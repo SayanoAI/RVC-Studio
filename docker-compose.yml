@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  rvc-studio:
+    image: rvc-studio:latest
+    build:
+      context: .
+    container_name: RVC-Studio
+    volumes:
+      - ./models/pretrained_v2:/app/models/pretrained_v2
+      - ./models/uvr5_weights:/app/models/uvr5_weights
+      - ./models/weights:/app/models/weights
+      - ./output:/app/output
+      - ./datasets:/app/datasets # you can use this folder in order to provide your dataset for model training
+      - ./songs:/app/songs
+      - ./logs:/app/logs
+    ports:
+      - 8501:8501
+    stop_signal: SIGINT
+    deploy:
+      resources:
+        reservations:
+          devices:
+              - driver: nvidia
+                device_ids: ['0']
+                capabilities: [gpu]

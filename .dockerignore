@@ -1,0 +1,16 @@
+.git
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+logs
+tests
+dockerfile
+docker-compose.yaml
+.dockerignore
+*.pt
+*.pth
+models
+songs
+.cache
