@@ -143,14 +143,14 @@ def vc_single(
         hubert_model = load_hubert()
 
     if not (cpt and net_g and vc and hubert_model):
-        return "Failed to load models", None
+        return None
 
     tgt_sr = cpt["config"][-1]
     
     version = cpt.get("version", "v1")
 
     if input_audio is None and input_audio_path is None:
-        return "You need to upload an audio", None
+        return None
     f0_up_key = int(f0_up_key)
     try:
         audio = input_audio[0] if input_audio is not None else load_input_audio(input_audio_path, 16000)
@@ -191,7 +191,7 @@ def vc_single(
         return (audio_opt, resample_sr if resample_sr >= 16000 and tgt_sr != resample_sr else tgt_sr)
     except Exception as info:
         print(info)
-        return (None, None)
+        return None
 
 @st.cache_data(show_spinner=False)
 def load_input_audio(fname,sr=None,**kwargs):

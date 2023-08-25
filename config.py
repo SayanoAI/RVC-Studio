@@ -17,10 +17,6 @@ def use_fp32_config():
             strr = f.read().replace("true", "false")
         with open(f"configs/{config_file}", "w") as f:
             f.write(strr)
-    with open("trainset_preprocess_pipeline_print.py", "r") as f:
-        strr = f.read().replace("3.7", "3.0")
-    with open("trainset_preprocess_pipeline_print.py", "w") as f:
-        f.write(strr)
 
 
 class Config:
@@ -30,6 +26,7 @@ class Config:
         self.n_cpu = 0
         self.gpu_name = None
         self.gpu_mem = None
+        self.has_gpu = torch.cuda.is_available()
         (
             self.python_cmd,
             self.listen_port,
@@ -109,11 +106,6 @@ class Config:
                 / 1024
                 + 0.4
             )
-            if self.gpu_mem <= 4:
-                with open("trainset_preprocess_pipeline_print.py", "r") as f:
-                    strr = f.read().replace("3.7", "3.0")
-                with open("trainset_preprocess_pipeline_print.py", "w") as f:
-                    f.write(strr)
         elif self.has_mps():
             print("No supported Nvidia GPU found")
             self.device = self.instead = "mps"

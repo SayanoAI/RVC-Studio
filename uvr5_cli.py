@@ -404,7 +404,7 @@ class UVR5_Model:
         # for model_path in uvr5_models:
         if "MDX" in model_path:
             self.model = MDXNetDereverb(model_path=model_path,**kwargs)
-        elif "VR_Models":
+        elif "VR_Models" in model_path:
             self.model = UVR5Dereverb(model_path=model_path,**kwargs) if any([
                 ele in model_path.lower() for ele in ["echo","noise","reverb"]
                 ]) else UVR5Base(model_path=model_path,**kwargs)
@@ -415,7 +415,7 @@ class UVR5_Model:
     
     # cleanup memory
     def __del__(self):
-        gc_collect(self.model)
+        gc_collect()
 
     def run_inference(self, audio_path):
         name = get_filename(self.model_path,audio_path,**self.args)

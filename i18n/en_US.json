@@ -1,6 +1,9 @@
 {
-    "inference.header.split_vocals": "Extract Vocals",
-    "inference.header.convert_vocals": "Change Vocals", 
+    "inference.split_vocals.subheader": "Extract Vocals",
+    "inference.convert_vocals.subheader": "Change Vocals",
+    "inference.convert_vocals.expander": "Change Vocals Options",
+    "inference.convert_vocals.expander.form_submit_button": "Save Options",
+    "inference.convert_vocals.button": "Change Vocals",
     "inference.use_cache": "Saves output to disk to save time processing in the future",
     "inference.f0_up_key": "Recommended +12 key for male to female conversion, and -12 key for female to male conversion. If the sound range goes too far and the voice is distorted, you can also adjust it to the appropriate range by yourself.",
     "inference.f0_method": "Select the pitch extraction algorithm ('harvest': better bass but extremely slow; 'crepe': better quality but GPU intensive), 'rmvpe': best quality, and little GPU requirement",

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from webui_utils import gc_collect, get_filenames, get_index, get_vc, load_config, merge_audio, save_input_audio, vc_single
 from uvr5_cli import split_audio
 
-_, i18n = load_config()
+config, i18n = load_config()
 
 @st.cache_data
 def split_vocals(model_paths,**args):
@@ -24,7 +24,7 @@ def split_vocals(model_paths,**args):
 def load_model(model_path):
     clear_data()
 
-    index_file = get_filenames(root="models",folder="index",exts=["index"],name_filters=[os.path.basename(model_path).split(".")[0]])
+    index_file = get_filenames(root="./models/weights",exts=["index"],name_filters=[os.path.basename(model_path).split(".")[0]])
     if st.session_state.inference.vc and st.session_state.inference.cpt and st.session_state.inference.net_g and st.session_state.inference.hubert_model:
         return {
             "vc": st.session_state.inference.vc,
@@ -60,7 +60,7 @@ def init_inference_state():
         cpt=None,
         vc=None,
         net_g=None,
-        device="cuda",
+        device=config.device,
         models=get_models(folder="weights"),
         model_name=None,
         uvr5_models=get_filenames(root="./models/uvr5_weights",name_filters=["vocal","instrument"]),
@@ -69,7 +69,7 @@ def init_inference_state():
         agg=10,
         dereverb=False,
         uvr5_name=[],
-        use_cache=False,
+        use_cache=True,
         hubert_model=None,
         audio_files=get_filenames(exts=["wav","flac","ogg","mp3"],folder="songs"),
         input_audio_name=None,
@@ -172,7 +172,7 @@ def render(state):
         
 
     with st.container():
-        st.subheader(i18n("inference.header.split_vocals"))
+        st.subheader(i18n("inference.split_vocals.subheader"))
         state.preprocess_model = st.selectbox(
             "Choose a preprocessor model",
             options=state.preprocess_models,
@@ -185,6 +185,7 @@ def render(state):
         col1, col2 = st.columns(2)
         state.device = col1.radio(
             "Device",
+            disabled=not config.has_gpu,
             options=DEVICE_OPTIONS,horizontal=True,
             index=get_index(DEVICE_OPTIONS,state.device))
         state.agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
@@ -221,35 +222,47 @@ def render(state):
             col2.write("Instrumental")
             col2.audio(state.input_instrumental[0],sample_rate=state.input_instrumental[1])
     
-    with st.form("inference.convert_voice"):
-        st.subheader(i18n("inference.header.convert_vocals"))
-        state.convert_params.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-14,max_value=14,step=7,value=state.convert_params.f0_up_key)
-        state.convert_params.f0_method = st.selectbox(i18n("inference.f0_method"),
-                                            options=PITCH_EXTRACTION_OPTIONS,
-                                            index=get_index(PITCH_EXTRACTION_OPTIONS,state.convert_params.f0_method))
-        state.convert_params.resample_sr = st.select_slider(i18n("inference.resample_sr"),
-                                            options=[0,16000,24000,22050,40000,44100,48000],
-                                            value=state.convert_params.resample_sr)
-        state.convert_params.index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.index_rate)
-        state.convert_params.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.convert_params.filter_radius)
-        state.convert_params.rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.rms_mix_rate)
-        state.convert_params.protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.convert_params.protect)
-        
-        if st.form_submit_button("Convert Vocals",disabled=not (state.input_vocals and state.model_name)):
-            output_vocals = convert_vocals(
-                state.model_name,
-                state.input_vocals,
-                **vars(state.convert_params)
+    st.subheader(i18n("inference.convert_vocals.subheader"))
+    with st.expander(i18n("inference.convert_vocals.expander")):
+        with st.form("inference.convert_vocals.expander"):
+            
+            f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.convert_params.f0_up_key)
+            f0_method = st.selectbox(i18n("inference.f0_method"),
+                                                options=PITCH_EXTRACTION_OPTIONS,
+                                                index=get_index(PITCH_EXTRACTION_OPTIONS,state.convert_params.f0_method))
+            resample_sr = st.select_slider(i18n("inference.resample_sr"),
+                                                options=[0,16000,24000,22050,40000,44100,48000],
+                                                value=state.convert_params.resample_sr)
+            index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.index_rate)
+            filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.convert_params.filter_radius)
+            rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.rms_mix_rate)
+            protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.convert_params.protect)
+            
+            if st.form_submit_button(i18n("inference.convert_vocals.expander.form_submit_button")):
+                state.convert_params = SimpleNamespace(
+                    f0_up_key=f0_up_key,
+                    f0_method=f0_method,
+                    resample_sr=resample_sr,
+                    index_rate=index_rate,
+                    filter_radius=filter_radius,
+                    rms_mix_rate=rms_mix_rate,
+                    protect=protect
                 )
-            state.output_vocals = output_vocals
-            if output_vocals is not None:
-                mixed_audio = merge_audio(
-                    output_vocals,
-                    state.input_instrumental,
-                    sr=state.input_audio[1]
-                )
-                state.output_audio = mixed_audio
-                state.output_audio_name = get_filename(state.input_audio_name,state.model_name)
+    if st.button(i18n("inference.convert_vocals.button"),disabled=not (state.input_vocals and state.model_name)):
+                output_vocals = convert_vocals(
+                    state.model_name,
+                    state.input_vocals,
+                    **vars(state.convert_params)
+                    )
+                state.output_vocals = output_vocals
+                if output_vocals is not None:
+                    mixed_audio = merge_audio(
+                        output_vocals,
+                        state.input_instrumental,
+                        sr=state.input_audio[1]
+                    )
+                    state.output_audio = mixed_audio
+                    state.output_audio_name = get_filename(state.input_audio_name,state.model_name)
     
     with st.container():
         col1, col2 = st.columns(2)
