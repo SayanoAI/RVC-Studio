@@ -43,6 +43,7 @@ torch==1.13.1+cu117
 streamlit
 scikit-learn
 tensorboardX
+tensorboard
 json5
 Markdown
 Cython

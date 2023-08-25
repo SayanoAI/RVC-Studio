@@ -1,10 +1,23 @@
 {
-    "inference.split_vocals.subheader": "Extract Vocals",
-    "inference.convert_vocals.subheader": "Change Vocals",
+    "inference.save.button": "Save Options",
+    "inference.refresh_data.button": "Refresh Data",
+    "inference.clear_data.button": "Reset Forms",
+    "inference.one_click.button": "1-Click VC",
+    "inference.song.selectbox": "Select a song file",
+    "inference.voice.selectbox": "Select a voice model",
+
+    "inference.split_vocals": "Extract Vocals",
+    "inference.split_vocals.expander": "Extract Vocals Options",
+    "inference.preprocess_model": "Choose a preprocessing model",
+    "inference.uvr5_name": "Choose a vocal extraction model",
+    "inference.device": "Extract Vocals",
+    "inference.agg": "Aggressiveness in isolating vocals",
+    "inference.use_cache": "Reduce future processing time by saving results to disk",
+
+    "inference.convert_vocals": "Change Vocals",
     "inference.convert_vocals.expander": "Change Vocals Options",
     "inference.convert_vocals.expander.form_submit_button": "Save Options",
-    "inference.convert_vocals.button": "Change Vocals",
-    "inference.use_cache": "Saves output to disk to save time processing in the future",
+    
     "inference.f0_up_key": "Recommended +12 key for male to female conversion, and -12 key for female to male conversion. If the sound range goes too far and the voice is distorted, you can also adjust it to the appropriate range by yourself.",
     "inference.f0_method": "Select the pitch extraction algorithm ('harvest': better bass but extremely slow; 'crepe': better quality but GPU intensive), 'rmvpe': best quality, and little GPU requirement",
     "inference.filter_radius": "If >=3: apply median filtering to the harvested pitch results. The value represents the filter radius and can reduce breathiness.",
@@ -12,7 +25,7 @@
     "inference.resample_sr": "Resample the output audio in post-processing to the final sample rate. Set to 0 for no resampling:",
     "inference.rms_mix_rate": "Adjust the volume envelope scaling. Closer to 0, the more it mimicks the volume of the original vocals. Can help mask noise and make volume sound more natural when set relatively low. Closer to 1 will be more of a consistently loud volume:",
     "inference.protect": "Protect voiceless consonants and breath sounds to prevent artifacts such as tearing in electronic music. Set to 0.5 to disable. Decrease the value to increase protection, but it may reduce indexing accuracy:",
-    "inference.agg": "Aggressiveness in isolating vocals",
+    
     "inference.download.button": "Download Song",
 
     "training.preprocess_data.title": "Process Data",

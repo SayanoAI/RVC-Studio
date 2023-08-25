@@ -60,7 +60,7 @@ def init_inference_state():
         cpt=None,
         vc=None,
         net_g=None,
-        device=config.device,
+        device="cuda" if config.has_gpu else "cpu",
         models=get_models(folder="weights"),
         model_name=None,
         uvr5_models=get_filenames(root="./models/uvr5_weights",name_filters=["vocal","instrument"]),
@@ -154,57 +154,62 @@ def render(state):
     with st.container():
         left, right = st.columns(2)
         state.input_audio_name = left.selectbox(
-            "Select a song",
+            i18n("inference.song.selectbox"),
             options=state.audio_files,
             index=get_index(state.audio_files,state.input_audio_name))
         col1, col2 = left.columns(2)
-        if col1.button("Refresh Data",on_click=refresh_data,use_container_width=True): st.experimental_rerun()
-        col2.button("One-Click Convert", type="primary",
+        if col1.button(i18n("inference.refresh_data.button"),on_click=refresh_data,use_container_width=True): st.experimental_rerun()
+        col2.button(i18n("inference.one_click.button"), type="primary",
                     use_container_width=True,
                     disabled=not (state.uvr5_name and state.input_audio_name and state.model_name),
                     on_click=one_click_convert)
         
-        state.model_name = right.selectbox("Select a voice",
+        state.model_name = right.selectbox(
+            i18n("inference.voice.selectbox"),
             options=state.models,
             index=get_index(state.models,state.model_name)
             )
-        if right.button("Clear Cache",on_click=clear_data): st.experimental_rerun()
+        if right.button(i18n("inference.clear_data.button"),on_click=clear_data): st.experimental_rerun()
         
 
-    with st.container():
-        st.subheader(i18n("inference.split_vocals.subheader"))
-        state.preprocess_model = st.selectbox(
-            "Choose a preprocessor model",
-            options=state.preprocess_models,
-            index=get_index(state.preprocess_models,state.preprocess_model))
-        state.uvr5_name = st.multiselect(
-            "Choose a uvr5 model",
-            options=state.uvr5_models,
-            default=state.uvr5_name)
-        
-        col1, col2 = st.columns(2)
-        state.device = col1.radio(
-            "Device",
-            disabled=not config.has_gpu,
-            options=DEVICE_OPTIONS,horizontal=True,
-            index=get_index(DEVICE_OPTIONS,state.device))
-        state.agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
+    st.subheader(i18n("inference.split_vocals"))
+    with st.expander(i18n("inference.split_vocals.expander"),expanded=not (state.input_audio_name and len(state.uvr5_name))):
+        with st.form("inference.split_vocals.expander"):
+            preprocess_model = st.selectbox(
+                i18n("inference.preprocess_model"),
+                options=state.preprocess_models,
+                index=get_index(state.preprocess_models,state.preprocess_model))
+            uvr5_name = st.multiselect(
+                i18n("inference.uvr5_name"),
+                options=state.uvr5_models,
+                default=state.uvr5_name)
+            
+            col1, col2 = st.columns(2)
+            device = col1.radio(
+                i18n("inference.device"),
+                disabled=not config.has_gpu,
+                options=DEVICE_OPTIONS,horizontal=True,
+                index=get_index(DEVICE_OPTIONS,state.device))
+            agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
 
-        state.use_cache=col1.checkbox(i18n("inference.use_cache"),value=state.use_cache)
-        # state.dereverb=col1.checkbox(i18n("inference.dereverb"),value=state.dereverb)
+            use_cache=col1.checkbox(i18n("inference.use_cache"),value=state.use_cache)
+            # state.dereverb=col1.checkbox(i18n("inference.dereverb"),value=state.dereverb)
+            if st.form_submit_button(i18n("inference.save.button")):
+                state.agg=agg
+                state.use_cache=use_cache
+                state.device=device
+                state.preprocess_model=preprocess_model
+                state.uvr5_name=uvr5_name
 
-        if col2.button(
-            "Split Vocals",
-            disabled=not (state.input_audio_name and len(state.uvr5_name))
-        ):
-            split_vocals(
-                state.uvr5_name,
-                audio_path=state.input_audio_name,
-                preprocess_model=state.preprocess_model,
-                device=state.device,
-                agg=state.agg,
-                use_cache=state.use_cache
-                )
+    if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_name))):
+        split_vocals(
+            state.uvr5_name,
+            audio_path=state.input_audio_name,
+            preprocess_model=state.preprocess_model,
+            device=state.device,
+            agg=state.agg,
+            use_cache=state.use_cache
+            )
             
     with st.container():
         
@@ -222,7 +227,7 @@ def render(state):
             col2.write("Instrumental")
             col2.audio(state.input_instrumental[0],sample_rate=state.input_instrumental[1])
     
-    st.subheader(i18n("inference.convert_vocals.subheader"))
+    st.subheader(i18n("inference.convert_vocals"))
     with st.expander(i18n("inference.convert_vocals.expander")):
         with st.form("inference.convert_vocals.expander"):
             
@@ -238,7 +243,7 @@ def render(state):
             rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.rms_mix_rate)
             protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.convert_params.protect)
             
-            if st.form_submit_button(i18n("inference.convert_vocals.expander.form_submit_button")):
+            if st.form_submit_button(i18n("inference.save.button")):
                 state.convert_params = SimpleNamespace(
                     f0_up_key=f0_up_key,
                     f0_method=f0_method,
@@ -248,7 +253,7 @@ def render(state):
                     rms_mix_rate=rms_mix_rate,
                     protect=protect
                 )
-    if st.button(i18n("inference.convert_vocals.button"),disabled=not (state.input_vocals and state.model_name)):
+    if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
                 output_vocals = convert_vocals(
                     state.model_name,
                     state.input_vocals,
