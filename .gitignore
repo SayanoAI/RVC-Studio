@@ -3,6 +3,7 @@ __pycache__
 /TEMP
 *.pyd
 *.pt
+*.pth
 *.exe
 .venv
 *.env

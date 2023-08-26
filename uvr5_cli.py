@@ -1,10 +1,12 @@
 import argparse
+import json
 import multiprocessing
 from multiprocessing.pool import ThreadPool
 import os, sys, torch, warnings
 from types import SimpleNamespace
 
 from tqdm import tqdm
+from lib.mdx import MDX, MDXModel
 
 from webui_utils import gc_collect, load_input_audio, remix_audio, save_input_audio
 
@@ -23,7 +25,7 @@ from lib.uvr5_pack.lib_v5 import nets_61968KB as nets
 
 
 class UVR5Base:
-    def __init__(self, agg, model_path, device, is_half):
+    def __init__(self, agg, model_path, device, is_half,**kwargs):
         self.model_path = model_path
         self.device = device
         self.data = {
@@ -58,8 +60,8 @@ class UVR5Base:
             )
         else:
             wav_vocals = spec_utils.cmb_spectrogram_to_wave(v_spec_m, self.mp)
-        print("vocals done!")
-        return_dict["vocals"] = remix_audio((wav_vocals,return_dict["sr"]),norm=True,to_int16=True,to_mono=True)
+        print(f"vocals done: {wav_vocals.shape}")
+        return_dict["vocals"] = remix_audio((wav_vocals,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=-1)
         return return_dict["vocals"]
     
     def process_instrumental(self,y_spec_m,input_high_end,input_high_end_h,return_dict={}):
@@ -72,8 +74,8 @@ class UVR5Base:
             )
         else:
             wav_instrument = spec_utils.cmb_spectrogram_to_wave(y_spec_m, self.mp)
-        print("instruments done!")
-        return_dict["instrumentals"] = remix_audio((wav_instrument,return_dict["sr"]),norm=True,to_int16=True,to_mono=True)
+        print(f"instruments done: {wav_instrument.shape}")
+        return_dict["instrumentals"] = remix_audio((wav_instrument,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=-1)
         return return_dict["instrumentals"] 
     
     def process_audio(self,y_spec_m,v_spec_m,input_high_end,input_high_end_h):
@@ -85,10 +87,6 @@ class UVR5Base:
             pool.apply(self.process_vocals, args=(v_spec_m,input_high_end,input_high_end_h,return_dict))
             pool.apply(self.process_instrumental, args=(y_spec_m,input_high_end,input_high_end_h,return_dict))
  
-        # thread1 = threading.Thread(target=self.process_vocals, args=(v_spec_m,input_high_end,input_high_end_h,return_dict))
-        # thread2 = threading.Thread(target=self.process_instrumental, args=(y_spec_m,input_high_end,input_high_end_h,return_dict))
-        # thread1.start(),thread2.start()
-        # thread1.join(),thread2.join()
         return return_dict
 
     def run_inference(self, music_file):
@@ -152,11 +150,12 @@ class UVR5Base:
 
         
         return_dict = self.process_audio(y_spec_m,v_spec_m,input_high_end,input_high_end_h)
+        return_dict["input_audio"] = input_audio
         
         return return_dict
 
 class UVR5Dereverb(UVR5Base):
-    def __init__(self, agg, model_path, device, is_half):
+    def __init__(self, agg, model_path, device, is_half,**kwargs):
         self.model_path = model_path
         self.device = device
         self.data = {
@@ -182,233 +181,93 @@ class UVR5Dereverb(UVR5Base):
         self.mp = mp
         self.model = model
     
+class MDXNet:
+    def __init__(self, model_path, chunks=15,denoise=False,num_threads=(os.cpu_count()//2),**kwargs):
+        model_hash = MDX.get_hash(model_path)
+        with open(os.path.join(os.path.dirname(model_path), 'model_data.json')) as infile:
+            model_params = json.load(infile)
+        mp = model_params.get(model_hash)
 
-class Conv_TDF_net_trim:
-    def __init__(
-        self, device, model_name, target_name, L, dim_f, dim_t, n_fft, hop=1024
-    ):
-        super(Conv_TDF_net_trim, self).__init__()
-
-        self.dim_f = dim_f
-        self.dim_t = 2**dim_t
-        self.n_fft = n_fft
-        self.hop = hop
-        self.n_bins = self.n_fft // 2 + 1
-        self.chunk_size = hop * (self.dim_t - 1)
-        self.window = torch.hann_window(window_length=self.n_fft, periodic=True).to(
-            device
-        )
-        self.target_name = target_name
-        self.blender = "blender" in model_name
-        self.dim_c = 4
-
-        out_c = self.dim_c * 4 if target_name == "*" else self.dim_c
-        self.freq_pad = torch.zeros(
-            [1, out_c, self.n_bins - self.dim_f, self.dim_t]
-        ).to(device)
-
-        self.n = L // 2
-        self.device=device
-
-    def stft(self, x):
-        x = x.reshape([-1, self.chunk_size])
-        x = torch.stft(
-            x,
-            n_fft=self.n_fft,
-            hop_length=self.hop,
-            window=self.window,
-            center=True,
-            return_complex=True,
-        )
-        x = torch.view_as_real(x)
-        x = x.permute([0, 3, 1, 2])
-        x = x.reshape([-1, 2, 2, self.n_bins, self.dim_t]).reshape(
-            [-1, self.dim_c, self.n_bins, self.dim_t]
-        )
-        return x[:, :, : self.dim_f]
-
-    def istft(self, x, freq_pad=None):
-        freq_pad = (
-            self.freq_pad.repeat([x.shape[0], 1, 1, 1])
-            if freq_pad is None
-            else freq_pad
-        )
-        x = torch.cat([x, freq_pad], -2)
-        c = 4 * 2 if self.target_name == "*" else 2
-        x = x.reshape([-1, c, 2, self.n_bins, self.dim_t]).reshape(
-            [-1, 2, self.n_bins, self.dim_t]
-        )
-        x = x.permute([0, 2, 3, 1])
-        x = x.contiguous()
-        x = torch.view_as_complex(x)
-        x = torch.istft(
-            x, n_fft=self.n_fft, hop_length=self.hop, window=self.window, center=True
-        )
-        return x.reshape([-1, c, self.chunk_size])
-
-class MDXNetDereverb:
-    def __init__(self, model_path, chunks=15, **kwargs):
         self.onnx = model_path
         self.shifts = 10  #'Predict with randomised equivariant stabilisation'
         self.mixing = "min_mag"  # ['default','min_mag','max_mag']
         self.chunks = chunks
         # self.margin = 44100
-        self.margin = 16000
-        self.dim_t = 9
-        self.dim_f = 3072
-        self.n_fft = 6144
-        self.denoise = True
-        self.args = SimpleNamespace(**kwargs)
-        self.device = "cpu" #self.args.device #cuda doesn't work for some reason
-        self.model_ = Conv_TDF_net_trim(
-            device=self.device,
-            model_name="Conv-TDF",
-            target_name="vocals",
-            L=11,
-            dim_f=self.dim_f,
-            dim_t=self.dim_t,
-            n_fft=self.n_fft,
-        )
-        self.mp = SimpleNamespace(param={"sr": self.margin})
-       
-        import onnxruntime as ort
-
-        print(ort.get_available_providers())
-        self.model = ort.InferenceSession(
-            self.onnx,
-            # os.path.join(args.onnx, self.model_.target_name + ".onnx"),
-            providers=[
-                "CUDAExecutionProvider",
-                "DmlExecutionProvider",
-                "CPUExecutionProvider",
-            ],
-        )
-        print(f"onnx load done: {dir(self.model.get_modelmeta())} ")
-
-    def demix(self, mix):
-        samples = mix.shape[-1]
-        margin = self.margin
-        assert not margin == 0, "margin cannot be zero!"
-        chunk_size = self.chunks * margin
-        if margin > chunk_size:
-            margin = chunk_size
-
-        segmented_mix = {}
-
-        if self.chunks == 0 or samples < chunk_size:
-            chunk_size = samples
-
-        counter = -1
-        for skip in range(0, samples, chunk_size):
-            counter += 1
-
-            s_margin = 0 if counter == 0 else margin
-            end = min(skip + chunk_size + margin, samples)
-
-            start = skip - s_margin
-
-            segmented_mix[skip] = mix[:, start:end].copy()
-            if end == samples:
-                break
-
-        sources = self.demix_base(segmented_mix, margin_size=margin)
-        """
-        mix:(2,big_sample)
-        segmented_mix:offset->(2,small_sample)
-        sources:(1,2,big_sample)
-        """
-        return sources
-
-    def demix_base(self, mixes, margin_size):
-        chunked_sources = []
-
-        for mix in tqdm(mixes,"Processing"):
-            cmix = mixes[mix]
-            sources = []
-            n_sample = cmix.shape[1]
-            model = self.model_
-            trim = model.n_fft // 2
-            gen_size = model.chunk_size - 2 * trim
-            pad = gen_size - n_sample % gen_size
-            mix_p = np.concatenate(
-                (np.zeros((2, trim)), cmix, np.zeros((2, pad)), np.zeros((2, trim))), 1
-            )
-            mix_waves = []
-            i = 0
-            while i < n_sample + pad:
-                waves = np.array(mix_p[:, i : i + model.chunk_size])
-                mix_waves.append(waves)
-                i += gen_size
-            mix_waves = torch.tensor(mix_waves, dtype=torch.float32).to(self.device)
-            with torch.no_grad():
-                _ort = self.model
-                spek = model.stft(mix_waves)
-                if self.denoise:
-                    spec_pred = (
-                        -_ort.run(None, {"input": -spek.cpu().numpy()})[0] * 0.5
-                        + _ort.run(None, {"input": spek.cpu().numpy()})[0] * 0.5
-                    )
-                    tar_waves = model.istft(torch.tensor(spec_pred).to(self.device))
-                else:
-                    tar_waves = model.istft(
-                        torch.tensor(_ort.run(None, {"input": spek.cpu().numpy()})[0]).to(self.device)
-                    )
-                tar_signal = (
-                    tar_waves[:, :, trim:-trim]
-                    .transpose(0, 1)
-                    .reshape(2, -1)
-                    .numpy()[:, :-pad]
-                )
-
-                start = 0 if mix == 0 else margin_size
-                end = None if mix == list(mixes.keys())[::-1][0] else -margin_size
-                if margin_size == 0:
-                    end = None
-                sources.append(tar_signal[:, start:end])
-
-            chunked_sources.append(sources)
-        _sources = np.concatenate(chunked_sources, axis=-1)
-        # del self.model
-        return _sources
-    
-    def process_audio(self,instrumental,vocals):
-        sr = self.mp.param["sr"]
-        return_dict = {"sr": sr}
+        self.sr = 16000
+        # self.dim_t = 9
+        self.dim_t=2 ** mp["mdx_dim_t_set"]
+        # self.dim_f = 3072
+        self.dim_f=mp["mdx_dim_f_set"]
+        # self.n_fft = 6144
+        self.n_fft=mp["mdx_n_fft_scale_set"]
         
+        self.args = SimpleNamespace(**kwargs)
+        self.denoise = denoise
+        self.num_threads = num_threads
+
+        self.device = self.args.device #self.args.device #cuda doesn't work for some reason
+        self.params = MDXModel(
+            self.device,
+            dim_f=mp["mdx_dim_f_set"],
+            dim_t=2 ** mp["mdx_dim_t_set"],
+            n_fft=mp["mdx_n_fft_scale_set"],
+            stem_name=mp["primary_stem"],
+            compensation=mp["compensate"]
+        )
+        # self.mp = SimpleNamespace(param={"sr": self.margin})
+
+        self.model = MDX(model_path, self.params)
+        print(f"onnx load done: {self.model} ({model_hash})")
+
+    def __del__(self):
+        del self.params, self.model
+        gc_collect()
+
+    def process_audio(self,background,foreground,target_sr=None):
+        target_sr =  self.sr if target_sr is None else target_sr
+        # foreground is processed data
+        instrumental,vocals = (foreground,background) if "instrument" in self.params.stem_name.lower() else (background,foreground)
         with ThreadPool(2) as pool:
             results = pool.starmap(remix_audio, [
-                ((instrumental,sr),sr,True,True,False,True),
-                ((vocals,sr),sr,True,True,False,True)
+                ((instrumental,self.sr),target_sr,False,True,self.sr!=target_sr,True),
+                ((vocals,self.sr),target_sr,False,True,self.sr!=target_sr,True)
             ])
 
-        return_dict["instrumental"] = results[0]
-        return_dict["vocals"] = results[1]
+        return_dict = {
+            "sr": target_sr,
+            "instrumentals": results[0],
+            "vocals": results[1]
+        }
         return return_dict
     
     def run_inference(self, audio_path):
-        mix, _ = librosa.load(audio_path, mono=False, sr=self.margin)
-        if mix.ndim == 1:
-            mix = np.asfortranarray([mix, mix])
-        mix = mix.T
-        sources = self.demix(mix.T)
-        opt = sources[0].T
-
-        return_dict = self.process_audio(instrumental=mix-opt,vocals=opt)
+        input_audio = load_input_audio(audio_path, mono=False)
+        mix, _ = remix_audio(input_audio,target_sr=self.sr,to_mono=False,norm=True)
         
+        if mix.ndim == 1:
+            mix = np.stack([mix, mix],axis=0)
+
+        if self.denoise:
+            wave_processed = -(self.model.process_wave(-mix, self.num_threads )) + (self.model.process_wave(mix, self.num_threads ))
+            wave_processed *= 0.5
+        else:
+            wave_processed = self.model.process_wave(mix, self.num_threads )
+        print(wave_processed.shape,mix.shape)
+        return_dict = self.process_audio(background=(mix-wave_processed*self.params.compensation),foreground=wave_processed,target_sr=input_audio[1])
+        return_dict["input_audio"] = input_audio
+
         return return_dict
 
 class UVR5_Model:
     def __init__(self, model_path, use_cache=False, **kwargs):
 
-        # self.models = {}
-        # for model_path in uvr5_models:
         if "MDX" in model_path:
-            self.model = MDXNetDereverb(model_path=model_path,**kwargs)
-        elif "VR_Models" in model_path:
+            self.model = MDXNet(model_path=model_path,denoise=True,**kwargs)
+        elif "UVR" in model_path:
             self.model = UVR5Dereverb(model_path=model_path,**kwargs) if any([
                 ele in model_path.lower() for ele in ["echo","noise","reverb"]
                 ]) else UVR5Base(model_path=model_path,**kwargs)
-            # self.models[model_path] = __instance__
+            
         self.use_cache = use_cache
         self.model_path = model_path
         self.args = kwargs
@@ -428,19 +287,18 @@ class UVR5_Model:
         instrumental_file = os.path.join(instrumental_path,name)
         os.makedirs(vocals_path,exist_ok=True)
         os.makedirs(instrumental_path,exist_ok=True)
-        input_audio = load_input_audio(audio_path,mono=True,sr=self.model.mp.param["sr"])
+        # input_audio = load_input_audio(audio_path,mono=True)
 
         if os.path.exists(instrumental_file) and os.path.exists(vocals_file):
             vocals = load_input_audio(vocals_file,mono=True)
             instrumental = load_input_audio(instrumental_file,mono=True)
-            # input_audio = load_input_audio(audio_path,mono=True)
+            input_audio = load_input_audio(audio_path,mono=True)
             return vocals, instrumental, input_audio
         
         return_dict = self.model.run_inference(audio_path)
         instrumental = return_dict["instrumentals"]
         vocals = return_dict["vocals"]
-        # instrumental = remix_audio((return_dict["instrumentals"],return_dict["sr"]),norm=True,to_int16=True,to_mono=True)
-        # vocals = remix_audio((return_dict["vocals"],return_dict["sr"]),norm=True,to_int16=True,to_mono=True)
+        input_audio = return_dict["input_audio"]
 
         if self.use_cache:
             save_input_audio(vocals_file,vocals,to_int16=True)
@@ -448,22 +306,20 @@ class UVR5_Model:
 
         return vocals, instrumental, input_audio
 
-def get_filename(model_path,audio_path,**args):
-    name = "_".join([
-        str(v) for v in args.values() if not hasattr(v, '__dict__')]+[
-            os.path.basename(model_path).split(".")[0],os.path.basename(audio_path)
-            ])
+def get_filename(model_path,audio_path,agg,**kwargs):
+    name = "_".join([str(agg),os.path.basename(model_path).split(".")[0],os.path.basename(audio_path)])
     return name
 
 def __run_inference_worker(arg):
-    (model_path,audio_path,agg,device,use_cache) = arg
+    (model_path,audio_path,agg,device,use_cache,num_threads) = arg
     
     model = UVR5_Model(
             agg=agg,
             model_path=model_path,
             device=device,
             is_half=device=="cuda",
-            use_cache=use_cache
+            use_cache=use_cache,
+            num_threads=num_threads
             )
     vocals, instrumental, input_audio = model.run_inference(audio_path)
 
@@ -479,7 +335,8 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
             model_path=preprocess_model,
             device=device,
             is_half=device=="cuda",
-            use_cache=use_cache
+            use_cache=use_cache,
+            num_threads = max(os.cpu_count()//2,1)
             )
         print("preprocessing")
         _, instrumental, input_audio = model.run_inference(audio_path)
@@ -495,20 +352,25 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
     else:
         input_audio = load_input_audio(audio_path,mono=True)
     
-    args = [(model_path,audio_path,agg,device,use_cache) for model_path in uvr5_models]
+    num_threads = max(os.cpu_count()//(len(uvr5_models)*2),1)
+    args = [(model_path,audio_path,agg,device,use_cache,num_threads) for model_path in uvr5_models]
     with multiprocessing.Pool(len(args)) as pool:
         pooled_data = pool.map(__run_inference_worker,args)
     # pool.join()
         
     wav_instrument = []
     wav_vocals = []
+    max_len = 0
 
     for ( vocals, instrumental, _) in pooled_data:
         wav_vocals.append(vocals[0])
         wav_instrument.append(instrumental[0])
+        max_len = max(max_len,len(vocals[0]),len(instrumental[0]))
 
-    instrumental = remix_audio((np.mean(wav_instrument,axis=0),input_audio[1]),norm=True,to_int16=True,to_mono=True)
-    vocals = remix_audio((np.mean(wav_vocals,axis=0),input_audio[1]),norm=True,to_int16=True,to_mono=True)
+    wav_instrument = np.mean([librosa.util.pad_center(wav,max_len) for wav in wav_instrument],axis=0)
+    wav_vocals = np.mean([librosa.util.pad_center(wav,max_len) for wav in wav_vocals],axis=0)
+    instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
+    vocals = remix_audio((wav_vocals,vocals[1]),norm=True,to_int16=True,to_mono=True)
 
     return vocals, instrumental, input_audio
 

@@ -226,25 +226,29 @@ def get_filenames(root=".",folder="**",exts=["*"],name_filters=[""]):
     return sorted([ele for ele in fnames if any([nf.lower() in ele.lower() for nf in name_filters])])
 
 @st.cache_data(show_spinner=False)
-def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,to_mono=False,**kwargs):
+def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,to_mono=False,axis=0,**kwargs):
     audio = np.array(input_audio[0],dtype="float32")
     if target_sr is None: target_sr=input_audio[1]
 
-    print(f"before resample: shape={audio.shape}, max={audio.max()}, min={audio.min()}, mean={audio.mean()} sr={input_audio[1]}")
+    print(f"before remix: shape={audio.shape}, max={audio.max()}, min={audio.min()}, mean={audio.mean()} sr={input_audio[1]}")
     if resample or input_audio[1]!=target_sr:
         audio = librosa.core.resample(np.array(input_audio[0],dtype="float32"),orig_sr=input_audio[1],target_sr=target_sr,**kwargs)
+    
+    if to_mono and audio.ndim>1: audio=audio.mean(axis)
+
     if norm: audio = librosa.util.normalize(audio)
+
     audio_max = np.abs(audio).max() / 0.95
     if audio_max > 1: audio /= audio_max
-    if to_mono and len(audio.shape)>1: audio=audio.mean(-1)
+    
     if to_int16: audio = np.clip(audio * MAX_INT16, a_min=-MAX_INT16+1, a_max=MAX_INT16-1).astype("int16")
-    print(f"after resample: shape={audio.shape}, max={audio.max()}, min={audio.min()}, mean={audio.mean()}, sr={target_sr}")
+    print(f"after remix: shape={audio.shape}, max={audio.max()}, min={audio.min()}, mean={audio.mean()}, sr={target_sr}")
 
     return audio, target_sr
 
 @st.cache_data
 def merge_audio(audio1,audio2,sr=40000):
-    print(f"merging audio audio1={audio1[0].max()} audio2={audio2[0].max()} sr={sr}")
+    print(f"merging audio audio1={audio1[0].shape,audio1[1]} audio2={audio2[0].shape,audio2[1]} sr={sr}")
     m1,_=remix_audio(audio1,target_sr=sr)
     m2,_=remix_audio(audio2,target_sr=sr)
     
@@ -252,6 +256,6 @@ def merge_audio(audio1,audio2,sr=40000):
     m1=librosa.util.pad_center(m1,maxlen)
     m2=librosa.util.pad_center(m2,maxlen)
 
-    mixed = librosa.util.stack([m1,m2],-1)
+    mixed = librosa.util.stack([m1,m2],0)
 
-    return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True)
+    return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)

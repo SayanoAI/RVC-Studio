@@ -24,7 +24,7 @@ def split_vocals(model_paths,**args):
 def load_model(model_path):
     clear_data()
 
-    index_file = get_filenames(root="./models/weights",exts=["index"],name_filters=[os.path.basename(model_path).split(".")[0]])
+    index_file = get_filenames(root="./models/RVC",folder=".index",exts=["index"],name_filters=[os.path.basename(model_path).split(".")[0]])
     if st.session_state.inference.vc and st.session_state.inference.cpt and st.session_state.inference.net_g and st.session_state.inference.hubert_model:
         return {
             "vc": st.session_state.inference.vc,
@@ -61,10 +61,10 @@ def init_inference_state():
         vc=None,
         net_g=None,
         device="cuda" if config.has_gpu else "cpu",
-        models=get_models(folder="weights"),
+        models=get_models(folder="RVC"),
         model_name=None,
-        uvr5_models=get_filenames(root="./models/uvr5_weights",name_filters=["vocal","instrument"]),
-        preprocess_models=[""]+get_filenames(root="./models/uvr5_weights",name_filters=["echo","reverb","noise"]),
+        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
+        preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
         preprocess_model="",
         agg=10,
         dereverb=False,
@@ -148,7 +148,7 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     output_dir = os.sep.join([os.getcwd(),"output"])
     os.makedirs(output_dir,exist_ok=True)
     output_file = os.sep.join([output_dir,f"{output_audio_name}.{ext}"])
-    return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio)}"
+    return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
     
 def render(state):
     with st.container():
@@ -182,6 +182,7 @@ def render(state):
             uvr5_name = st.multiselect(
                 i18n("inference.uvr5_name"),
                 options=state.uvr5_models,
+                format_func=lambda item: os.path.basename(item),
                 default=state.uvr5_name)
             
             col1, col2 = st.columns(2)
