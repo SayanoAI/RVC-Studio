@@ -8,7 +8,6 @@ import multiprocessing
 from lib.audio import load_audio
 from webui_utils import gc_collect, load_hubert, load_input_audio
 import torch
-mutex = multiprocessing.Lock()
 
 class Preprocess:
     def __init__(self, sr, exp_dir, noparallel=True):
@@ -36,12 +35,12 @@ class Preprocess:
         os.makedirs(self.wavs16k_dir, exist_ok=True)
 
     def println(self,strr):
-        mutex.acquire()
+        # mutex.acquire()
         print(strr)
         with open("%s/preprocess.log" % self.exp_dir, "a+") as f:
             f.write("%s\n" % strr)
             f.flush()
-        mutex.release()
+        # mutex.release()
 
     def norm_write(self, tmp_audio, idx0, idx1):
         tmp_max = np.abs(tmp_audio).max()
@@ -215,7 +214,7 @@ class FeatureInput(object):
                 from lib.rmvpe import RMVPE
 
                 print("loading rmvpe model")
-                self.model_rmvpe = RMVPE("rmvpe.pt", is_half=False, device=self.device)
+                self.model_rmvpe = RMVPE("./models/rmvpe.pt", is_half=False, device=self.device)
             f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         elif self.f0_method == "crepe":
             import torch, torchcrepe
@@ -247,7 +246,7 @@ class FeatureInput(object):
 
                 print("loading rmvpe model")
                 self.model_rmvpe = RMVPE(
-                    "rmvpe.pt", is_half=self.is_half, device=self.device
+                    "./models/rmvpe.pt", is_half=self.is_half, device=self.device
                 )
             f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         f0_mel = 1127 * np.log(1 + f0 / 700)
@@ -352,3 +351,7 @@ def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
                 featureInput.printt("f0_all_fail-%s" % (traceback.format_exc()))
 
     return ps
+
+if __name__ == "__main__":
+    torch.multiprocessing.set_start_method("spawn")
+    main()
