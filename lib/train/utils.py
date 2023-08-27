@@ -318,7 +318,10 @@ def get_hparams(init=True):
     )
     parser.add_argument(
         "-e", "--experiment_dir", type=str, required=True, help="experiment dir"
-    )  # -m
+    )
+    parser.add_argument(
+        "-n", "--name", type=str, help="name of the model, uses experiment_dir as default"
+    )
     parser.add_argument(
         "-sr", "--sample_rate", type=str, required=True, help="sample rate, 32k/40k/48k"
     )
@@ -354,8 +357,9 @@ def get_hparams(init=True):
         help="if caching the dataset in GPU memory, 1 or 0",
     )
 
+
     args = parser.parse_args()
-    name = args.experiment_dir
+    name = args.name or args.experiment_dir
     experiment_dir = os.path.join("./logs", args.experiment_dir)
 
     if not os.path.exists(experiment_dir):

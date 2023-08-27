@@ -212,6 +212,8 @@ def kill_all_process(pids):
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
 PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 SR_MAP = {"40k": 40000, "48k": 48000}
+PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"G{st.session_state.training.sr}"])
+PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"D{st.session_state.training.sr}"])
 
 def render(state):
     
@@ -256,8 +258,8 @@ def render(state):
         state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
         state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
         state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=10,value=state.save_epoch)
-        state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=get_filenames(folder="pretrained_v2",name_filters=[f"G{str(state.sr)[:2]}k"]))
-        state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=get_filenames(folder="pretrained_v2",name_filters=[f"D{str(state.sr)[:2]}k"]))
+        state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
+        state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
         state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)
         state.if_cache_gpu=st.checkbox(i18n("training.if_cache_gpu"),value=state.if_cache_gpu)
         state.if_save_every_weights=st.checkbox(i18n("training.if_save_every_weights"),value=state.if_save_every_weights)
