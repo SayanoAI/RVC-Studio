@@ -62,7 +62,7 @@ class MDX:
 
     DEFAULT_PROCESSOR = 0
 
-    def __init__(self, model_path: str, params: MDXModel, processor=DEFAULT_PROCESSOR):
+    def __init__(self, model_path: str, params: MDXModel, processor=DEFAULT_PROCESSOR,margin=DEFAULT_MARGIN_SIZE,chunks=15):
 
         # Set the device and the provider (CPU or CUDA)
         self.device = torch.device(f'cuda:{processor}') if processor >= 0 else torch.device('cpu')
@@ -75,6 +75,8 @@ class MDX:
         # Preload the model for faster performance
         self.ort.run(None, {'input': torch.rand(1, 4, params.dim_f, params.dim_t).numpy()})
         self.process = lambda spec: self.ort.run(None, {'input': spec.cpu().numpy()})[0]
+        self.margin=margin
+        self.chunks=chunks
 
         self.prog = None
 
@@ -210,8 +212,9 @@ class MDX:
             numpy array: Processed wave array
         """
         self.prog = tqdm(total=0)
-        chunk = wave.shape[-1] // mt_threads
-        waves = self.segment(wave, False, chunk)
+        chunk_size = wave.shape[-1] // (mt_threads if not self.chunks else (self.chunks*mt_threads))
+        margin = self.margin
+        waves = self.segment(wave, False, chunk_size, margin)
 
         # Create a queue to hold the processed wave segments
         q = queue.Queue()
@@ -232,7 +235,7 @@ class MDX:
         processed_batches = [list(wave.values())[0] for wave in
                              sorted(processed_batches, key=lambda d: list(d.keys())[0])]
         assert len(processed_batches) == len(waves), 'Incomplete processed batches, please reduce batch size!'
-        return self.segment(processed_batches, True, chunk)
+        return self.segment(processed_batches, True, chunk_size, margin)
 
 
 def run_mdx(model_params, output_dir, model_path, filename, exclude_main=False, exclude_inversion=False, suffix=None, invert_suffix=None, denoise=False, keep_orig=True, m_threads=2):

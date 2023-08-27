@@ -216,7 +216,7 @@ class MDXNet:
         )
         # self.mp = SimpleNamespace(param={"sr": self.margin})
 
-        self.model = MDX(model_path, self.params)
+        self.model = MDX(model_path, self.params,chunks=self.chunks,margin=self.sr)
         print(f"onnx load done: {self.model} ({model_hash})")
 
     def __del__(self):

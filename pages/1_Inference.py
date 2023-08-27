@@ -63,7 +63,7 @@ def init_inference_state():
         device="cuda" if config.has_gpu else "cpu",
         models=get_models(folder="RVC"),
         model_name=None,
-        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
+        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument","karaoke"]),
         preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
         preprocess_model="",
         agg=10,
@@ -92,9 +92,9 @@ def init_inference_state():
     return state
 
 def refresh_data():
-    st.session_state.inference.uvr5_models = get_filenames(root="./models/uvr5_weights",name_filters=["vocal","instrument"])
-    st.session_state.inference.preprocess_models = [""]+get_filenames(root="./models/uvr5_weights",name_filters=["echo","reverb","noise"])
-    st.session_state.inference.models = get_models(folder="weights")
+    st.session_state.inference.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument","karaoke"])
+    st.session_state.inference.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"])
+    st.session_state.inference.models = get_models(folder="RVC")
     st.session_state.inference.audio_files = get_filenames(exts=["wav","flac","ogg","mp3"],name_filters=[""],folder="songs")
     gc_collect()
     
@@ -183,7 +183,7 @@ def render(state):
                 i18n("inference.uvr5_name"),
                 options=state.uvr5_models,
                 format_func=lambda item: os.path.basename(item),
-                default=state.uvr5_name)
+                default=[name for name in state.uvr5_name if name in state.uvr5_models])
             
             col1, col2 = st.columns(2)
             device = col1.radio(
