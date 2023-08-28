@@ -182,7 +182,7 @@ class UVR5Dereverb(UVR5Base):
         self.model = model
     
 class MDXNet:
-    def __init__(self, model_path, chunks=15,denoise=False,num_threads=(os.cpu_count()//2),**kwargs):
+    def __init__(self, model_path, chunks=15,denoise=False,num_threads=1,**kwargs):
         model_hash = MDX.get_hash(model_path)
         with open(os.path.join(os.path.dirname(model_path), 'model_data.json')) as infile:
             model_params = json.load(infile)
@@ -193,7 +193,7 @@ class MDXNet:
         self.mixing = "min_mag"  # ['default','min_mag','max_mag']
         self.chunks = chunks
         # self.margin = 44100
-        self.sr = 16000
+        self.sr = 44100
         # self.dim_t = 9
         self.dim_t=2 ** mp["mdx_dim_t_set"]
         # self.dim_f = 3072
@@ -216,7 +216,7 @@ class MDXNet:
         )
         # self.mp = SimpleNamespace(param={"sr": self.margin})
 
-        self.model = MDX(model_path, self.params,chunks=self.chunks,margin=self.sr)
+        self.model = MDX(model_path, self.params,device=self.device,chunks=self.chunks,margin=self.sr)
         print(f"onnx load done: {self.model} ({model_hash})")
 
     def __del__(self):
@@ -248,11 +248,14 @@ class MDXNet:
             mix = np.stack([mix, mix],axis=0)
 
         if self.denoise:
-            wave_processed = -(self.model.process_wave(-mix, self.num_threads )) + (self.model.process_wave(mix, self.num_threads ))
-            wave_processed *= 0.5
+            args = [mix,-mix]
+            with multiprocessing.Pool(len(args)) as pool:
+                pooled_data = pool.map(self.model.process_wave,args)
+            # wave_processed = -(self.model.process_wave(-mix, self.num_threads )) + (self.model.process_wave(mix, self.num_threads ))
+            wave_processed = (pooled_data[0] - pooled_data[1])*0.5
         else:
             wave_processed = self.model.process_wave(mix, self.num_threads )
-        print(wave_processed.shape,mix.shape)
+        # print(wave_processed.shape,mix.shape)
         return_dict = self.process_audio(background=(mix-wave_processed*self.params.compensation),foreground=wave_processed,target_sr=input_audio[1])
         return_dict["input_audio"] = input_audio
 
@@ -260,13 +263,11 @@ class MDXNet:
 
 class UVR5_Model:
     def __init__(self, model_path, use_cache=False, **kwargs):
-
+        denoise = any([ele in model_path.lower() for ele in ["echo","noise","reverb"]])
         if "MDX" in model_path:
-            self.model = MDXNet(model_path=model_path,denoise=True,**kwargs)
+            self.model = MDXNet(model_path=model_path,denoise=denoise,**kwargs)
         elif "UVR" in model_path:
-            self.model = UVR5Dereverb(model_path=model_path,**kwargs) if any([
-                ele in model_path.lower() for ele in ["echo","noise","reverb"]
-                ]) else UVR5Base(model_path=model_path,**kwargs)
+            self.model = UVR5Dereverb(model_path=model_path,**kwargs) if denoise else UVR5Base(model_path=model_path,**kwargs)
             
         self.use_cache = use_cache
         self.model_path = model_path
@@ -327,6 +328,7 @@ def __run_inference_worker(arg):
     
 def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=10,use_cache=False):
     
+    # if "cuda" in device: torch.multiprocessing.set_start_method("spawn")
     pooled_data = []
 
     if preprocess_model:
@@ -334,7 +336,7 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
             agg=agg,
             model_path=preprocess_model,
             device=device,
-            is_half=device=="cuda",
+            is_half="cuda" in device,
             use_cache=use_cache,
             num_threads = max(os.cpu_count()//2,1)
             )
@@ -352,7 +354,7 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
     else:
         input_audio = load_input_audio(audio_path,mono=True)
     
-    num_threads = max(os.cpu_count()//(len(uvr5_models)*2),1)
+    num_threads = 1 # max(os.cpu_count()//(len(uvr5_models)*2),1)
     args = [(model_path,audio_path,agg,device,use_cache,num_threads) for model_path in uvr5_models]
     with multiprocessing.Pool(len(args)) as pool:
         pooled_data = pool.map(__run_inference_worker,args)

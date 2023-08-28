@@ -1,13 +1,10 @@
 import gc
 import hashlib
 import os
-import queue
-import threading
 import warnings
 
 import librosa
 import numpy as np
-import onnxruntime as ort
 import soundfile as sf
 import torch
 from tqdm import tqdm
@@ -62,23 +59,27 @@ class MDX:
 
     DEFAULT_PROCESSOR = 0
 
-    def __init__(self, model_path: str, params: MDXModel, processor=DEFAULT_PROCESSOR,margin=DEFAULT_MARGIN_SIZE,chunks=15):
+    # def __init__(self, model_path: str, params: MDXModel, processor=DEFAULT_PROCESSOR,margin=DEFAULT_MARGIN_SIZE,chunks=15):
+    def __init__(self, model_path: str, params: MDXModel, device="cpu",margin=DEFAULT_MARGIN_SIZE,chunks=15):
 
         # Set the device and the provider (CPU or CUDA)
-        self.device = torch.device(f'cuda:{processor}') if processor >= 0 else torch.device('cpu')
-        self.provider = ['CUDAExecutionProvider'] if processor >= 0 else ['CPUExecutionProvider']
+        self.device = device #torch.device(f'cuda:{processor}') if processor >= 0 else torch.device('cpu')
+        # self.provider = ['CUDAExecutionProvider'] if processor >= 0 else ['CPUExecutionProvider']
+        self.providers = ['CUDAExecutionProvider','CPUExecutionProvider']
 
         self.model = params
 
         # Load the ONNX model using ONNX Runtime
-        self.ort = ort.InferenceSession(model_path, providers=self.provider)
+        import onnxruntime as ort
+        print(ort.get_available_providers())
+        self.ort = ort.InferenceSession(model_path, providers=self.providers)
         # Preload the model for faster performance
         self.ort.run(None, {'input': torch.rand(1, 4, params.dim_f, params.dim_t).numpy()})
         self.process = lambda spec: self.ort.run(None, {'input': spec.cpu().numpy()})[0]
         self.margin=margin
         self.chunks=chunks
 
-        self.prog = None
+        # self.prog = None
 
     @staticmethod
     def get_hash(model_path):
@@ -172,7 +173,8 @@ class MDX:
 
         return mix_waves, pad, trim
 
-    def _process_wave(self, mix_waves, trim, pad, q: queue.Queue, _id: int):
+    # def _process_wave(self, mix_waves, trim, pad, q: queue.Queue, _id: int):
+    def _process_wave(self, mix_waves, trim, pad):
         """
         Process each wave segment in a multi-threaded environment
 
@@ -190,14 +192,14 @@ class MDX:
         with torch.no_grad():
             pw = []
             for mix_wave in mix_waves:
-                self.prog.update()
+                # self.prog.update()
                 spec = self.model.stft(mix_wave)
-                processed_spec = torch.tensor(self.process(spec))
-                processed_wav = self.model.istft(processed_spec.to(self.device))
+                processed_spec = torch.tensor(self.process(spec)).to(self.device)
+                processed_wav = self.model.istft(processed_spec)
                 processed_wav = processed_wav[:, :, trim:-trim].transpose(0, 1).reshape(2, -1).cpu().numpy()
                 pw.append(processed_wav)
         processed_signal = np.concatenate(pw, axis=-1)[:, :-pad]
-        q.put({_id: processed_signal})
+        # q.put({_id: processed_signal})
         return processed_signal
 
     def process_wave(self, wave: np.array, mt_threads=1):
@@ -211,29 +213,18 @@ class MDX:
         Returns:
             numpy array: Processed wave array
         """
-        self.prog = tqdm(total=0)
-        chunk_size = wave.shape[-1] // (mt_threads if not self.chunks else (self.chunks*mt_threads))
+        # self.prog = tqdm(total=0)
+        # chunk_size = wave.shape[-1] // (mt_threads if not self.chunks else (self.chunks*mt_threads))
+        chunk_size = self.model.chunk_size
         margin = self.margin
         waves = self.segment(wave, False, chunk_size, margin)
-
-        # Create a queue to hold the processed wave segments
-        q = queue.Queue()
-        threads = []
-        for c, batch in enumerate(waves):
-            mix_waves, pad, trim = self.pad_wave(batch)
-            self.prog.total = len(mix_waves) * mt_threads
-            thread = threading.Thread(target=self._process_wave, args=(mix_waves, trim, pad, q, c))
-            thread.start()
-            threads.append(thread)
-        for thread in threads:
-            thread.join()
-        self.prog.close()
-
+        
         processed_batches = []
-        while not q.empty():
-            processed_batches.append(q.get())
-        processed_batches = [list(wave.values())[0] for wave in
-                             sorted(processed_batches, key=lambda d: list(d.keys())[0])]
+        for batch in tqdm(waves,desc="processing waves"):
+            mix_waves, pad, trim = self.pad_wave(batch)
+            processed_waves = self._process_wave(mix_waves, trim, pad)
+            processed_batches.append(processed_waves)
+
         assert len(processed_batches) == len(waves), 'Incomplete processed batches, please reduce batch size!'
         return self.segment(processed_batches, True, chunk_size, margin)
 
