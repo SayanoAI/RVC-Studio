@@ -53,7 +53,7 @@ from lib.train.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 global_step = 0
 least_loss = 40
 
-def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./models/weights"):
+def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./models/RVC"):
     try:
         opt = OrderedDict()
         opt["weight"] = {}
@@ -85,7 +85,7 @@ def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./mo
         opt["sr"] = sr
         opt["f0"] = if_f0
         opt["version"] = version
-        torch.save(opt, os.sep.join([model_path,name]))
+        torch.save(opt, os.sep.join([model_path,name,".pth"]))
         return "Success."
     except:
         return traceback.format_exc()
