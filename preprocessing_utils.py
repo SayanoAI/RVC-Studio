@@ -355,4 +355,3 @@ def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method("spawn")
-    main()

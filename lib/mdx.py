@@ -76,10 +76,10 @@ class MDX:
 
         # Load the ONNX model using ONNX Runtime
         self.ort = ort.InferenceSession(model_path, providers=self.providers)
-        print(self.ort,self.device,self.providers)
+        # print(self.ort,self.device,self.providers)
 
         # Preload the model for faster performance
-        self.ort.run(None, {'input': torch.rand(1, 4, params.dim_f, params.dim_t).numpy()})
+        # self.ort.run(None, {'input': torch.rand(1, 4, params.dim_f, params.dim_t).numpy()})
         self.process = lambda spec: self.ort.run(None, {'input': spec.cpu().numpy()})[0]
         self.margin=margin
         self.chunks=chunks
