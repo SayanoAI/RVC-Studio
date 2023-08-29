@@ -79,12 +79,13 @@ class VC(object):
         filter_radius,
         inp_f0=None,
     ):
-        global input_audio_path2wav
+        
         time_step = self.window / self.sr * 1000
         f0_min = 50
         f0_max = 1100
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
+        x = librosa.effects.pitch_shift(x, self.sr, n_steps=f0_up_key) if f0_up_key!=0 else x #pitch shift input
         if f0_method == "pm":
             import parselmouth
             f0 = (
@@ -103,6 +104,7 @@ class VC(object):
                     f0, [[pad_size, p_len - len(f0) - pad_size]], mode="constant"
                 )
         elif f0_method == "harvest":
+            global input_audio_path2wav
             input_audio_path2wav[input_audio_path] = x.astype(np.double)
             f0 = cache_harvest_f0(input_audio_path, self.sr, f0_max, f0_min, 10)
             if filter_radius > 2:
@@ -143,7 +145,20 @@ class VC(object):
                 del self.model_rmvpe
                 print("cleaning ortruntime memory")
 
-        f0 *= pow(2, f0_up_key / 12)
+        
+        # scale = pow(2, f0_up_key / 12)
+        
+        # f_max = f0.max()#max(f0.max(),f0_max)
+        # f0_mid = f_max if f0_up_key==0 else f_max/2
+        
+        
+        # print("\tbefore scaling",f0.shape,f0.min(),f0.mean(),f0.max(),f0_mid,scale)
+        # y_normalized = f0/f_max
+        # x = librosa.effects.pitch_shift(x, self.sr, n_steps=f0_up_key)
+        # f0 = f0 * scale
+        # print("\tafter scaling",f0.shape,f0.min(),f0.mean(),f0.max(),f0_mid,scale)
+        
+
         # with open("test.txt","w")as f:f.write("\n".join([str(i)for i in f0.tolist()]))
         tf0 = self.sr // self.window  # 每秒f0点数
         if inp_f0 is not None:
@@ -158,7 +173,7 @@ class VC(object):
                 :shape
             ]
         # with open("test_opt.txt","w")as f:f.write("\n".join([str(i)for i in f0.tolist()]))
-        f0bak = f0.copy()
+        # f0bak = f0.copy()
         f0_mel = 1127 * np.log(1 + f0 / 700)
         f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (
             f0_mel_max - f0_mel_min
@@ -166,7 +181,7 @@ class VC(object):
         f0_mel[f0_mel <= 1] = 1
         f0_mel[f0_mel > 255] = 255
         f0_coarse = np.rint(f0_mel).astype(np.int32)
-        return f0_coarse, f0bak  # 1-0
+        return f0_coarse, f0  # 1-0
 
     def vc(
         self,
