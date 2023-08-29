@@ -64,10 +64,7 @@ config, i18n = load_config()
 @st.cache_data
 def get_index(arr,value): return arr.index(value) if value in arr else 0
 
-def gc_collect(*args):
-    for arg in args:
-        del arg
-    args = None
+def gc_collect():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     gc.collect()

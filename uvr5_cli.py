@@ -182,30 +182,20 @@ class UVR5Dereverb(UVR5Base):
         self.model = model
     
 class MDXNet:
-    def __init__(self, model_path, chunks=15,denoise=False,num_threads=1,**kwargs):
+    def __init__(self, model_path, chunks=15,denoise=False,num_threads=1,device="cpu",**kwargs):
         model_hash = MDX.get_hash(model_path)
         with open(os.path.join(os.path.dirname(model_path), 'model_data.json')) as infile:
             model_params = json.load(infile)
         mp = model_params.get(model_hash)
 
-        self.onnx = model_path
-        self.shifts = 10  #'Predict with randomised equivariant stabilisation'
-        self.mixing = "min_mag"  # ['default','min_mag','max_mag']
         self.chunks = chunks
-        # self.margin = 44100
-        self.sr = 44100
-        # self.dim_t = 9
-        self.dim_t=2 ** mp["mdx_dim_t_set"]
-        # self.dim_f = 3072
-        self.dim_f=mp["mdx_dim_f_set"]
-        # self.n_fft = 6144
-        self.n_fft=mp["mdx_n_fft_scale_set"]
+        self.sr = 16000 if denoise else 44100
         
         self.args = SimpleNamespace(**kwargs)
         self.denoise = denoise
         self.num_threads = num_threads
 
-        self.device = self.args.device #self.args.device #cuda doesn't work for some reason
+        self.device = device
         self.params = MDXModel(
             self.device,
             dim_f=mp["mdx_dim_f_set"],
@@ -248,10 +238,8 @@ class MDXNet:
             mix = np.stack([mix, mix],axis=0)
 
         if self.denoise:
-            args = [mix,-mix]
-            with multiprocessing.Pool(len(args)) as pool:
-                pooled_data = pool.map(self.model.process_wave,args)
-            # wave_processed = -(self.model.process_wave(-mix, self.num_threads )) + (self.model.process_wave(mix, self.num_threads ))
+            with ThreadPool(2) as pool:
+                pooled_data = pool.map(self.model.process_wave,[mix,-mix])
             wave_processed = (pooled_data[0] - pooled_data[1])*0.5
         else:
             wave_processed = self.model.process_wave(mix, self.num_threads )

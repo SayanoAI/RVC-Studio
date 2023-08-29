@@ -206,7 +206,9 @@ def get_active_pids(pids):
 def kill_all_process(pids):
     for pid in get_active_pids(pids):
         pid.kill()
-    gc_collect(pids)
+    
+    del pids
+    gc_collect()
     st.experimental_rerun()
 
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
@@ -286,7 +288,8 @@ def render(state):
             if col3.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{prc.pid}"):
                 prc.kill()
                 prc.returncode="killed"
-                gc_collect(prc)
+                del prc
+                gc_collect()
 
         if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
             kill_all_process(state.pids)

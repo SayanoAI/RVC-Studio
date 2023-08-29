@@ -307,7 +307,8 @@ def preprocess_trainset(inp_root, sr, n_p, exp_dir):
     pp.println(sys.argv)
     pp.pipeline_mp_inp_dir(inp_root, n_p)
     pp.println("end preprocess")
-    gc_collect(pp)
+    del pp
+    gc_collect()
 
 def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
     
