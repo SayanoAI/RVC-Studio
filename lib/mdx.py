@@ -52,7 +52,7 @@ class MDXModel:
         x = x.permute([0, 2, 3, 1])
         x = x.contiguous()
         x = torch.view_as_complex(x)
-        x = torch.istft(x, n_fft=self.n_fft, hop_length=self.hop, window=self.window.cpu(), center=True)
+        x = torch.istft(x.to(self.device), n_fft=self.n_fft, hop_length=self.hop, window=self.window, center=True)
         return x.reshape([-1, 2, self.chunk_size])
 
 

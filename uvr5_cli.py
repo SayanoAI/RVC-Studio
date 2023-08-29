@@ -300,7 +300,7 @@ def get_filename(model_path,audio_path,agg,**kwargs):
     return name
 
 def __run_inference_worker(arg):
-    (model_path,audio_path,agg,device,use_cache,num_threads) = arg
+    (model_path,audio_path,agg,device,use_cache) = arg
     
     model = UVR5_Model(
             agg=agg,
@@ -308,7 +308,7 @@ def __run_inference_worker(arg):
             device=device,
             is_half=device=="cuda",
             use_cache=use_cache,
-            num_threads=num_threads
+            # num_threads=num_threads
             )
     vocals, instrumental, input_audio = model.run_inference(audio_path)
 
@@ -317,7 +317,7 @@ def __run_inference_worker(arg):
 def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=10,use_cache=False):
     
     # if "cuda" in device: torch.multiprocessing.set_start_method("spawn")
-    pooled_data = []
+    # pooled_data = []
 
     if preprocess_model:
         model = UVR5_Model(
@@ -342,17 +342,20 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
     else:
         input_audio = load_input_audio(audio_path,mono=True)
     
-    num_threads = 1 # max(os.cpu_count()//(len(uvr5_models)*2),1)
-    args = [(model_path,audio_path,agg,device,use_cache,num_threads) for model_path in uvr5_models]
-    with multiprocessing.Pool(len(args)) as pool:
-        pooled_data = pool.map(__run_inference_worker,args)
-    # pool.join()
+    # num_threads = 1 # max(os.cpu_count()//(len(uvr5_models)*2),1)
+    # args = [(model_path,audio_path,agg,device,use_cache,num_threads) for model_path in uvr5_models]
+    # with multiprocessing.Pool(len(args)) as pool:
+    #     pooled_data = pool.map(__run_inference_worker,args)
+    # # pool.join()
         
     wav_instrument = []
     wav_vocals = []
     max_len = 0
 
-    for ( vocals, instrumental, _) in pooled_data:
+    # for ( vocals, instrumental, _) in pooled_data:
+    for model_path in uvr5_models:
+        args = (model_path,audio_path,agg,device,use_cache)
+        vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])
         wav_instrument.append(instrumental[0])
         max_len = max(max_len,len(vocals[0]),len(instrumental[0]))
