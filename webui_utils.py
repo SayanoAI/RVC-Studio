@@ -22,13 +22,49 @@ import json
 from scipy.io import wavfile
 import io
 
-# logging.getLogger("numba").setLevel(logging.WARNING)
-# logging.getLogger("markdown_it").setLevel(logging.WARNING)
-# logging.getLogger("urllib3").setLevel(logging.WARNING)
-# logging.getLogger("matplotlib").setLevel(logging.WARNING)
 torch.manual_seed(114514)
 
 MAX_INT16 = 32768
+
+class SessionStateContext:
+    def __init__(self, name: str, initial_state={}):
+        self.__data__ = st.session_state.get(name,initial_state)
+        self.__name__ = name
+        self.__initial_state__ = initial_state
+    
+    def __enter__(self):
+        print("Entering the context")
+        print(f"Acquiring {self}")
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        print(exc_type, exc_value, traceback)
+        print("Exiting the context")
+        print(f"Releasing {repr(self)}")
+        st.session_state[self.__name__] = self.__data__
+    
+    def __dir__(self):
+        return self.data.__dir__
+    
+    def __str__(self):
+        return str(self.__data__)
+    
+    def __repr__(self):
+        return f"SessionStateContext('{self.__name__}',{self.__data__})"
+    
+    def __getattr__(self, name: str):
+        if name.startswith("__") and name.endswith("__"):
+            super().__getattr__(name)
+        else:
+            return self.__data__.get(name)
+        # return getattr(self.__data__, name)
+    
+    def __setattr__(self, name, value):
+        if name.startswith("__") and name.endswith("__"):
+            super().__setattr__(name, value)
+        else:
+            self.__data__[name] = value
+            # setattr(self.__data__, name, value)
 
 class I18nAuto:
     def __init__(self, language=None):
