@@ -352,6 +352,3 @@ def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
                 featureInput.printt("f0_all_fail-%s" % (traceback.format_exc()))
 
     return ps
-
-if __name__ == "__main__":
-    torch.multiprocessing.set_start_method("spawn")

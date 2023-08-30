@@ -33,38 +33,56 @@ class SessionStateContext:
         self.__initial_state__ = initial_state
     
     def __enter__(self):
-        print("Entering the context")
-        print(f"Acquiring {self}")
+        # print("Entering the context")
+        # print(f"Acquiring {self}")
         return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        print(exc_type, exc_value, traceback)
-        print("Exiting the context")
-        print(f"Releasing {repr(self)}")
+    def __exit__(self, *_):
+        # print(exc_type, exc_value, traceback)
+        # print("Exiting the context")
+        # print(f"Releasing {repr(self)}")
         st.session_state[self.__name__] = self.__data__
     
     def __dir__(self):
         return self.data.__dir__
-    
     def __str__(self):
         return str(self.__data__)
-    
     def __repr__(self):
         return f"SessionStateContext('{self.__name__}',{self.__data__})"
     
+    def __getitem__(self, name: str):
+        if name in self.__data__:
+            return self.__data__[name]
+        else:
+            return self.__getattr__(name)
+        
+    def __setitem__(self, name: str, value):
+        if name in self.__data__:
+            self.__data__[name] = value
+        else:
+            self.__setattr__(name, value)
+    def __delitem__(self,name):
+        if name in self.__data__:
+            del self.__data__[name]
+        else:
+            self.__delattr__(name)
+        
     def __getattr__(self, name: str):
         if name.startswith("__") and name.endswith("__"):
-            super().__getattr__(name)
+            return super().__getattr__(name)
         else:
             return self.__data__.get(name)
-        # return getattr(self.__data__, name)
-    
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value):
         if name.startswith("__") and name.endswith("__"):
             super().__setattr__(name, value)
         else:
             self.__data__[name] = value
-            # setattr(self.__data__, name, value)
+    def __delattr__(self,name):
+        if name.startswith("__") and name.endswith("__"):
+            super().__delattr__(name)
+        elif name in self.__data__:
+            del self.__data__[name]
+        else:
+            print(f"Failed to delete {name}")
 
 class I18nAuto:
     def __init__(self, language=None):

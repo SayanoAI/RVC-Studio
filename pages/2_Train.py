@@ -9,7 +9,7 @@ import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
 
-from webui_utils import gc_collect, get_filenames, get_index, load_config
+from webui_utils import SessionStateContext, gc_collect, get_filenames, get_index, load_config
 
 config, i18n = load_config()
 CWD = os.getcwd()
@@ -211,13 +211,38 @@ def kill_all_process(pids):
     gc_collect()
     st.experimental_rerun()
 
+@st.cache_data
+def init_training_state():
+    state = SimpleNamespace(
+        exp_dir="",
+        sr="40k",
+        if_f0=True,
+        trainset_dir="",
+        spk_id=0,
+        f0method="rmvpe",
+        save_epoch=0,
+        total_epoch=100,
+        batch_size=4,
+        n_threads=os.cpu_count(),
+        if_save_latest=True,
+        pretrained_G=None,
+        pretrained_D=None,
+        gpus=[0],
+        if_cache_gpu=False,
+        if_save_every_weights=False,
+        version="v2",
+        pids=[],
+        device="cuda")
+    return vars(state)
+
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
 PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 SR_MAP = {"40k": 40000, "48k": 48000}
-PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"G{st.session_state.training.sr}"])
-PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"D{st.session_state.training.sr}"])
 
-def render(state):
+
+with SessionStateContext("training",init_training_state()) as state:
+    PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"G{state.sr}"])
+    PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"D{state.sr}"])
     
     with st.container():
         col1,col2 = st.columns(2)
@@ -294,35 +319,11 @@ def render(state):
         if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
             kill_all_process(state.pids)
 
-    return state
+    # return state
 
-@st.cache_data
-def init_training_state():
-    state = SimpleNamespace(
-        exp_dir="",
-        sr="40k",
-        if_f0=True,
-        trainset_dir="",
-        spk_id=0,
-        f0method="rmvpe",
-        save_epoch=0,
-        total_epoch=100,
-        batch_size=4,
-        n_threads=os.cpu_count(),
-        if_save_latest=True,
-        pretrained_G=None,
-        pretrained_D=None,
-        gpus=[0],
-        if_cache_gpu=False,
-        if_save_every_weights=False,
-        version="v2",
-        pids=[],
-        device="cuda")
-    return state
+# def init_state():
+#     st.session_state["training"] = st.session_state.get("training",init_training_state())
 
-def init_state():
-    st.session_state["training"] = st.session_state.get("training",init_training_state())
+# init_state()
 
-init_state()
-
-if __name__=="__main__": st.session_state.training=render(st.session_state.training)
+# if __name__=="__main__": st.session_state.training=render(st.session_state.training)
