@@ -69,6 +69,7 @@ def init_inference_state():
         preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
         preprocess_model="",
         agg=10,
+        merge_type="median",
         dereverb=False,
         uvr5_name=[],
         use_cache=True,
@@ -116,23 +117,23 @@ def get_filename(audio_name,model_name):
     return f"{singer}.{song}"
 
 def one_click_convert(state):
-    vocals, instrumental, input_audio = split_vocals(
+    state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
         state.uvr5_name,
         audio_path=state.input_audio_name,
         preprocess_model=state.preprocess_model,
         device=state.device,
         agg=state.agg,
-        use_cache=state.use_cache
+        use_cache=state.use_cache,
+        merge_type=state.merge_type
         )
     params = vars(state.convert_params)
     
     changed_vocals = convert_vocals(
         state,
-        vocals,
+        state.input_vocals,
         **params)
-    state.input_audio = input_audio
     state.output_vocals = changed_vocals
-    mixed_audio = merge_audio(changed_vocals,instrumental,sr=state.input_audio[1])
+    mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_audio[1])
     state.output_audio_name = get_filename(
         state.input_audio_name,state.model_name)
     state.output_audio = mixed_audio
@@ -151,7 +152,9 @@ if __name__=="__main__":
             state.input_audio_name = left.selectbox(
                 i18n("inference.song.selectbox"),
                 options=state.audio_files,
-                index=get_index(state.audio_files,state.input_audio_name))
+                index=get_index(state.audio_files,state.input_audio_name),
+                format_func=lambda option: os.path.basename(option)
+                )
             col1, col2 = left.columns(2)
             if col1.button(i18n("inference.refresh_data.button"),use_container_width=True):
                 state = refresh_data(state)
@@ -166,7 +169,8 @@ if __name__=="__main__":
             state.model_name = right.selectbox(
                 i18n("inference.voice.selectbox"),
                 options=state.models,
-                index=get_index(state.models,state.model_name)
+                index=get_index(state.models,state.model_name),
+                format_func=lambda option: os.path.basename(option).split(".")[0]
                 )
             if right.button(i18n("inference.clear_data.button")):
                 state = clear_data(state)
@@ -192,16 +196,21 @@ if __name__=="__main__":
                     disabled=not config.has_gpu,
                     options=DEVICE_OPTIONS,horizontal=True,
                     index=get_index(DEVICE_OPTIONS,state.device))
+                merge_type = col1.radio(
+                    i18n("inference.merge_type"),
+                    options=["median","mean"],horizontal=True,
+                    index=get_index(["median","mean"],state.merge_type))
+                
                 agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
-
-                use_cache=col1.checkbox(i18n("inference.use_cache"),value=state.use_cache)
-                # state.dereverb=col1.checkbox(i18n("inference.dereverb"),value=state.dereverb)
-                if st.form_submit_button(i18n("inference.save.button")):
+                use_cache=col2.checkbox(i18n("inference.use_cache"),value=state.use_cache)
+                
+                if col1.form_submit_button(i18n("inference.save.button")):
                     state.agg=agg
                     state.use_cache=use_cache
                     state.device=device
                     state.preprocess_model=preprocess_model
                     state.uvr5_name=uvr5_name
+                    state.merge_type=merge_type
 
         if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_name))):
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
@@ -210,7 +219,8 @@ if __name__=="__main__":
                 preprocess_model=state.preprocess_model,
                 device=state.device,
                 agg=state.agg,
-                use_cache=state.use_cache
+                use_cache=state.use_cache,
+                merge_type=state.merge_type
                 )
                 
         with st.container():
@@ -256,23 +266,22 @@ if __name__=="__main__":
                         protect=protect
                     )
         if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
-                    with st.spinner(i18n("inference.convert_vocals")):
-                        output_vocals = convert_vocals(
-                            state,
-                            state.input_vocals,
-                            **vars(state.convert_params)
-                            )
+            with st.spinner(i18n("inference.convert_vocals")):
+                output_vocals = convert_vocals(
+                    state,
+                    state.input_vocals,
+                    **vars(state.convert_params)
+                    )
                         
-                    if output_vocals is not None:
-                        state.output_vocals = output_vocals
-                        with st.spinner(i18n("inference.convert_vocals")):
-                            mixed_audio = merge_audio(
-                                output_vocals,
-                                state.input_instrumental,
-                                sr=state.input_audio[1]
-                            )
-                            state.output_audio = mixed_audio
-                            state.output_audio_name = get_filename(state.input_audio_name,state.model_name)
+                if output_vocals is not None:
+                    state.output_vocals = output_vocals
+                    mixed_audio = merge_audio(
+                        output_vocals,
+                        state.input_instrumental,
+                        sr=state.input_audio[1]
+                    )
+                    state.output_audio = mixed_audio
+                    state.output_audio_name = get_filename(state.input_audio_name,state.model_name)
         
         with st.container():
             col1, col2 = st.columns(2)
@@ -291,20 +300,19 @@ if __name__=="__main__":
                 col2.audio(state.output_audio[0],sample_rate=state.output_audio[1])
                 if col2.button(i18n("inference.download.button")):
                     download_song(state.output_audio,state.output_audio_name)
-                # col2.download_button(
-                #     label=i18n("inference.download.button"),
-                #     data=audio_to_bytes(state.output_audio[0],state.output_audio[1]),
-                #     file_name=state.output_audio_name,
-                #     mime="audio/mpeg")
 
-        with st.form("tts"):
+        with st.container():
             state.tts_text = st.text_area("text",state.tts_text)
             container = st.container()
-            if st.form_submit_button("talk"):
-                state.tts_audio = speecht5(state.text,"female")
-                state.converted_voice = convert_vocals(state.model_name,state.tts_audio)
+            if st.button("talk"):
+                with st.spinner("performing TTS..."):
+                    state.tts_audio = speecht5(state.tts_text ,"female")
+                    state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.convert_params))
+            if state.converted_voice:
                 container.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
                 container.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])
+                if st.button("download text",disabled=state.converted_voice is None):
+                    download_song(state.converted_voice,str(hash(state.tts_text))[:10],ext="wav")
 
 # def init_state():
 #     st.session_state["inference"] = st.session_state.get("inference",init_inference_state())

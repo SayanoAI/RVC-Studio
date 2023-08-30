@@ -285,7 +285,7 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
     if resample or input_audio[1]!=target_sr:
         audio = librosa.core.resample(np.array(input_audio[0],dtype="float32"),orig_sr=input_audio[1],target_sr=target_sr,**kwargs)
     
-    if to_mono and audio.ndim>1: audio=audio.mean(axis)
+    if to_mono and audio.ndim>1: audio=np.nanmedian(audio,axis)
 
     if norm: audio = librosa.util.normalize(audio)
 

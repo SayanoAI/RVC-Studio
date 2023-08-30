@@ -314,7 +314,7 @@ def __run_inference_worker(arg):
 
     return vocals, instrumental, input_audio
     
-def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=10,use_cache=False):
+def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=10,use_cache=False,merge_type="mean"):
     
     # if "cuda" in device: torch.multiprocessing.set_start_method("spawn")
     # pooled_data = []
@@ -360,8 +360,9 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
         wav_instrument.append(instrumental[0])
         max_len = max(max_len,len(vocals[0]),len(instrumental[0]))
 
-    wav_instrument = np.mean([librosa.util.pad_center(wav,max_len) for wav in wav_instrument],axis=0)
-    wav_vocals = np.mean([librosa.util.pad_center(wav,max_len) for wav in wav_vocals],axis=0)
+    merge_func = np.nanmedian if merge_type=="median" else np.nanmean
+    wav_instrument = merge_func([librosa.util.pad_center(wav,max_len) for wav in wav_instrument],axis=0)
+    wav_vocals = merge_func([librosa.util.pad_center(wav,max_len) for wav in wav_vocals],axis=0)
     instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
     vocals = remix_audio((wav_vocals,vocals[1]),norm=True,to_int16=True,to_mono=True)
 
@@ -383,6 +384,9 @@ def main(): #uvr5_models,audio_path,device="cuda",agg=10,use_cache=False
     )
     parser.add_argument(
         "-d", "--device", type=str, default="cpu", choices=["cpu","cuda"], help="perform calculations on [cpu] or [cuda]"
+    )
+    parser.add_argument(
+        "-m", "--merge_type", type=str, default="median", choices=["mean","median"], help="how to combine processed audio"
     )
     parser.add_argument(
         "-c", "--use_cache", type=bool, action="store_true", default=False, help="caches the results so next run is faster"

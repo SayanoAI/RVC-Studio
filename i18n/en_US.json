@@ -11,6 +11,7 @@
     "inference.preprocess_model": "Choose a preprocessing model",
     "inference.uvr5_name": "Choose a vocal extraction model",
     "inference.device": "Extract Vocals",
+    "inference.merge_type": "Merge Type",
     "inference.agg": "Aggressiveness in isolating vocals",
     "inference.use_cache": "Reduce future processing time by saving results to disk",
 
