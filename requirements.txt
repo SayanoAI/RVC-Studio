@@ -48,3 +48,8 @@ json5
 Markdown
 Cython
 pytube
+
+#tts
+transformers
+num2words
+sentencepiece

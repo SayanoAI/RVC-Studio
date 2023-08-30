@@ -2,6 +2,7 @@ import streamlit as st
 from types import SimpleNamespace
 
 from webui_utils import get_filenames, get_index, load_config, load_input_audio
+from tts import speecht5
 
 _, i18n = load_config()
 
@@ -51,6 +52,8 @@ def render(state):
     if st.session_state.processing.a1: col1.audio(st.session_state.processing.a1)
     if st.session_state.processing.a2: col2.audio(st.session_state.processing.a2)
     if st.session_state.processing.a3: st.audio(st.session_state.processing.a3)
+
+    
 
     return state
 

@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from types import SimpleNamespace
+from tts import speecht5
 
 from webui_utils import gc_collect, get_filenames, get_index, get_vc, load_config, merge_audio, save_input_audio, vc_single
 from uvr5_cli import split_audio
@@ -290,6 +291,15 @@ def render(state):
             #     data=audio_to_bytes(state.output_audio[0],state.output_audio[1]),
             #     file_name=state.output_audio_name,
             #     mime="audio/mpeg")
+
+    with st.form("tts"):
+        text = st.text_area("text")
+        container = st.container()
+        if st.form_submit_button("talk"):
+            tts_audio = speecht5(text,"female")
+            converted_voice = convert_vocals(state.model_name,tts_audio)
+            container.audio(tts_audio[0],sample_rate=tts_audio[1])
+            container.audio(converted_voice[0],sample_rate=converted_voice[1])
 
     return state
 
