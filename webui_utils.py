@@ -26,11 +26,51 @@ torch.manual_seed(114514)
 
 MAX_INT16 = 32768
 
+from contextlib import contextmanager
+from io import StringIO
+from threading import current_thread
+import streamlit as st
+import sys
+
+
+@contextmanager
+def st_redirect(src, dst):
+    placeholder = st.empty()
+    output_func = getattr(placeholder, dst)
+
+    with StringIO() as buffer:
+        old_write = src.write
+
+        def new_write(b):
+            if getattr(current_thread(), "st.REPORT_CONTEXT_ATTR_NAME", None):
+                buffer.write(b)
+                output_func(buffer.getvalue())
+            else:
+                old_write(b)
+
+        try:
+            src.write = new_write
+            yield
+        finally:
+            src.write = old_write
+
+
+@contextmanager
+def st_stdout(dst):
+    with st_redirect(sys.stdout, dst):
+        yield
+
+
+@contextmanager
+def st_stderr(dst):
+    with st_redirect(sys.stderr, dst):
+        yield
+
 class SessionStateContext:
     def __init__(self, name: str, initial_state={}):
         self.__data__ = st.session_state.get(name,initial_state)
         self.__name__ = name
-        self.__initial_state__ = initial_state
+        self.__initial_state__ = {} if initial_state is None else initial_state
     
     def __enter__(self):
         # print("Entering the context")
@@ -189,6 +229,7 @@ def vc_single(
     resample_sr=0,
     rms_mix_rate=.25,
     protect=0.33,
+    **kwargs #prevents function from breaking
 ):
     if hubert_model == None:
         hubert_model = load_hubert()
