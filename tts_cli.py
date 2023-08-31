@@ -38,14 +38,15 @@ def cast_to_device(tensor, device):
     
 def __bark__(text, device="cpu"):
     from transformers import AutoProcessor, BarkModel
+    dtype = torch.float32 if "cpu" in device else torch.float16
     bark_processor = AutoProcessor.from_pretrained(
         bark_checkpoint,
         cache_dir=os.path.join(TTS_MODELS_DIR,bark_checkpoint),
-        torch_dtype=torch.float16)
+        torch_dtype=dtype)
     bark_model = BarkModel.from_pretrained(
         bark_checkpoint,
         cache_dir=os.path.join(TTS_MODELS_DIR,bark_checkpoint),
-        torch_dtype=torch.float16).to(device)
+        torch_dtype=dtype).to(device)
     # bark_model.enable_cpu_offload()
 
     inputs = bark_processor(
