@@ -55,3 +55,4 @@ num2words
 sentencepiece
 speechbrain
 accelerate
+edge-tts

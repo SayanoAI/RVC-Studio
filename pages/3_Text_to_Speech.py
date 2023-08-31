@@ -30,7 +30,6 @@ def load_model(_state,model_name):
         data["file_index"] = index_file[0] if len(index_file) else ""
         return data
 
-@st.cache_data(max_entries=10)
 def convert_vocals(_state,input_audio,**kwargs):
     print(f"converting vocals... {_state.model_name} - {kwargs}")
     models=load_model(_state,_state.model_name)
@@ -47,22 +46,19 @@ def init_inference_state():
         models=get_models(folder="RVC"),
         device="cuda" if config.has_gpu else "cpu",
         tts_options=SimpleNamespace(
-            f0_up_key=0,
+            f0_up_key=6,
             f0_method="rmvpe",
-            index_rate=.75,
+            index_rate=.8,
             filter_radius=3,
             resample_sr=0,
-            rms_mix_rate=.2,
-            protect=0.2
+            rms_mix_rate=.25,
+            protect=0.25
         )
     )
     return vars(state)
 
 def refresh_data(state):
-    state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument","karaoke"])
-    state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"])
     state.models = get_models(folder="RVC")
-    state.audio_files = get_filenames(exts=["wav","flac","ogg","mp3"],name_filters=[""],folder="songs")
     gc_collect()
     return state
     
@@ -90,11 +86,11 @@ def one_click_speech(state):
     speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
     state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
     state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
-    
-TTS_MODELS = ["speecht5","bark","tacotron2"]
+
+TTS_MODELS = ["speecht5","bark","tacotron2","edge"]
 
 if __name__=="__main__":
-    with st_stdout("info"),st_stderr("error"),SessionStateContext("tts",initial_state=init_inference_state()) as state:
+    with SessionStateContext("tts",initial_state=init_inference_state()) as state:
         with st.container():
             left, right = st.columns(2)
             state.tts_method = left.selectbox(
@@ -120,7 +116,7 @@ if __name__=="__main__":
             
 
         st.subheader(i18n("tts.inference"))
-        with st.expander("tts.options"):
+        with st.expander(i18n("tts.options")):
             with st.form("tts.options.form"):
                 col1, col2 = st.columns(2)
                 device = col1.radio(
@@ -129,7 +125,7 @@ if __name__=="__main__":
                     options=DEVICE_OPTIONS,horizontal=True,
                     index=get_index(DEVICE_OPTIONS,state.device))
                 
-                f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.tts_options.f0_up_key)
+                f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
                 f0_method = st.selectbox(i18n("inference.f0_method"),
                                                     options=PITCH_EXTRACTION_OPTIONS,
                                                     index=get_index(PITCH_EXTRACTION_OPTIONS,state.tts_options.f0_method))

@@ -1,11 +1,7 @@
-import gc
 import hashlib
-import os
 import warnings
 
-import librosa
 import numpy as np
-import soundfile as sf
 import torch
 from tqdm import tqdm
 
@@ -30,7 +26,7 @@ class MDXModel:
         self.n_bins = self.n_fft // 2 + 1
         self.chunk_size = hop * (self.dim_t - 1)
         self.device = device
-        self.window = torch.hann_window(window_length=self.n_fft, periodic=True).to(self.device)
+        self.window = torch.hann_window(window_length=self.n_fft, periodic=True,dtype=torch.float32,device=self.device)
 
         out_c = self.dim_c
 

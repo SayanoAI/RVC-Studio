@@ -1,10 +1,11 @@
+import io
 import numpy as np
 import torch
 import os
 
 from num2words import num2words
 
-from webui_utils import MAX_INT16, remix_audio
+from webui_utils import MAX_INT16, load_input_audio, remix_audio
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -25,7 +26,9 @@ def __speecht5__(text, speaker_embedding=None, device="cpu"):
     inputs = tts_processor(text=text, return_tensors="pt")
     input_ids = inputs["input_ids"]
     input_ids = input_ids[..., :tts_model.config.max_text_positions]
-    speech = tts_model.generate_speech(input_ids.to(device), speaker_embedding.to(device), vocoder=tts_vocoder)
+
+    dtype = torch.float32 if "cpu" in device else torch.float16
+    speech = tts_model.generate_speech(input_ids.to(device), speaker_embedding.to(device).to(dtype), vocoder=tts_vocoder)
     speech = (speech.cpu().numpy() * MAX_INT16).astype(np.int16)
     return speech, 16000
 
@@ -75,6 +78,29 @@ def __tacotron2__(text, device="cpu"):
     # return as numpy array
     return speech, 22050
 
+def __edge__(text, speaker="en-US-JennyNeural"):
+    import edge_tts
+    import asyncio
+
+    async def fetch_audio():
+        communicate = edge_tts.Communicate(text, speaker)
+        tempfile = os.path.join("output","edge_tts.wav")
+        with open(tempfile, "wb") as data:
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    data.write(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    print(f"WordBoundary: {chunk}")
+        
+        return load_input_audio(tempfile)
+    
+    audio, sr = asyncio.run(fetch_audio())
+    # audio = np.frombuffer(stream.getbuffer())
+    print(audio.shape,audio.max(),audio.min(),audio.mean(),sr)
+    # return as numpy array
+    return audio, sr
+
+
 def train_speaker_embedding(speaker: str,input_audio=None):
     embedding_path = f"./models/tts/embeddings/{speaker}.npy"
     if os.path.exists(embedding_path):
@@ -103,11 +129,13 @@ def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
         if speaker is None: raise ValueError(f"Must provider a speaker_embedding for {method} inference!")
         if type(speaker)==str:
             speaker_embedding = np.load(speaker)
-            speaker_embedding = torch.tensor(speaker_embedding)
+            speaker_embedding = torch.tensor(speaker_embedding).half()
         else: speaker_embedding = speaker
         return __speecht5__(text,speaker_embedding,device)
     elif method=="bark":
         return __bark__(text,device)
     elif method=="tacotron2":
         return __tacotron2__(text,device)
+    elif method=="edge":
+        return __edge__(text)
     else: return None

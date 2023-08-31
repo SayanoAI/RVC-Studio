@@ -2,7 +2,7 @@ import numpy as np, torch, sys, os
 from time import time as ttime
 import torch.nn.functional as F
 import scipy.signal as signal
-import pyworld, os, traceback, faiss, librosa, torchcrepe
+import pyworld, os, traceback, faiss, librosa
 from scipy import signal
 from functools import lru_cache
 
@@ -85,7 +85,7 @@ class VC(object):
         f0_max = 1100
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
-        x = librosa.effects.pitch_shift(x, self.sr, n_steps=f0_up_key) if f0_up_key!=0 else x #pitch shift input
+        x = librosa.effects.pitch_shift(x, sr=self.sr, n_steps=f0_up_key) if f0_up_key!=0 else x #pitch shift input
         if f0_method == "pm":
             import parselmouth
             f0 = (
@@ -110,11 +110,12 @@ class VC(object):
             if filter_radius > 2:
                 f0 = signal.medfilt(f0, 3)
         elif f0_method == "crepe":
+            import torchcrepe
             model = "full"
             # Pick a batch size that doesn't cause memory errors on your gpu
             batch_size = 512
             # Compute pitch using first gpu
-            audio = torch.tensor(np.copy(x))[None].float()
+            audio = torch.tensor(x)[None].float()
             f0, pd = torchcrepe.predict(
                 audio,
                 self.sr,
@@ -130,16 +131,14 @@ class VC(object):
             f0 = torchcrepe.filter.mean(f0, 3)
             f0[pd < 0.1] = 0
             f0 = f0[0].cpu().numpy()
+
         elif f0_method == "rmvpe":
             if hasattr(self, "model_rmvpe") == False:
                 from lib.rmvpe import RMVPE
-
-                print("loading rmvpe model")
-                self.model_rmvpe = RMVPE(
-                    "./models/rmvpe.pt", is_half=self.is_half, device=self.device
-                )
-
+                self.model_rmvpe = RMVPE("./models/rmvpe.pt", is_half=self.is_half, device=self.device) # is_half doesn't work
+            
             f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
+
             if "privateuseone" in str(self.device):  # clean ortruntime memory
                 del self.model_rmvpe.model
                 del self.model_rmvpe

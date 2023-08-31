@@ -191,17 +191,17 @@ def get_vc(model_path,device="cpu"):
     else:
         net_g = net_g.float()
     vc = VC(tgt_sr, config)
-    hubert_model = load_hubert()
+    hubert_model = load_hubert(config)
     return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model}
 
-def load_hubert(device=config.device):
+def load_hubert(config):
     try:
         models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
             ["./models/hubert_base.pt"],
             suffix="",
         )
         hubert_model = models[0]
-        hubert_model = hubert_model.to(device)
+        hubert_model = hubert_model.to(config.device)
         if config.is_half:
             hubert_model = hubert_model.half()
         else:
