@@ -122,7 +122,7 @@ if __name__=="__main__":
                     i18n("inference.device"),
                     disabled=not config.has_gpu,
                     options=DEVICE_OPTIONS,horizontal=True,
-                    index=get_index(DEVICE_OPTIONS,state.device))
+                    index=get_index(DEVICE_OPTIONS,state.tts_options.device))
                 
                 f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.tts_options.f0_up_key)
                 f0_method = st.selectbox(i18n("inference.f0_method"),
@@ -156,7 +156,7 @@ if __name__=="__main__":
                 with st.spinner("performing TTS speaker embedding..."):
                     speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
                 with st.spinner("performing TTS speaker inference..."):
-                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
+                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.tts_options.device)
             if state.tts_audio:
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
 
