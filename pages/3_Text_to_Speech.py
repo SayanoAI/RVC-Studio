@@ -86,6 +86,11 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     output_file = os.sep.join([output_dir,f"{output_audio_name}.{ext}"])
     return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
     
+def one_click_speech(state):
+    speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
+    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
+    state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
+    
 TTS_MODELS = ["speecht5","bark","tacotron2"]
 
 if __name__=="__main__":
@@ -150,6 +155,10 @@ if __name__=="__main__":
 
         with st.container():
             state.tts_text = st.text_area("Speech",state.tts_text,max_chars=600)
+
+            if st.button("One Click Convert"):
+                one_click_speech(state)
+
             col1, col2 = st.columns(2)
             
             if col1.button("Generate Speech"):
