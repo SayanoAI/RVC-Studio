@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from types import SimpleNamespace
-from tts import speecht5
+from tts_cli import generate_speech, train_speaker_embedding
 
 from webui_utils import SessionStateContext, gc_collect, get_filenames, get_index, get_vc, load_config, merge_audio, save_input_audio, vc_single
 from uvr5_cli import split_audio
@@ -304,14 +304,18 @@ if __name__=="__main__":
         with st.container():
             state.tts_text = st.text_area("text",state.tts_text)
             container = st.container()
-            if st.button("talk"):
-                with st.spinner("performing TTS..."):
-                    state.tts_audio = speecht5(state.tts_text ,"female")
+            if st.button("run TTS"):
+                with st.spinner("performing TTS speaker embedding..."):
+                    speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0],state.output_vocals)
+                with st.spinner("performing TTS speaker inference..."):
+                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method="tacotron2", device=state.device)
+            if st.button("convert TTS"):
                     state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.convert_params))
+            if state.tts_audio: container.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
+
             if state.converted_voice:
-                container.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
                 container.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])
-                if st.button("download text",disabled=state.converted_voice is None):
+                if st.button("download converted TTS",disabled=state.converted_voice is None):
                     download_song(state.converted_voice,str(hash(state.tts_text))[:10],ext="wav")
 
 # def init_state():

@@ -2,7 +2,6 @@ import streamlit as st
 from types import SimpleNamespace
 
 from webui_utils import get_filenames, get_index, load_config, load_input_audio
-from tts import speecht5
 
 _, i18n = load_config()
 

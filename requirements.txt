@@ -53,3 +53,5 @@ pytube
 transformers
 num2words
 sentencepiece
+speechbrain
+accelerate
