@@ -45,6 +45,7 @@ def get_models(folder="."):
 def init_inference_state():
     state = SimpleNamespace(
         models=get_models(folder="RVC"),
+        device="cuda" if config.has_gpu else "cpu",
         tts_options=SimpleNamespace(
             f0_up_key=0,
             f0_method="rmvpe",
@@ -52,8 +53,7 @@ def init_inference_state():
             filter_radius=3,
             resample_sr=0,
             rms_mix_rate=.2,
-            protect=0.2,
-            device="cuda" if config.has_gpu else "cpu",
+            protect=0.2
         )
     )
     return vars(state)
@@ -122,7 +122,7 @@ if __name__=="__main__":
                     i18n("inference.device"),
                     disabled=not config.has_gpu,
                     options=DEVICE_OPTIONS,horizontal=True,
-                    index=get_index(DEVICE_OPTIONS,state.tts_options.device))
+                    index=get_index(DEVICE_OPTIONS,state.device))
                 
                 f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.tts_options.f0_up_key)
                 f0_method = st.selectbox(i18n("inference.f0_method"),
@@ -144,9 +144,9 @@ if __name__=="__main__":
                         index_rate=index_rate,
                         filter_radius=filter_radius,
                         rms_mix_rate=rms_mix_rate,
-                        protect=protect,
-                        device=device
+                        protect=protect
                     )
+                    state.device=device
 
         with st.container():
             state.tts_text = st.text_area("Speech",state.tts_text,max_chars=600)
@@ -156,7 +156,7 @@ if __name__=="__main__":
                 with st.spinner("performing TTS speaker embedding..."):
                     speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
                 with st.spinner("performing TTS speaker inference..."):
-                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.tts_options.device)
+                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
             if state.tts_audio:
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
 
