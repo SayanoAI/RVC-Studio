@@ -63,6 +63,9 @@
     "training.kill_all_pids": "Close All Processes",
     "training.kill_one_pid": "Stop",
 
+        "tts.inference": "Text to Speech",
+        "tts.options": "TTS Options",
+        "tts.model.selectbox": "TTS Models",
     "ckpt处理": "ckpt Processing",
     "模型融合, 可用于测试音色融合": "Model fusion, can be used to test timbre fusion",
     "A模型路径": "Path to Model A:",

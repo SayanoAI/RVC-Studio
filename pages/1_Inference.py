@@ -11,14 +11,6 @@ config, i18n = load_config()
 @st.cache_data
 def split_vocals(model_paths,**args):
     vocals,instrumental,input_audio=split_audio(model_paths,**args)
-    # st.session_state.inference.input_audio=input_audio
-    # st.session_state.inference.input_vocals=vocals
-    # st.session_state.inference.input_instrumental=instrumental
-    # st.session_state.inference.output_vocals = None
-    # st.session_state.inference.output_audio = None
-
-    # gc_collect()
-
     return vocals, instrumental, input_audio
 
 @st.cache_resource(show_spinner=False)
@@ -300,27 +292,3 @@ if __name__=="__main__":
                 col2.audio(state.output_audio[0],sample_rate=state.output_audio[1])
                 if col2.button(i18n("inference.download.button")):
                     download_song(state.output_audio,state.output_audio_name)
-
-        with st.container():
-            state.tts_text = st.text_area("text",state.tts_text)
-            container = st.container()
-            if st.button("run TTS"):
-                with st.spinner("performing TTS speaker embedding..."):
-                    speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0],state.output_vocals)
-                with st.spinner("performing TTS speaker inference..."):
-                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method="tacotron2", device=state.device)
-            if st.button("convert TTS"):
-                    state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.convert_params))
-            if state.tts_audio: container.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
-
-            if state.converted_voice:
-                container.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])
-                if st.button("download converted TTS",disabled=state.converted_voice is None):
-                    download_song(state.converted_voice,str(hash(state.tts_text))[:10],ext="wav")
-
-# def init_state():
-#     st.session_state["inference"] = st.session_state.get("inference",init_inference_state())
-
-# init_state()
-
-# if __name__=="__main__": st.session_state.inference=render(st.session_state.inference)
