@@ -107,7 +107,7 @@ def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
     from lib.infer_pack.commons import intersperse
     from lib.train import utils
 
-    hps = utils.get_hparams_from_file("./lib/vits/configs/ljs_base.json")
+    hps = utils.get_hparams_from_file("./models/VITS/configs/ljs_base.json")
     def get_text(text, hps):
         text_norm = text_to_sequence(text, hps.data.text_cleaners)
         if hps.data.add_blank:
@@ -127,7 +127,7 @@ def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
     with torch.no_grad():
         x_tst = stn_tst.cuda().unsqueeze(0)
         x_tst_lengths = torch.LongTensor([stn_tst.size(0)]).cuda()
-        audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.666, noise_scale_w=0.6, length_scale=1)[0][0,0].data.cpu().float().numpy()
+        audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.666, noise_scale_w=0.6, length_scale=1.5)[0][0,0].data.cpu().float().numpy()
     return audio, hps.data.sampling_rate
 
 

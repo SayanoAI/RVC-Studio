@@ -86,25 +86,6 @@ def english_cleaners2(text):
     text = lowercase(text)
     text = expand_abbreviations(text)
     text = expand_numbers(text)
-    text = phonemize(text, language='en-us', strip=True)
+    text = phonemize(text, language='en-us', backend='espeak', strip=True, preserve_punctuation=True, with_stress=True)
     text = collapse_whitespace(text)
     return text
-
-# def english_cleaners(text):
-#   '''Pipeline for English text, including abbreviation expansion.'''
-#   text = convert_to_ascii(text)
-#   text = lowercase(text)
-#   text = expand_abbreviations(text)
-#   phonemes = phonemize(text, language='en-us', backend='segments', strip=True)
-#   phonemes = collapse_whitespace(phonemes)
-#   return phonemes
-
-
-# def english_cleaners2(text):
-#   '''Pipeline for English text, including abbreviation expansion. + punctuation + stress'''
-#   text = convert_to_ascii(text)
-#   text = lowercase(text)
-#   text = expand_abbreviations(text)
-#   phonemes = phonemize(text, language='en-us', backend='segments', strip=True, preserve_punctuation=True, with_stress=False)
-#   phonemes = collapse_whitespace(phonemes)
-#   return phonemes

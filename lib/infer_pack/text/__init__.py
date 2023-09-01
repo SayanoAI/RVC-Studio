@@ -3,7 +3,7 @@ from . import cleaners
 from .symbols import symbols
 import os
 
-os.environ["PHONEMIZER_ESPEAK_PATH"] = "C:\Program Files\eSpeak NG\espeak-ng.exe"
+os.environ["PHONEMIZER_ESPEAK_PATH"] = os.path.join(os.getcwd(),"dist","eSpeak NG","espeak-ng.exe")
 
 print(os.environ["PHONEMIZER_ESPEAK_PATH"])
 
