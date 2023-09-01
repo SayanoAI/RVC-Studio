@@ -100,6 +100,36 @@ def __edge__(text, speaker="en-US-JennyNeural"):
     # return as numpy array
     return audio, sr
 
+def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
+    from lib.infer_pack.models import SynthesizerTrn
+    from lib.infer_pack.text.symbols import symbols
+    from lib.infer_pack.text import text_to_sequence
+    from lib.infer_pack.commons import intersperse
+    from lib.train import utils
+
+    hps = utils.get_hparams_from_file("./lib/vits/configs/ljs_base.json")
+    def get_text(text, hps):
+        text_norm = text_to_sequence(text, hps.data.text_cleaners)
+        if hps.data.add_blank:
+            text_norm = intersperse(text_norm, 0)
+        text_norm = torch.LongTensor(text_norm)
+        return text_norm
+    net_g = SynthesizerTrn(
+        len(symbols),
+        hps.data.filter_length // 2 + 1,
+        hps.train.segment_size // hps.data.hop_length,
+        **hps.model).cuda()
+    _ = net_g.eval()
+
+    _ = utils.load_checkpoint(speaker, net_g, None)
+
+    stn_tst = get_text(text, hps)
+    with torch.no_grad():
+        x_tst = stn_tst.cuda().unsqueeze(0)
+        x_tst_lengths = torch.LongTensor([stn_tst.size(0)]).cuda()
+        audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.666, noise_scale_w=0.6, length_scale=1)[0][0,0].data.cpu().float().numpy()
+    return audio, hps.data.sampling_rate
+
 
 def train_speaker_embedding(speaker: str,input_audio=None):
     embedding_path = f"./models/tts/embeddings/{speaker}.npy"
@@ -138,4 +168,6 @@ def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
         return __tacotron2__(text,device)
     elif method=="edge":
         return __edge__(text)
+    elif method=="vits":
+        return __vits__(text)
     else: return None

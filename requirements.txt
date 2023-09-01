@@ -56,3 +56,8 @@ sentencepiece
 speechbrain
 accelerate
 edge-tts
+
+#required by vits
+monotonic-align
+Unidecode==1.1.1
+phonemizer==2.2.1

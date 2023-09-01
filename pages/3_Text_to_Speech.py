@@ -87,7 +87,7 @@ def one_click_speech(state):
     state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
     state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
 
-TTS_MODELS = ["speecht5","bark","tacotron2","edge"]
+TTS_MODELS = ["speecht5","bark","tacotron2","edge","vits"]
 
 if __name__=="__main__":
     with SessionStateContext("tts",initial_state=init_inference_state()) as state:
