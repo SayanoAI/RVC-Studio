@@ -4,9 +4,10 @@ import numpy as np, os, traceback
 from lib.slicer2 import Slicer
 import librosa, traceback
 from scipy.io import wavfile
-import multiprocessing
 from lib.audio import load_audio
-from webui_utils import gc_collect, load_hubert, load_input_audio
+from vc_infer_pipeline import load_hubert
+from web_utils.audio import load_input_audio
+from webui_utils import gc_collect, config
 import torch
 
 class Preprocess:
@@ -132,7 +133,7 @@ class FeatureInput(object):
         self.f0_mel_min = 1127 * np.log(1 + self.f0_min / 700)
         self.f0_mel_max = 1127 * np.log(1 + self.f0_max / 700)
 
-        self.model = load_hubert(device)
+        self.model = load_hubert(config)
 
     def printt(self,strr):
         print(strr)

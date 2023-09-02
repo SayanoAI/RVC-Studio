@@ -1,11 +1,10 @@
-import io
 import numpy as np
 import torch
 import os
 
-from num2words import num2words
+from lib.infer_pack.text.cleaners import english_cleaners
 
-from webui_utils import MAX_INT16, load_input_audio, remix_audio
+from web_utils.audio import MAX_INT16, load_input_audio, remix_audio
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -145,15 +144,10 @@ def train_speaker_embedding(speaker: str,input_audio=None):
     np.save(f"./models/tts/embeddings/{speaker}.npy",embeddings.numpy())
     return embeddings
 
-def parseText(text):
-    words = text.split()
-    words = [num2words(word) if word.isdigit() else word for word in words]
-    return ' '.join(words)
-
 def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
     if text and len(text.strip()) == 0:
         return (np.zeros(0).astype(np.int16),16000)
-    text = parseText(text) #convert numbers to words
+    text = english_cleaners(text) #clean text
 
     if method=="speecht5":
         if speaker is None: raise ValueError(f"Must provider a speaker_embedding for {method} inference!")

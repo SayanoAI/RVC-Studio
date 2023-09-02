@@ -9,7 +9,8 @@ from tqdm import tqdm
 from lib.mdx import MDX, MDXModel
 import hashlib
 import math
-from webui_utils import gc_collect, load_input_audio, remix_audio, save_input_audio
+from web_utils.audio import load_input_audio, remix_audio, save_input_audio
+from webui_utils import gc_collect
 
 CWD = os.getcwd()
 sys.path.append(CWD)
@@ -429,7 +430,8 @@ def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=1
         song_name = os.path.basename(audio_path).split(".")[0]
         output_name = get_filename(os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
         preprocess_path = os.path.join(CACHE_DIR,song_name,output_name)
-        if not os.path.exists(preprocess_path):
+        if os.path.exists(preprocess_path): input_audio = load_input_audio(preprocess_path,mono=True)
+        else:
             model = UVR5_Model(
                 agg=agg,
                 model_path=preprocess_model,

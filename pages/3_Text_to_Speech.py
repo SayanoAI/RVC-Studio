@@ -2,10 +2,11 @@ import os
 import streamlit as st
 from types import SimpleNamespace
 from tts_cli import generate_speech, train_speaker_embedding
+from vc_infer_pipeline import get_vc, vc_single
+from web_utils.contexts import SessionStateContext
+from web_utils.audio import save_input_audio
 
-from webui_utils import SessionStateContext, gc_collect, get_filenames, get_index, get_vc, load_config, st_stderr, save_input_audio, st_stdout, vc_single
-
-config, i18n = load_config()
+from webui_utils import gc_collect, get_filenames, get_index, config, i18n
 
 @st.cache_resource(show_spinner=False)
 def load_model(_state,model_name):
@@ -22,7 +23,7 @@ def load_model(_state,model_name):
         }
     else:
         _state = clear_data(_state)
-        data = get_vc(model_name,device=_state.device)
+        data = get_vc(model_name,config=config,device=_state.device)
         _state.vc = data["vc"]
         _state.cpt = data["cpt"]
         _state.net_g = data["net_g"]

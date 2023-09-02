@@ -81,11 +81,16 @@ def transliteration_cleaners(text):
   text = collapse_whitespace(text)
   return text
 
-def english_cleaners2(text):
+def english_cleaners(text):
     text = convert_to_ascii(text)
     text = lowercase(text)
     text = expand_abbreviations(text)
     text = expand_numbers(text)
+    text = collapse_whitespace(text)
+    return text
+
+def english_cleaners2(text):
+    text = english_cleaners(text)
     text = phonemize(text, language='en-us', backend='espeak', strip=True, preserve_punctuation=True, with_stress=True)
     text = collapse_whitespace(text)
     return text

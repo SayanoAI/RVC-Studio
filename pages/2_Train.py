@@ -8,10 +8,10 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
+from web_utils.contexts import SessionStateContext
 
-from webui_utils import SessionStateContext, gc_collect, get_filenames, get_index, load_config
+from webui_utils import gc_collect, get_filenames, get_index, config, i18n
 
-config, i18n = load_config()
 CWD = os.getcwd()
 
 DEVICE_OPTIONS = ["cpu","cuda"]
@@ -318,12 +318,3 @@ with SessionStateContext("training",init_training_state()) as state:
 
         if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
             kill_all_process(state.pids)
-
-    # return state
-
-# def init_state():
-#     st.session_state["training"] = st.session_state.get("training",init_training_state())
-
-# init_state()
-
-# if __name__=="__main__": st.session_state.training=render(st.session_state.training)

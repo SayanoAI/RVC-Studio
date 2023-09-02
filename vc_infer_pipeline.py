@@ -5,6 +5,7 @@ import scipy.signal as signal
 import pyworld, os, traceback, faiss, librosa
 from scipy import signal
 from functools import lru_cache
+from web_utils.audio import load_input_audio, remix_audio
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
@@ -462,3 +463,129 @@ class VC(object):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         return audio_opt
+
+def get_vc(model_path,config,device="cpu"):
+    print("loading %s" % model_path)
+    cpt = torch.load(model_path, map_location=device)
+    tgt_sr = cpt["config"][-1]
+    cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  # n_spk
+    if_f0 = cpt.get("f0", 1)
+    version = cpt.get("version", "v1")
+    
+    if version == "v1":
+        if if_f0 == 1:
+            from lib.infer_pack.models import SynthesizerTrnMs256NSFsid
+            net_g = SynthesizerTrnMs256NSFsid(*cpt["config"], is_half=config.is_half)
+        else:
+            from lib.infer_pack.models import SynthesizerTrnMs256NSFsid_nono
+            net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
+    elif version == "v2":
+        if if_f0 == 1:
+            from lib.infer_pack.models import SynthesizerTrnMs768NSFsid
+            net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
+        else:
+            from lib.infer_pack.models import SynthesizerTrnMs768NSFsid_nono
+            net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
+    del net_g.enc_q
+    
+    net_g.load_state_dict(cpt["weight"], strict=False)
+    net_g.eval().to(device)
+    if config.is_half:
+        net_g = net_g.half()
+    else:
+        net_g = net_g.float()
+    vc = VC(tgt_sr, config)
+    hubert_model = load_hubert(config)
+    return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model}
+
+def load_hubert(config):
+    try:
+        from fairseq import checkpoint_utils
+        models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
+            ["./models/hubert_base.pt"],
+            suffix="",
+        )
+        hubert_model = models[0]
+        hubert_model = hubert_model.to(config.device)
+        if config.is_half:
+            hubert_model = hubert_model.half()
+        else:
+            hubert_model = hubert_model.float()
+        hubert_model.eval()
+        return hubert_model
+    except Exception as e:
+        print(e)
+        return None
+
+def vc_single(
+        cpt=None,
+        net_g=None,
+        vc=None,
+        hubert_model=None,
+    sid=0,
+    input_audio=None,
+    input_audio_path=None,
+    f0_up_key=0,
+    f0_file=None,
+    f0_method="crepe",
+    file_index="",  # .index file
+    index_rate=.75,
+    filter_radius=3,
+    resample_sr=0,
+    rms_mix_rate=.25,
+    protect=0.33,
+    **kwargs #prevents function from breaking
+):
+    if hubert_model == None:
+        hubert_model = load_hubert()
+
+    if not (cpt and net_g and vc and hubert_model):
+        return None
+
+    tgt_sr = cpt["config"][-1]
+    
+    version = cpt.get("version", "v1")
+
+    if input_audio is None and input_audio_path is None:
+        return None
+    f0_up_key = int(f0_up_key)
+    try:
+        audio = input_audio[0] if input_audio is not None else load_input_audio(input_audio_path, 16000)
+        
+        audio,_ = remix_audio((audio,input_audio[1] if input_audio is not None else 16000), target_sr=16000, norm=True,  to_mono=True)
+
+        times = [0, 0, 0]
+        if_f0 = cpt.get("f0", 1)
+        
+        audio_opt = vc.pipeline(
+            hubert_model,
+            net_g,
+            sid,
+            audio,
+            input_audio_path,
+            times,
+            f0_up_key,
+            f0_method,
+            file_index,
+            index_rate,
+            if_f0,
+            filter_radius,
+            tgt_sr,
+            resample_sr,
+            rms_mix_rate,
+            version,
+            protect,
+            f0_file=f0_file,
+        )
+        
+        index_info = (
+            "Using index:%s." % file_index
+            if os.path.exists(file_index)
+            else "Index not used."
+        )
+        print(index_info)
+        
+        return (audio_opt, resample_sr if resample_sr >= 16000 and tgt_sr != resample_sr else tgt_sr)
+    except Exception as info:
+        print(info)
+        return None

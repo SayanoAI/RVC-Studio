@@ -1,12 +1,12 @@
 import os
 import streamlit as st
 from types import SimpleNamespace
-from tts_cli import generate_speech, train_speaker_embedding
+from vc_infer_pipeline import get_vc, vc_single
+from web_utils.contexts import SessionStateContext
+from web_utils.audio import save_input_audio
 
-from webui_utils import SessionStateContext, gc_collect, get_filenames, get_index, get_vc, load_config, merge_audio, save_input_audio, vc_single
+from webui_utils import gc_collect, get_filenames, get_index, config, i18n, merge_audio
 from uvr5_cli import split_audio
-
-config, i18n = load_config()
 
 @st.cache_data
 def split_vocals(model_paths,**args):
@@ -28,7 +28,7 @@ def load_model(_state,model_name):
         }
     else:
         _state = clear_data(_state)
-        data = get_vc(model_name,device=_state.device)
+        data = get_vc(model_name,config=config,device=_state.device)
         _state.vc = data["vc"]
         _state.cpt = data["cpt"]
         _state.net_g = data["net_g"]
@@ -203,6 +203,7 @@ if __name__=="__main__":
                     state.preprocess_model=preprocess_model
                     state.uvr5_name=uvr5_name
                     state.merge_type=merge_type
+                    st.experimental_rerun()
 
         if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_name))):
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
@@ -235,7 +236,8 @@ if __name__=="__main__":
         with st.expander(i18n("inference.convert_vocals.expander")):
             with st.form("inference.convert_vocals.expander"):
                 
-                f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.convert_params.f0_up_key)
+                # f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=6,value=state.convert_params.f0_up_key)
+                f0_up_key = st.select_slider(i18n("inference.f0_up_key"),options=[-12,-5,0,7,12],value=state.convert_params.f0_up_key)
                 f0_method = st.selectbox(i18n("inference.f0_method"),
                                                     options=PITCH_EXTRACTION_OPTIONS,
                                                     index=get_index(PITCH_EXTRACTION_OPTIONS,state.convert_params.f0_method))
@@ -257,6 +259,7 @@ if __name__=="__main__":
                         rms_mix_rate=rms_mix_rate,
                         protect=protect
                     )
+                    st.experimental_rerun()
         if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
             with st.spinner(i18n("inference.convert_vocals")):
                 output_vocals = convert_vocals(
