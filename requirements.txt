@@ -40,10 +40,11 @@ ffmpy==0.3.1
 --extra-index-url https://download.pytorch.org/whl/cu117
 torch==1.13.1+cu117
 
-streamlit
 scikit-learn
 tensorboardX
 tensorboard
+streamlit
+streamlit-tensorboard==0.0.2
 json5
 Markdown
 Cython
