@@ -6,19 +6,19 @@ services:
       context: .
     container_name: RVC-Studio
     volumes:
-      - ./models/pretrained_v2:/app/models/pretrained_v2
-      - ./models/uvr5_weights:/app/models/uvr5_weights
-      - ./models/weights:/app/models/weights
+      - ./models:/app/models
       - ./output:/app/output
       - ./datasets:/app/datasets # you can use this folder in order to provide your dataset for model training
       - ./songs:/app/songs
       - ./logs:/app/logs
+      - .cache:/app/.cache
     ports:
       - 8501:8501
     stop_signal: SIGINT
     deploy:
       resources:
         reservations:
+          cpus: ".999"
           devices:
               - driver: nvidia
                 device_ids: ['0']

@@ -6,8 +6,7 @@ EXPOSE 8501
 
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.cache apt update && apt install -y -qq ffmpeg aria2
-
+RUN --mount=type=cache,target=/root/.cache apt update && apt install -y -qq ffmpeg aria2 espeak
 # RUN aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/D40k.pth -d /app/models/pretrained_v2/ -o D40k.pth
 # RUN aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/G40k.pth -d /app/models/pretrained_v2/ -o G40k.pth
 # RUN aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0D40k.pth -d /app/models/pretrained_v2/ -o f0D40k.pth
@@ -21,7 +20,7 @@ COPY ./requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
 COPY . .
 
-VOLUME ["/app/models/uvr5_weights","/app/models/pretrained_v2","/app/models/weights", "/app/output", "/app/datasets", "/app/logs", "/app/songs" ]
+VOLUME ["/app/models", "/app/output", "/app/datasets", "/app/logs", "/app/songs", "/app/.cache" ]
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 

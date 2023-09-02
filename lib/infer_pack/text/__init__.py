@@ -2,10 +2,11 @@
 from . import cleaners
 from .symbols import symbols
 import os
+import platform
 
-os.environ["PHONEMIZER_ESPEAK_PATH"] = os.path.join(os.getcwd(),"dist","eSpeak NG","espeak-ng.exe")
-
-print(os.environ["PHONEMIZER_ESPEAK_PATH"])
+if platform.system()=="windows": #local windows package
+  os.environ["PHONEMIZER_ESPEAK_PATH"] = os.path.join(os.getcwd(),"dist","eSpeak NG","espeak-ng.exe")
+  print(os.environ["PHONEMIZER_ESPEAK_PATH"])
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
