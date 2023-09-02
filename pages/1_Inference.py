@@ -57,8 +57,8 @@ def init_inference_state():
         device="cuda" if config.has_gpu else "cpu",
         models=get_models(folder="RVC"),
         model_name=None,
-        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument","karaoke"]),
-        preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
+        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
+        preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
         preprocess_model="",
         agg=10,
         merge_type="median",
@@ -87,8 +87,8 @@ def init_inference_state():
     return vars(state)
 
 def refresh_data(state):
-    state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument","karaoke"])
-    state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise"])
+    state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
+    state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_models(folder="RVC")
     state.audio_files = get_filenames(exts=["wav","flac","ogg","mp3"],name_filters=[""],folder="songs")
     gc_collect()
