@@ -14,6 +14,7 @@ services:
       - .cache:/app/.cache
     ports:
       - 8501:8501
+      - 6006:6006
     stop_signal: SIGINT
     deploy:
       resources:

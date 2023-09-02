@@ -3,6 +3,7 @@
 FROM python:3.8-bullseye
 
 EXPOSE 8501
+EXPOSE 6006
 
 WORKDIR /app
 
