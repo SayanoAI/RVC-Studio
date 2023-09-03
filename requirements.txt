@@ -49,6 +49,7 @@ json5
 Markdown
 Cython
 pytube
+lightning
 
 #tts
 transformers
