@@ -6,6 +6,8 @@ from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
 
 from lib.downloader import BASE_MODELS_DIR
+from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
+from web_utils.audio import load_input_audio, save_input_audio
 
 st.set_page_config(layout="centered")
 
@@ -198,23 +200,28 @@ def one_click_train(): #TODO not implemented yet
     
     print(i18n("全流程结束！"))
 
-# def get_active_pids(pids):
-#     active_pids = []
-#     for prc in pids:
-#         try:
-#             if prc.returncode is not None: print(f"process {prc} returned with {prc.returncode}")
-#             else: active_pids.append(prc)
-#         except Exception as e:
-#             print(e)
-#     return active_pids
+def train_speaker_embedding(exp_dir: str, model_log_dir: str):
 
-# def kill_all_process(pids):
-#     for pid in get_active_pids(pids):
-#         pid.kill()
-    
-#     del pids
-#     gc_collect()
-#     st.experimental_rerun()
+    # get dataset
+    training_file = os.path.join(CWD,"logs",model_log_dir,"embedding.wav")
+    if os.path.isfile(training_file): audio = load_input_audio(training_file,sr=16000,mono=True)[0]
+    else:
+        dataset_dir = os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")
+        audio = np.concatenate([
+            load_input_audio(os.path.join(dataset_dir,fname),sr=16000,mono=True)[0]
+            for fname in os.listdir(dataset_dir)],axis=None)
+        save_input_audio(training_file,(audio,16000))
+
+    # train embedding
+    from speechbrain.pretrained import EncoderClassifier
+    os.environ["HUGGINGFACE_HUB_CACHE"] = os.path.join(TTS_MODELS_DIR,EMBEDDING_CHECKPOINT)
+    classifier = EncoderClassifier.from_hparams(source=EMBEDDING_CHECKPOINT, savedir=os.path.join(TTS_MODELS_DIR,EMBEDDING_CHECKPOINT))
+    embeddings = classifier.encode_batch(torch.from_numpy(audio),normalize=True).squeeze(0)
+
+    # save embedding file
+    embedding_path = os.path.join(TTS_MODELS_DIR,"embeddings",f"{exp_dir}.npy")
+    os.makedirs(os.path.dirname(embedding_path), exist_ok=True)
+    np.save(embedding_path,embeddings.numpy())
 
 @st.cache_data
 def init_training_state():
@@ -308,12 +315,11 @@ with SessionStateContext("training",init_training_state()) as state:
     disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
     if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
         train_index(state.exp_dir,state.version,state.sr)
-    
-    # if state.pids is not None and len(state.pids):
-    #     state.pids = get_active_pids(state.pids)
 
-    #     st.subheader(i18n("training.pids"))
-    #     st.write(state.pids)
+    disabled = not (state.exp_dir)
+    if state.exp_dir and st.button(i18n("training.train_speaker.submit"),disabled=disabled):
+        train_speaker_embedding(state.exp_dir,model_log_dir)
+    else: st.markdown(f"*Only required for speecht5 TTS*")
 
     with st.expander(i18n("training.pids")):
         for p in get_subprocesses():
@@ -324,6 +330,3 @@ with SessionStateContext("training",init_training_state()) as state:
                 p.kill()
                 gc_collect()
                 st.experimental_rerun()
-
-        # if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
-        #     kill_all_process(state.pids)

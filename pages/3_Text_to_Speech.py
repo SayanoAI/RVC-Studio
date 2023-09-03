@@ -5,7 +5,7 @@ import streamlit as st
 st.set_page_config(layout="centered")
 
 from types import SimpleNamespace
-from tts_cli import generate_speech, train_speaker_embedding
+from tts_cli import generate_speech
 from vc_infer_pipeline import get_vc, vc_single
 from web_utils.contexts import SessionStateContext
 from web_utils.audio import save_input_audio
@@ -92,8 +92,7 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
     
 def one_click_speech(state):
-    speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
-    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
+    state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
     state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
 
 TTS_MODELS = ["speecht5","bark","tacotron2","edge","vits"]
@@ -167,10 +166,7 @@ if __name__=="__main__":
             col1, col2 = st.columns(2)
             
             if col1.button("Generate Speech"):
-                with st.spinner("performing TTS speaker embedding..."):
-                    speaker = train_speaker_embedding(os.path.basename(state.model_name).split(".")[0])
-                with st.spinner("performing TTS speaker inference..."):
-                    state.tts_audio = generate_speech(state.tts_text,speaker=speaker,method=state.tts_method, device=state.device)
+                state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
             if state.tts_audio:
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
 

@@ -4,7 +4,7 @@ import os
 
 from lib.infer_pack.text.cleaners import english_cleaners
 
-from web_utils.audio import MAX_INT16, load_input_audio, remix_audio
+from web_utils.audio import MAX_INT16, load_input_audio
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -13,9 +13,10 @@ bark_checkpoint = "suno/bark-small"
 bark_voice_presets="v2/en_speaker_0"
 tacotron2_checkpoint = "speechbrain/tts-tacotron2-ljspeech"
 hifigan_checkpoint = "speechbrain/tts-hifigan-ljspeech"
-embedding_checkpoint = "speechbrain/spkrec-xvect-voxceleb"
+EMBEDDING_CHECKPOINT = "speechbrain/spkrec-xvect-voxceleb"
 os.makedirs(os.path.join(CWD,"models","tts","embeddings"),exist_ok=True)
 TTS_MODELS_DIR = os.path.join(CWD,"models","tts")
+DEFAULT_SPEAKER = os.path.join(TTS_MODELS_DIR,"embeddings","Sayano.npy")
 
 def __speecht5__(text, speaker_embedding=None, device="cpu"):
     from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
@@ -129,31 +130,23 @@ def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
         audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.678, noise_scale_w=0.6, length_scale=1.1)[0][0,0].data.cpu().float().numpy()
     return audio, hps.data.sampling_rate
 
-
-def train_speaker_embedding(speaker: str,input_audio=None):
-    embedding_path = f"./models/tts/embeddings/{speaker}.npy"
-    if os.path.exists(embedding_path):
-        speaker_embedding = np.load(embedding_path)
-        speaker_embedding = torch.tensor(speaker_embedding)
-        return speaker_embedding
-    if input_audio is None: raise ValueError(f"Please train a speaker model, {embedding_path} is missing!")
-    from speechbrain.pretrained import EncoderClassifier
-    classifier = EncoderClassifier.from_hparams(source=embedding_checkpoint, savedir=os.path.join(TTS_MODELS_DIR,embedding_checkpoint))
-    audio,_ = remix_audio(input_audio,target_sr=16000,norm=True,resample=True,to_mono=True)
-    embeddings = classifier.encode_batch(torch.from_numpy(audio),normalize=True).squeeze(0)
-    np.save(f"./models/tts/embeddings/{speaker}.npy",embeddings.numpy())
-    return embeddings
-
 def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
     if text and len(text.strip()) == 0:
         return (np.zeros(0).astype(np.int16),16000)
     text = english_cleaners(text) #clean text
-
+    speaker_embedding = None
+    
     if method=="speecht5":
-        if speaker is None: raise ValueError(f"Must provider a speaker_embedding for {method} inference!")
         if type(speaker)==str:
-            speaker_embedding = np.load(speaker)
-            speaker_embedding = torch.tensor(speaker_embedding).half()
+            embedding_path = os.path.join(TTS_MODELS_DIR,"embeddings",f"{speaker}.npy")
+            if os.path.isfile(embedding_path):
+                speaker_embedding = np.load(embedding_path)
+                speaker_embedding = torch.tensor(speaker_embedding).half()
+            elif os.path.isfile(DEFAULT_SPEAKER):
+                print(f"Speaker {speaker} not found, using default speaker...")
+                speaker_embedding = np.load(DEFAULT_SPEAKER)
+                speaker_embedding = torch.tensor(speaker_embedding).half()
+            else: raise ValueError(f"Must provider a speaker_embedding for {method} inference!")
         else: speaker_embedding = speaker
         return __speecht5__(text,speaker_embedding,device)
     elif method=="bark":
