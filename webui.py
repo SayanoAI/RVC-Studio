@@ -2,11 +2,17 @@
 from io import BytesIO
 import os
 from pathlib import Path
+import platform
+import sys
 from pytube import YouTube
 import streamlit as st
 from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
 
 st.set_page_config("RVC Studio",layout="centered")
+
+CWD = os.getcwd()
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 from web_utils.contexts import ProgressBarContext, SessionStateContext
 
@@ -18,6 +24,16 @@ def download_audio_to_buffer(url):
     default_filename = audio.default_filename
     audio.stream_to_buffer(buffer)
     return default_filename, buffer
+
+def render_download_ffmpeg(lib_name="ffmpeg.exe"):
+    col1, col2 = st.columns(2)
+    is_downloaded = os.path.exists(lib_name)
+    col1.checkbox(os.path.basename(lib_name),value=is_downloaded,disabled=True)
+    if col2.button("Download",disabled=is_downloaded,key=lib_name):
+        link = f"{RVC_DOWNLOAD_LINK}ffmpeg.exe"
+        with st.spinner(f"Downloading from {link} to {lib_name}"):
+            download_file((lib_name,link))
+            st.experimental_rerun()
 
 def render_model_checkboxes(generator):
     not_downloaded = []
@@ -50,6 +66,11 @@ if __name__=="__main__":
             if st.button("Download All",key="download-all-pretrained-models",disabled=len(to_download)==0):
                 with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                     pb.run()
+        with st.container():
+            if platform.system() == "Windows":
+                render_download_ffmpeg()
+            elif platform.system() == "Linux":
+                st.markdown("run `apt update && apt install -y -qq ffmpeg espeak` in your terminal")
 
         st.subheader("Required Models for inference")
         with st.expander("RVC Models"):

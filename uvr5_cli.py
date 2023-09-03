@@ -13,7 +13,8 @@ from web_utils.audio import load_input_audio, remix_audio, save_input_audio
 from webui_utils import gc_collect
 
 CWD = os.getcwd()
-sys.path.append(CWD)
+if CWD not in sys.path:
+    sys.path.append(CWD)
 CACHE_DIR = os.path.join(CWD,".cache","songs")
 
 warnings.filterwarnings("ignore")

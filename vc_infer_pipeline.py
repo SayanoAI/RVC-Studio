@@ -7,8 +7,9 @@ from scipy import signal
 from functools import lru_cache
 from web_utils.audio import load_input_audio, remix_audio
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
+CWD = os.getcwd()
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 

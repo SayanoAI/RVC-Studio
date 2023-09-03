@@ -3,7 +3,8 @@ import os, sys
 import traceback
 
 CWD = os.getcwd()
-sys.path.append(CWD)
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 from lib.train import utils
 import datetime
