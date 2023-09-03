@@ -28,6 +28,15 @@ This project provides a comprehensive platform for training RVC models and gener
 4. Install the required packages with the command `pip install -r requirements.txt`.
 5. Run the streamlit app with the command `streamlit run webui.py`.
 
+## Instructions for inference
+1. Download all the required models on the webui page (https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main)
+2. Put your favourite songs in the ./songs folder
+3. Press "Refresh Data" button
+4. Select a song (only wav/flac/ogg/mp3 are supported for now)
+5. Select a voice model (put your RVC v2 models in ./models/RVC/ and index file in ./models/RVC/.index/)
+6. Choose a vocal extraction model (preprocessing model is optional)
+7. Click "Save Options" and "1-Click VC" to get started
+
 ## Dockerize
 Run `docker compose up --build` in the main project folder.
 **Known issue:** Tensorboard doesn't work inside a docker container. Feel free to submit a PR if you know a solution.

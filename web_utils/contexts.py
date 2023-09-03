@@ -1,3 +1,5 @@
+from types import FunctionType
+from typing import List
 import streamlit as st
 
 class SessionStateContext:
@@ -58,6 +60,26 @@ class SessionStateContext:
         else:
             print(f"Failed to delete {name}")
 
+class ProgressBarContext:
+    def __init__(self, iter: List, func: FunctionType, text: str=""):
+        
+        self.max_progress = len(iter)
+        self.args = iter
+        self.func = func
+        self.text = text
+        self.__progressbar__ = st.progress(0, text)
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *_):
+        return self.__progressbar__.progress(100, f"{self.text}: finished")
+
+    def run(self):
+        max_progress = len(self.args)
+        for i in range(max_progress):
+            self.__progressbar__(i//max_progress,f"{self.text}: {i}/{len(self.args)}")
+            self.func(self.args[i])
 
 # TODO: show terminal logs in streamlit
 from contextlib import contextmanager
