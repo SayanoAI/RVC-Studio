@@ -5,6 +5,7 @@ __pycache__
 *.pt
 *.pth
 *.exe
+*.bk
 .venv
 *.env
 !/logs/mute

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from pytube import YouTube
 import streamlit as st
-from lib.download_models import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VR_MODELS, download_link_generator, download_model
+from lib.download_models import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_model
 
 st.set_page_config("RVC Studio",menu_items={
     # 'Get Help': '',
@@ -68,6 +68,11 @@ if __name__=="__main__":
             if st.button("Download All",key="download-all-vr-models",disabled=len(to_download)==0):
                 with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
                     pb.run()
+        with st.expander("VITS Models"):
+            generator = download_link_generator(RVC_DOWNLOAD_LINK, VITS_MODELS)
+            to_download = render_model_checkboxes(generator)
+            with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+                st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
 
     with SessionStateContext("youtube_downloader") as state:
         st.title("Download Audio from Youtube")

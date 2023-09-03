@@ -73,12 +73,13 @@ class ProgressBarContext:
         return self
     
     def __exit__(self, *_):
-        return self.__progressbar__.progress(100, f"{self.text}: finished")
+        del self
+    #     return self.__progressbar__.progress(100, f"{self.text}: finished")
 
     def run(self):
         max_progress = len(self.args)
         for i in range(max_progress):
-            self.__progressbar__(i//max_progress,f"{self.text}: {i}/{len(self.args)}")
+            self.__progressbar__.progress(i//max_progress,f"{self.text}: {i}/{len(self.args)}")
             self.func(self.args[i])
 
 # TODO: show terminal logs in streamlit

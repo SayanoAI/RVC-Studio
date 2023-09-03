@@ -11,6 +11,7 @@ MDX_MODELS = ["MDXNET/Kim_Vocal_2.onnx","MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
 VR_MODELS = ["UVR/UVR-DeEcho-DeReverb.pth","UVR/HP5-vocals+instrumentals.pth","UVR/6_HP-Karaoke-UVR.pth"]
 RVC_MODELS = ["RVC/Sayano.pth","RVC/.index/added_IVF1063_Flat_nprobe_1_Sayano_v2.index"]
 BASE_MODELS = ["hubert_base.pt", "rmvpe.pt"]
+VITS_MODELS = ["VITS/pretrained_ljs.pth"]
 PRETRAINED_MODELS = [
     "pretrained_v2/D48k.pth",
     "pretrained_v2/G48k.pth",
