@@ -85,7 +85,7 @@ def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./mo
         opt["sr"] = sr
         opt["f0"] = if_f0
         opt["version"] = version
-        torch.save(opt, os.sep.join([model_path,name,".pth"]))
+        torch.save(opt, os.path.join([model_path,name+".pth"]))
         return "Success."
     except:
         return traceback.format_exc()
@@ -534,7 +534,7 @@ def train_and_evaluate(
                                 ckpt,
                                 hps.sample_rate,
                                 hps.if_f0,
-                                hps.name + f"_e{epoch}_loss{loss_gen_all:2.2f}",
+                                f"{hps.name}_e{epoch}_loss{loss_gen_all:2.2f}",
                                 epoch,
                                 hps.version,
                                 hps,
