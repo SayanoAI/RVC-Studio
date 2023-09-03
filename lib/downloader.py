@@ -22,7 +22,7 @@ PRETRAINED_MODELS = [
     "pretrained_v2/f0D40k.pth",
     "pretrained_v2/f0G40k.pth"]
 
-def download_model(params: Tuple[str, str]):
+def download_file(params: Tuple[str, str]):
     model_path, download_link = params
     if os.path.isfile(model_path): raise FileExistsError(f"{model_path} already exists!")
     

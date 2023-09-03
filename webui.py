@@ -4,13 +4,9 @@ import os
 from pathlib import Path
 from pytube import YouTube
 import streamlit as st
-from lib.download_models import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_model
+from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
 
-st.set_page_config("RVC Studio",menu_items={
-    # 'Get Help': '',
-    # 'Report a bug': "",
-    # 'About': ""
-})
+st.set_page_config("RVC Studio",layout="centered")
 
 from web_utils.contexts import ProgressBarContext, SessionStateContext
 
@@ -32,7 +28,7 @@ def render_model_checkboxes(generator):
         if not is_downloaded: not_downloaded.append((model_path,link))
         if col2.button("Download",disabled=is_downloaded,key=model_path):
             with st.spinner(f"Downloading from {link} to {model_path}"):
-                download_model((model_path,link))
+                download_file((model_path,link))
                 st.experimental_rerun()
     return not_downloaded
 
@@ -44,7 +40,7 @@ if __name__=="__main__":
             generator = download_link_generator(RVC_DOWNLOAD_LINK, BASE_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-base-models",disabled=len(to_download)==0):
-                with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+                with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                     pb.run()
 
         st.subheader("Required Models for training")
@@ -52,7 +48,7 @@ if __name__=="__main__":
             generator = download_link_generator(RVC_DOWNLOAD_LINK, PRETRAINED_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-pretrained-models",disabled=len(to_download)==0):
-                with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+                with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                     pb.run()
 
         st.subheader("Required Models for inference")
@@ -60,18 +56,18 @@ if __name__=="__main__":
             generator = download_link_generator(RVC_DOWNLOAD_LINK, RVC_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-rvc-models",disabled=len(to_download)==0):
-                with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+                with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                     pb.run()
         with st.expander("Vocal Separation Models"):
             generator = download_link_generator(RVC_DOWNLOAD_LINK, VR_MODELS+MDX_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-vr-models",disabled=len(to_download)==0):
-                with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+                with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                     pb.run()
         with st.expander("VITS Models"):
             generator = download_link_generator(RVC_DOWNLOAD_LINK, VITS_MODELS)
             to_download = render_model_checkboxes(generator)
-            with ProgressBarContext(to_download,download_model,"Downloading models") as pb:
+            with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                 st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
 
     with SessionStateContext("youtube_downloader") as state:
