@@ -1,5 +1,6 @@
 import os
 from random import shuffle
+import sys
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
@@ -15,12 +16,11 @@ import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
 from web_utils.contexts import SessionStateContext
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n
+from webui_utils import gc_collect, get_filenames, get_index, config, get_subprocesses, i18n
 
 CWD = os.getcwd()
-
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version):
     model_log_dir = f"{CWD}/logs/{exp_dir}_{version}_{sr}"
@@ -198,23 +198,23 @@ def one_click_train(): #TODO not implemented yet
     
     print(i18n("全流程结束！"))
 
-def get_active_pids(pids):
-    active_pids = []
-    for prc in pids:
-        try:
-            if prc.returncode is not None: print(f"process {prc} returned with {prc.returncode}")
-            else: active_pids.append(prc)
-        except Exception as e:
-            print(e)
-    return active_pids
+# def get_active_pids(pids):
+#     active_pids = []
+#     for prc in pids:
+#         try:
+#             if prc.returncode is not None: print(f"process {prc} returned with {prc.returncode}")
+#             else: active_pids.append(prc)
+#         except Exception as e:
+#             print(e)
+#     return active_pids
 
-def kill_all_process(pids):
-    for pid in get_active_pids(pids):
-        pid.kill()
+# def kill_all_process(pids):
+#     for pid in get_active_pids(pids):
+#         pid.kill()
     
-    del pids
-    gc_collect()
-    st.experimental_rerun()
+#     del pids
+#     gc_collect()
+#     st.experimental_rerun()
 
 @st.cache_data
 def init_training_state():
@@ -241,9 +241,9 @@ def init_training_state():
     return vars(state)
 
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 SR_MAP = {"40k": 40000, "48k": 48000}
-
+DEVICE_OPTIONS = ["cpu","cuda"]
+PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
 
 with SessionStateContext("training",init_training_state()) as state:
     PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
@@ -282,7 +282,7 @@ with SessionStateContext("training",init_training_state()) as state:
                                   horizontal=True,index=get_index(PITCH_EXTRACTION_OPTIONS,state.f0method))
         disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
         if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
-            state.pids.extend(extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr))
+            extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr)
         
     with st.form(i18n("training.train_model.form")):  #def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
         st.subheader(i18n("training.train_model.title"))
@@ -300,30 +300,30 @@ with SessionStateContext("training",init_training_state()) as state:
         
         disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
         if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
-            state.pids.append(train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
+            train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
                                           "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
                                           state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
-                                          state.if_save_every_weights))
+                                          state.if_save_every_weights)
 
     disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
     if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
         train_index(state.exp_dir,state.version,state.sr)
     
-    if state.pids is not None and len(state.pids):
-        state.pids = get_active_pids(state.pids)
+    # if state.pids is not None and len(state.pids):
+    #     state.pids = get_active_pids(state.pids)
 
-        st.subheader(i18n("training.pids"))
-        st.write(state.pids)
+    #     st.subheader(i18n("training.pids"))
+    #     st.write(state.pids)
 
-        col1,col2,col3=st.columns(3)
-        for prc in state.pids:
-            col1.write(prc.pid)
-            col2.write(prc.returncode)
-            if col3.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{prc.pid}"):
-                prc.kill()
-                prc.returncode="killed"
-                del prc
+    with st.expander(i18n("training.pids")):
+        for p in get_subprocesses():
+            col1,col2,col3=st.columns(3)
+            col1.write(p.pid)
+            col2.write(p.returncode)
+            if col3.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{p.pid}"):
+                p.kill()
                 gc_collect()
+                st.experimental_rerun()
 
-        if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
-            kill_all_process(state.pids)
+        # if st.button(i18n("training.kill_all_pids"),type="primary",use_container_width=True):
+        #     kill_all_process(state.pids)

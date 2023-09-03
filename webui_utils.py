@@ -1,6 +1,7 @@
 from datetime import datetime
 import gc
 import os
+from types import SimpleNamespace
 import psutil
 import torch
 import librosa
@@ -87,7 +88,7 @@ def get_subprocesses():
     for p in python_processes:
         cpu_percent = p.cpu_percent()
         memory_percent = p.memory_percent()
-        activity = {
+        process = SimpleNamespace(**{
             'pid': p.pid,
             "name": p.name(),
             'cpu_percent': f"{cpu_percent:.2f}%",
@@ -95,5 +96,5 @@ def get_subprocesses():
             'status': p.status(),
             'time started': datetime.fromtimestamp(p.create_time()).isoformat(),
             'kill': p.terminate
-            }
-        yield activity
+            })
+        yield process

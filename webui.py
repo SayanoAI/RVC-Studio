@@ -50,14 +50,6 @@ def render_model_checkboxes(generator):
     return not_downloaded
 
 if __name__=="__main__":
-    with st.sidebar:
-        with st.expander("Show PIDs"):
-            for p in get_subprocesses():
-                st.write(p)
-                if st.button("Kill",key=p["pid"]):
-                    p["kill"]()
-                    st.experimental_rerun()
-                    
 
     with st.container():
         st.title("Download required models")
