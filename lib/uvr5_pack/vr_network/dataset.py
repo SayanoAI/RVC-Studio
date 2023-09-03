@@ -6,7 +6,7 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 
-from . import spec_utils
+from lib.uvr5_pack import spec_utils
 
 
 class VocalRemoverValidationSet(torch.utils.data.Dataset):
