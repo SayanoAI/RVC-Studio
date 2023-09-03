@@ -3,7 +3,7 @@ import os, sys
 import traceback
 
 CWD = os.getcwd()
-sys.path.append(os.path.join(CWD))
+sys.path.append(CWD)
 
 from lib.train import utils
 import datetime
@@ -85,7 +85,7 @@ def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./mo
         opt["sr"] = sr
         opt["f0"] = if_f0
         opt["version"] = version
-        torch.save(opt, os.path.join([model_path,name+".pth"]))
+        torch.save(opt, os.path.join(model_path,name+".pth"))
         return "Success."
     except:
         return traceback.format_exc()
