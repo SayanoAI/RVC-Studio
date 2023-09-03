@@ -1,5 +1,8 @@
 import os
 import streamlit as st
+
+st.set_page_config(layout="centered")
+
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
 from web_utils.contexts import SessionStateContext
