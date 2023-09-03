@@ -1,4 +1,5 @@
 import os
+import sys
 import streamlit as st
 
 st.set_page_config(layout="centered")
@@ -6,11 +7,15 @@ st.set_page_config(layout="centered")
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
 from web_utils.contexts import SessionStateContext
-from web_utils.audio import save_input_audio
+from web_utils.audio import SUPPORTED_AUDIO, bytes_to_audio, save_input_audio
 
 from webui_utils import gc_collect, get_filenames, get_index, config, i18n, merge_audio
 from uvr5_cli import split_audio
 
+CWD = os.getcwd()
+if CWD not in sys.path:
+    sys.path.append(CWD)
+    
 @st.cache_data
 def split_vocals(model_paths,**args):
     vocals,instrumental,input_audio=split_audio(model_paths,**args)
@@ -69,7 +74,7 @@ def init_inference_state():
         uvr5_name=[],
         use_cache=True,
         hubert_model=None,
-        audio_files=get_filenames(exts=["wav","flac","ogg","mp3"],folder="songs"),
+        audio_files=get_filenames(exts=SUPPORTED_AUDIO,folder="songs"),
         input_audio_name=None,
         input_audio=None,
         input_vocals=None,
@@ -93,7 +98,7 @@ def refresh_data(state):
     state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
     state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_models(folder="RVC")
-    state.audio_files = get_filenames(exts=["wav","flac","ogg","mp3"],name_filters=[""],folder="songs")
+    state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
     return state
     
@@ -199,7 +204,7 @@ if __name__=="__main__":
                 agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
                 use_cache=col2.checkbox(i18n("inference.use_cache"),value=state.use_cache)
                 
-                if col1.form_submit_button(i18n("inference.save.button")):
+                if col1.form_submit_button(i18n("inference.save.button"),type="primary"):
                     state.agg=agg
                     state.use_cache=use_cache
                     state.device=device
@@ -207,6 +212,7 @@ if __name__=="__main__":
                     state.uvr5_name=uvr5_name
                     state.merge_type=merge_type
                     st.experimental_rerun()
+                elif len(uvr5_name)<1: st.write(i18n("inference.uvr5_name"))
 
         if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_name))):
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
@@ -252,7 +258,7 @@ if __name__=="__main__":
                 rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.rms_mix_rate)
                 protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.convert_params.protect)
                 
-                if st.form_submit_button(i18n("inference.save.button")):
+                if st.form_submit_button(i18n("inference.save.button"),type="primary"):
                     state.convert_params = SimpleNamespace(
                         f0_up_key=f0_up_key,
                         f0_method=f0_method,
@@ -263,6 +269,14 @@ if __name__=="__main__":
                         protect=protect
                     )
                     st.experimental_rerun()
+
+        uploaded_file = st.file_uploader("Upload your own voice file (if you didn't use voice extraction)",
+                                         type=SUPPORTED_AUDIO)
+        if uploaded_file is not None:
+            state.input_vocals = bytes_to_audio(uploaded_file.read())
+            state.input_audio_name = uploaded_file.name
+            del uploaded_file
+
         if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
             with st.spinner(i18n("inference.convert_vocals")):
                 output_vocals = convert_vocals(
@@ -273,11 +287,13 @@ if __name__=="__main__":
                         
                 if output_vocals is not None:
                     state.output_vocals = output_vocals
-                    mixed_audio = merge_audio(
-                        output_vocals,
-                        state.input_instrumental,
-                        sr=state.input_audio[1]
-                    )
+                    if (state.input_instrumental):
+                        mixed_audio = merge_audio(
+                            output_vocals,
+                            state.input_instrumental,
+                            sr=state.input_audio[1]
+                        )
+                    else: mixed_audio = output_vocals
                     state.output_audio = mixed_audio
                     state.output_audio_name = get_filename(state.input_audio_name,state.model_name)
         

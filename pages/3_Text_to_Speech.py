@@ -1,4 +1,5 @@
 import os
+import sys
 import streamlit as st
 
 st.set_page_config(layout="centered")
@@ -10,6 +11,10 @@ from web_utils.contexts import SessionStateContext
 from web_utils.audio import save_input_audio
 
 from webui_utils import gc_collect, get_filenames, get_index, config, i18n
+
+CWD = os.getcwd()
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 @st.cache_resource(show_spinner=False)
 def load_model(_state,model_name):
