@@ -6,9 +6,10 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
-from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
-
 st.set_page_config("RVC Studio",layout="centered")
+
+from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
+from webui_utils import get_subprocesses
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -49,6 +50,15 @@ def render_model_checkboxes(generator):
     return not_downloaded
 
 if __name__=="__main__":
+    with st.sidebar:
+        with st.expander("Show PIDs"):
+            for p in get_subprocesses():
+                st.write(p)
+                if st.button("Kill",key=p["pid"]):
+                    p["kill"]()
+                    st.experimental_rerun()
+                    
+
     with st.container():
         st.title("Download required models")
 

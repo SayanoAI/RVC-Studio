@@ -1,5 +1,7 @@
+from datetime import datetime
 import gc
 import os
+import psutil
 import torch
 import librosa
 # import logging
@@ -76,3 +78,22 @@ def merge_audio(audio1,audio2,sr=40000):
     mixed = librosa.util.stack([m1,m2],0)
 
     return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)
+
+def get_subprocesses():
+    pid = os.getpid()
+    # Get a list of all subprocesses started by the current process
+    subprocesses = psutil.Process(pid).children(recursive=True)
+    python_processes = [p for p in subprocesses if p.status()=="running"]
+    for p in python_processes:
+        cpu_percent = p.cpu_percent()
+        memory_percent = p.memory_percent()
+        activity = {
+            'pid': p.pid,
+            "name": p.name(),
+            'cpu_percent': f"{cpu_percent:.2f}%",
+            'memory_percent': f"{memory_percent:.2f}%",
+            'status': p.status(),
+            'time started': datetime.fromtimestamp(p.create_time()).isoformat(),
+            'kill': p.terminate
+            }
+        yield activity
