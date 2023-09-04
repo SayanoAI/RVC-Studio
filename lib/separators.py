@@ -11,7 +11,7 @@ from lib.uvr5_pack.constants import MDX_NET_FREQ_CUT
 from lib.uvr5_pack.vr_network.model_param_init import ModelParameters
 from lib.uvr5_pack.vr_network.nets_new import CascadedNet
 from lib.uvr5_pack.vr_network.nets import CascadedASPPNet
-from web_utils.audio import load_input_audio, remix_audio
+from web_utils.audio import remix_audio
 import librosa
 from lib.uvr5_pack import spec_utils
 class UVR5Base:
@@ -152,7 +152,7 @@ class UVR5Base:
         else:
             wav_vocals = spec_utils.cmb_spectrogram_to_wave(v_spec_m, self.mp)
         print(f"vocals done: {wav_vocals.shape}")
-        return_dict["vocals"] = remix_audio((wav_vocals,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=-1)
+        return_dict["vocals"] = remix_audio((wav_vocals,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=0)
         return return_dict["vocals"]
     
     def process_instrumental(self,y_spec_m,input_high_end,input_high_end_h,return_dict={}):
@@ -166,7 +166,7 @@ class UVR5Base:
         else:
             wav_instrument = spec_utils.cmb_spectrogram_to_wave(y_spec_m, self.mp)
         print(f"instruments done: {wav_instrument.shape}")
-        return_dict["instrumentals"] = remix_audio((wav_instrument,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=-1)
+        return_dict["instrumentals"] = remix_audio((wav_instrument,return_dict["sr"]),norm=True,to_int16=True,to_mono=True,axis=0)
         return return_dict["instrumentals"] 
     
     def process_audio(self,y_spec_m,v_spec_m,input_high_end,input_high_end_h):
