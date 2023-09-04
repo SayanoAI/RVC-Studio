@@ -256,7 +256,7 @@ class UVR5New(UVR5Base):
             "agg": agg,
             "high_end_process": "mirroring",
         }
-        mp = ModelParameters("lib/uvr5_pack/lib_v5/modelparams/4band_v3.json")
+        mp = ModelParameters("lib/uvr5_pack/vr_network/modelparams/4band_v3.json")
         nout = 64 if dereverb else 48
         model = CascadedNet(mp.param["bins"] * 2, nout)
         cpk = torch.load(model_path, map_location=self.device)
