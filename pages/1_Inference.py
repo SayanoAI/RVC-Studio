@@ -108,7 +108,7 @@ def clear_data(state):
     return state
 
 DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
+PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
 
 @st.cache_data
 def get_filename(audio_name,model_name):

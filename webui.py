@@ -9,7 +9,6 @@ import streamlit as st
 st.set_page_config("RVC Studio",layout="centered")
 
 from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
-from webui_utils import get_subprocesses
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -51,7 +50,8 @@ def render_model_checkboxes(generator):
 
 if __name__=="__main__":
 
-    with st.container():
+    model_tab, audio_tab = st.tabs(["Model Download","Audio Download"])
+    with model_tab:
         st.title("Download required models")
 
         with st.expander("Base Models"):
@@ -93,10 +93,10 @@ if __name__=="__main__":
             with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                 st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
 
-    with SessionStateContext("youtube_downloader") as state:
+    with audio_tab, SessionStateContext("youtube_downloader") as state:
         st.title("Download Audio from Youtube")
-        state.url = st.text_input("Insert Youtube URL:",value=state.url)
-        if st.button("Fetch",disabled=state.url is None):
+        state.url = st.text_input("Insert Youtube URL:",value=state.url if state.url else "")
+        if st.button("Fetch",disabled=not state.url):
             with st.spinner("Downloading Audio Stream from Youtube..."):
                 state.downloaded_audio = download_audio_to_buffer(state.url)
             st.subheader("Title")

@@ -156,16 +156,17 @@ if __name__=="__main__":
                         protect=protect
                     )
                     state.device=device
+                    st.experimental_rerun()
 
         with st.container():
-            state.tts_text = st.text_area("Speech",state.tts_text,max_chars=600)
+            state.tts_text = st.text_area("Speech",value=state.tts_text if state.tts_text else "",max_chars=600)
 
-            if st.button("One Click Convert"):
+            if st.button("One Click Convert", disabled=not state.tts_text):
                 one_click_speech(state)
 
             col1, col2 = st.columns(2)
             
-            if col1.button("Generate Speech"):
+            if col1.button("Generate Speech", disabled=not state.tts_text):
                 state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
             if state.tts_audio:
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])

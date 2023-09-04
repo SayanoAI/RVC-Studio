@@ -253,9 +253,6 @@ DEVICE_OPTIONS = ["cpu","cuda"]
 PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
 
 with SessionStateContext("training",init_training_state()) as state:
-    PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
-    PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
-    model_log_dir = f"{state.exp_dir}_{state.version}_{state.sr}"
     
     with st.container():
         col1,col2 = st.columns(2)
@@ -279,6 +276,10 @@ with SessionStateContext("training",init_training_state()) as state:
         disabled = not (state.trainset_dir and state.exp_dir and os.path.exists(state.trainset_dir))
         if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
             preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version)
+
+    PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
+    PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
+    model_log_dir = f"{state.exp_dir}_{state.version}_{state.sr}"
 
     with st.form(i18n("training.extract_features.form")):  #extract_features(exp_dir, n_threads, version, if_f0, f0method)
         st.subheader(i18n("training.extract_features.title"))
