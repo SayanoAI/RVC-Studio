@@ -80,8 +80,7 @@ def merge_audio(audio1,audio2,sr=40000):
 
     return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)
 
-def get_subprocesses():
-    pid = os.getpid()
+def get_subprocesses(pid = os.getpid()):
     # Get a list of all subprocesses started by the current process
     subprocesses = psutil.Process(pid).children(recursive=True)
     python_processes = [p for p in subprocesses if p.status()=="running"]
@@ -94,7 +93,7 @@ def get_subprocesses():
             'cpu_percent': f"{cpu_percent:.2f}%",
             'memory_percent': f"{memory_percent:.2f}%",
             'status': p.status(),
-            'time started': datetime.fromtimestamp(p.create_time()).isoformat(),
-            'kill': p.terminate
+            'time_started': datetime.fromtimestamp(p.create_time()).isoformat(),
+            'kill': p.kill
             })
         yield process

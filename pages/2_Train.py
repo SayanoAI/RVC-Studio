@@ -316,17 +316,20 @@ with SessionStateContext("training",init_training_state()) as state:
     if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
         train_index(state.exp_dir,state.version,state.sr)
 
-    disabled = not (state.exp_dir)
+    disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
     if state.exp_dir and st.button(i18n("training.train_speaker.submit"),disabled=disabled):
         train_speaker_embedding(state.exp_dir,model_log_dir)
     else: st.markdown(f"*Only required for speecht5 TTS*")
 
     with st.expander(i18n("training.pids")):
         for p in get_subprocesses():
-            col1,col2,col3=st.columns(3)
+            col1,col2,col3,col4=st.columns(4)
             col1.write(p.pid)
-            col2.write(p.returncode)
-            if col3.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{p.pid}"):
+            col2.write(p.name)
+            col3.write(p.time_started)
+            if col4.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{p.pid}"):
+                for c in get_subprocesses(p.pid):
+                    c.kill()
                 p.kill()
                 gc_collect()
                 st.experimental_rerun()
