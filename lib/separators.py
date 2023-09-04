@@ -28,7 +28,7 @@ class UVR5Base:
             "agg": agg,
             "high_end_process": "mirroring",
         }
-        mp = ModelParameters("lib/uvr5_pack/lib_v5/modelparams/4band_v2.json")
+        mp = ModelParameters("lib/uvr5_pack/vr_network/modelparams/4band_v2.json")
         model = CascadedASPPNet(mp.param["bins"] * 2)
         cpk = torch.load(model_path, map_location=self.device)
         model.load_state_dict(cpk)

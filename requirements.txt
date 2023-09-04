@@ -50,6 +50,7 @@ Markdown
 Cython
 pytube
 lightning
+samplerate
 
 #tts
 transformers
