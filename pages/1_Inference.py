@@ -21,7 +21,6 @@ def split_vocals(model_paths,**args):
     vocals,instrumental,input_audio=split_audio(model_paths,**args)
     return vocals, instrumental, input_audio
 
-@st.cache_resource(show_spinner=False)
 def load_model(_state,model_name):
 
     index_file = get_filenames(root="./models/RVC",folder=".index",exts=["index"],name_filters=[os.path.basename(model_name).split(".")[0]])
@@ -108,7 +107,7 @@ def clear_data(state):
     return state
 
 DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
+PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 
 @st.cache_data
 def get_filename(audio_name,model_name):

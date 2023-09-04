@@ -1,7 +1,7 @@
 {
     "inference.save.button": "Save Options",
     "inference.refresh_data.button": "Refresh Data",
-    "inference.clear_data.button": "Reset Forms",
+    "inference.clear_data.button": "Clear Memory",
     "inference.one_click.button": "1-Click VC",
     "inference.song.selectbox": "Select a song file",
     "inference.voice.selectbox": "Select a voice model",
