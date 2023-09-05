@@ -1,5 +1,5 @@
 # RVC Studio
-This project provides a comprehensive platform for training RVC models and generating AI voice covers.
+This project provides a comprehensive platform for training RVC models and generating AI voice covers. Use the app to download the required files before using or manually download them here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
 
 ## Features
 * Youtube music downloader: download any music video from Youtube as an mp3 file with just one click.
@@ -40,6 +40,9 @@ This project provides a comprehensive platform for training RVC models and gener
 ## Dockerize
 Run `docker compose up --build` in the main project folder.
 **Known issue:** Tensorboard doesn't work inside a docker container. Feel free to submit a PR if you know a solution.
+
+## FAQs
+* Trouble with ffmpeg/espeak? [Read this](/dist/README.md)
 
 ## Disclaimer
 This project is for educational and research purposes only. The generated voice overs are not intended to infringe on any copyrights or trademarks of the original songs or text. The project does not endorse or promote any illegal or unethical use of the generative AI technology. The project is not responsible for any damages or liabilities arising from the use or misuse of the generated voice overs.
