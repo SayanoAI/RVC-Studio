@@ -317,10 +317,11 @@ with SessionStateContext("training",init_training_state()) as state:
     if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
         train_index(state.exp_dir,state.version,state.sr)
 
-    disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
-    if state.exp_dir and st.button(i18n("training.train_speaker.submit"),disabled=disabled):
-        train_speaker_embedding(state.exp_dir,model_log_dir)
-    else: st.markdown(f"*Only required for speecht5 TTS*")
+    if state.exp_dir:
+        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
+        if st.button(i18n("training.train_speaker.submit"),disabled=disabled):
+            train_speaker_embedding(state.exp_dir,model_log_dir)
+        else: st.markdown(f"*Only required for speecht5 TTS*")
 
     with st.expander(i18n("training.pids")):
         for p in get_subprocesses():
