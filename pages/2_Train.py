@@ -17,9 +17,9 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
-from web_utils.contexts import SessionStateContext
+from web_utils.contexts import SessionStateContext, st_stderr, st_stdout
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n, render_subprocess_list
+from webui_utils import get_filenames, get_index, config, i18n, render_subprocess_list
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -124,7 +124,7 @@ def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save
         "-v", version
     ])
     
-    p = subprocess.Popen(cmd, shell=True, cwd=CWD)
+    p = subprocess.Popen(cmd, shell=True, cwd=CWD, stderr=subprocess.PIPE)
 
     return p
 
@@ -179,9 +179,11 @@ def train_index(exp_dir,version,sr):
     batch_size_add = 8192
     for i in range(0, big_npy.shape[0], batch_size_add):
         index.add(big_npy[i : i + batch_size_add])
-    faiss.write_index(index,os.sep.join([BASE_MODELS_DIR,"RVC",".index",f"added_IVF{n_ivf}_Flat_nprobe_{index_ivf.nprobe}_{exp_dir}_{version}.index"]))
+
+    index_name = os.path.join(BASE_MODELS_DIR,"RVC",".index",f"{exp_dir}_{version}_{sr}.index")
+    faiss.write_index(index,index_name)
        
-    print("added_IVF%s_Flat_nprobe_%s_%s_%s.index")
+    print(f"saved file to {index_name}")
 
 def one_click_train(): #TODO not implemented yet
 
@@ -253,75 +255,77 @@ SR_MAP = {"40k": 40000, "48k": 48000}
 DEVICE_OPTIONS = ["cpu","cuda"]
 PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
 
-with SessionStateContext("training",init_training_state()) as state:
-    
-    with st.container():
-        col1,col2 = st.columns(2)
-        state.exp_dir = col1.text_input(i18n("training.exp_dir"),value=state.exp_dir,placeholder="Sayano") #model_name
-        state.n_threads=col2.selectbox(i18n("training.n_threads"),
-                                    options=N_THREADS_OPTIONS,
-                                    index=get_index(N_THREADS_OPTIONS,state.n_threads))
-
-        col1,col2,col3 = st.columns(3)
-        state.sr=col1.radio(i18n("training.sr"),
-                        options=["40k","48k"],
-                        index=get_index(["40k","48k"],state.sr),
-                        horizontal=True)
-        state.version=col2.radio(i18n("training.version"),options=["v1","v2"],horizontal=True,index=get_index(["v1","v2"],state.version))
-        state.device=col3.radio(i18n("training.device"),options=["cuda","cpu"],horizontal=True)
-
-        #preprocess_data(exp_dir, sr, trainset_dir, n_threads)
-        st.subheader(i18n("training.preprocess_data.title"))
-        st.write(i18n("training.preprocess_data.text"))
-        state.trainset_dir=st.text_input(i18n("training.preprocess_data.trainset_dir"),placeholder="./datasets/Sayano")
-        disabled = not (state.trainset_dir and state.exp_dir and os.path.exists(state.trainset_dir))
-        if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
-            preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version)
-
-    PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
-    PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
-    model_log_dir = f"{state.exp_dir}_{state.version}_{state.sr}"
-
-    with st.form(i18n("training.extract_features.form")):  #extract_features(exp_dir, n_threads, version, if_f0, f0method)
-        st.subheader(i18n("training.extract_features.title"))
-        st.write(i18n("training.extract_features.text"))
-        col1,col2 = st.columns(2)
-        state.if_f0=col1.checkbox(i18n("training.if_f0"),value=state.if_f0)
-        state.f0method=col2.radio(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,
-                                  horizontal=True,index=get_index(PITCH_EXTRACTION_OPTIONS,state.f0method))
-        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
-        if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
-            extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr)
+if __name__=="__main__":
+    st_logs = st.empty()
+    with st_stdout(st_logs), st_stderr(st_logs), SessionStateContext("training",init_training_state()) as state:
         
-    with st.form(i18n("training.train_model.form")):  #def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
-        st.subheader(i18n("training.train_model.title"))
-        st.write(i18n("training.train_model.text"))
-        state.gpus=st.multiselect(i18n("training.gpus"),options=np.arange(torch.cuda.device_count(),dtype=str))
-        col1,col2,col3=st.columns(3)
-        state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
-        state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
-        state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=10,value=state.save_epoch)
-        state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
-        state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
-        state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)
-        state.if_cache_gpu=st.checkbox(i18n("training.if_cache_gpu"),value=state.if_cache_gpu)
-        state.if_save_every_weights=st.checkbox(i18n("training.if_save_every_weights"),value=state.if_save_every_weights)
-        
-        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
-        if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
-            train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
-                                          "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
-                                          state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
-                                          state.if_save_every_weights)
+        with st.container():
+            col1,col2 = st.columns(2)
+            state.exp_dir = col1.text_input(i18n("training.exp_dir"),value=state.exp_dir,placeholder="Sayano") #model_name
+            state.n_threads=col2.selectbox(i18n("training.n_threads"),
+                                        options=N_THREADS_OPTIONS,
+                                        index=get_index(N_THREADS_OPTIONS,state.n_threads))
 
-    disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
-    if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
-        train_index(state.exp_dir,state.version,state.sr)
+            col1,col2,col3 = st.columns(3)
+            state.sr=col1.radio(i18n("training.sr"),
+                            options=["40k","48k"],
+                            index=get_index(["40k","48k"],state.sr),
+                            horizontal=True)
+            state.version=col2.radio(i18n("training.version"),options=["v1","v2"],horizontal=True,index=get_index(["v1","v2"],state.version))
+            state.device=col3.radio(i18n("training.device"),options=["cuda","cpu"],horizontal=True)
 
-    if state.exp_dir:
-        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
-        if st.button(i18n("training.train_speaker.submit"),disabled=disabled):
-            train_speaker_embedding(state.exp_dir,model_log_dir)
-        else: st.markdown(f"*Only required for speecht5 TTS*")
+            #preprocess_data(exp_dir, sr, trainset_dir, n_threads)
+            st.subheader(i18n("training.preprocess_data.title"))
+            st.write(i18n("training.preprocess_data.text"))
+            state.trainset_dir=st.text_input(i18n("training.preprocess_data.trainset_dir"),placeholder="./datasets/Sayano")
+            disabled = not (state.trainset_dir and state.exp_dir and os.path.exists(state.trainset_dir))
+            if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
+                preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version)
 
-    render_subprocess_list()
+        PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
+        PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
+        model_log_dir = f"{state.exp_dir}_{state.version}_{state.sr}"
+
+        with st.form(i18n("training.extract_features.form")):  #extract_features(exp_dir, n_threads, version, if_f0, f0method)
+            st.subheader(i18n("training.extract_features.title"))
+            st.write(i18n("training.extract_features.text"))
+            col1,col2 = st.columns(2)
+            state.if_f0=col1.checkbox(i18n("training.if_f0"),value=state.if_f0)
+            state.f0method=col2.radio(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,
+                                    horizontal=True,index=get_index(PITCH_EXTRACTION_OPTIONS,state.f0method))
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
+            if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
+                extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr)
+            
+        with st.form(i18n("training.train_model.form")):  #def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
+            st.subheader(i18n("training.train_model.title"))
+            st.write(i18n("training.train_model.text"))
+            state.gpus=st.multiselect(i18n("training.gpus"),options=np.arange(torch.cuda.device_count(),dtype=str))
+            col1,col2,col3=st.columns(3)
+            state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
+            state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
+            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=10,value=state.save_epoch)
+            state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
+            state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
+            state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)
+            state.if_cache_gpu=st.checkbox(i18n("training.if_cache_gpu"),value=state.if_cache_gpu)
+            state.if_save_every_weights=st.checkbox(i18n("training.if_save_every_weights"),value=state.if_save_every_weights)
+            
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
+            if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
+                train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
+                                            "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
+                                            state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
+                                            state.if_save_every_weights)
+
+        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
+        if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
+            train_index(state.exp_dir,state.version,state.sr)
+
+        if state.exp_dir:
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
+            if st.button(i18n("training.train_speaker.submit"),disabled=disabled):
+                train_speaker_embedding(state.exp_dir,model_log_dir)
+            else: st.markdown(f"*Only required for speecht5 TTS*")
+
+        render_subprocess_list()

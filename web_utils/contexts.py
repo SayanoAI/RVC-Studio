@@ -77,9 +77,8 @@ class ProgressBarContext:
     #     return self.__progressbar__.progress(100, f"{self.text}: finished")
 
     def run(self):
-        max_progress = len(self.args)
-        for i in range(max_progress):
-            self.__progressbar__.progress(i//max_progress,f"{self.text}: {i}/{len(self.args)}")
+        for i in range(self.max_progress ):
+            self.__progressbar__.progress(float(i/self.max_progress),f"{self.text}: {i}/{self.max_progress}")
             self.func(self.args[i])
 
 # TODO: show terminal logs in streamlit
@@ -87,21 +86,24 @@ from contextlib import contextmanager
 from io import StringIO
 from threading import current_thread
 import sys
+from streamlit.runtime.scriptrunner.script_run_context import SCRIPT_RUN_CONTEXT_ATTR_NAME
 
 @contextmanager
 def st_redirect(src, dst):
-    placeholder = st.empty()
-    output_func = getattr(placeholder, dst)
+    # placeholder = st.empty()
+    output_func = dst #getattr(placeholder, dst)
 
     with StringIO() as buffer:
         old_write = src.write
 
         def new_write(b):
-            if getattr(current_thread(), "st.REPORT_CONTEXT_ATTR_NAME", None):
-                buffer.write(b)
-                output_func(buffer.getvalue())
-            else:
-                old_write(b)
+            if getattr(current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, None):
+                try:
+                    buffer.write(b)
+                    output_func(f"{buffer.getvalue()}")
+                except:
+                    old_write(b)        
+            old_write(b)
 
         try:
             src.write = new_write
@@ -110,11 +112,12 @@ def st_redirect(src, dst):
             src.write = old_write
 
 @contextmanager
-def st_stdout(dst):
-    with st_redirect(sys.stdout, dst):
+def st_stdout(placeholder=st.empty(),output="info"):
+    with st_redirect(sys.stdout, getattr(placeholder,output)):
         yield
 
+
 @contextmanager
-def st_stderr(dst):
-    with st_redirect(sys.stderr, dst):
+def st_stderr(placeholder=st.empty(),output="error"):
+    with st_redirect(sys.stderr, getattr(placeholder,output)):
         yield
