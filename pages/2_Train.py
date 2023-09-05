@@ -7,9 +7,10 @@ import streamlit as st
 
 from lib.downloader import BASE_MODELS_DIR
 from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
+from web_utils import MENU_ITEMS
 from web_utils.audio import load_input_audio, save_input_audio
 
-st.set_page_config(layout="centered")
+st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from types import SimpleNamespace
 import subprocess
@@ -18,7 +19,7 @@ import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
 from web_utils.contexts import SessionStateContext
 
-from webui_utils import gc_collect, get_filenames, get_index, config, get_subprocesses, i18n
+from webui_utils import gc_collect, get_filenames, get_index, config, i18n, render_subprocess_list
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -323,15 +324,4 @@ with SessionStateContext("training",init_training_state()) as state:
             train_speaker_embedding(state.exp_dir,model_log_dir)
         else: st.markdown(f"*Only required for speecht5 TTS*")
 
-    with st.expander(i18n("training.pids")):
-        for p in get_subprocesses():
-            col1,col2,col3,col4=st.columns(4)
-            col1.write(p.pid)
-            col2.write(p.name)
-            col3.write(p.time_started)
-            if col4.button(i18n("training.kill_one_pid"),key=f"training.kill_one_pid.{p.pid}"):
-                for c in get_subprocesses(p.pid):
-                    c.kill()
-                p.kill()
-                gc_collect()
-                st.experimental_rerun()
+    render_subprocess_list()

@@ -2,7 +2,9 @@ import os
 import sys
 import streamlit as st
 
-st.set_page_config(layout="centered")
+from web_utils import MENU_ITEMS
+
+st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from types import SimpleNamespace
 from tts_cli import generate_speech

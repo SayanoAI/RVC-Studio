@@ -6,7 +6,9 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
-st.set_page_config("RVC Studio",layout="centered")
+
+from web_utils import MENU_ITEMS
+st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
 

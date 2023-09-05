@@ -60,9 +60,10 @@
     "training.train_index.submit": "4. Train feature index",
     "training.train_speaker.submit": "Train Optional Speaker Embedding",
     "training.one_click": "One-click training",
-    "training.pids": "Active Processes",
-    "training.kill_all_pids": "Close All Processes",
-    "training.kill_one_pid": "Stop",
+
+    "process.pids": "Active Processes",
+    "process.kill_all_pids": "Close All Processes",
+    "process.kill_one_pid": "Stop",
 
         "tts.inference": "Text to Speech",
         "tts.options": "TTS Options",
