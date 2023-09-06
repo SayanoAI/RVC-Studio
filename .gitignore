@@ -5,6 +5,7 @@ __pycache__
 *.pt
 *.pth
 *.exe
+*.bin
 *.bk
 .venv
 *.env

@@ -64,3 +64,7 @@ edge-tts
 monotonic-align
 Unidecode==1.1.1
 phonemizer==2.2.1
+
+#required by chat
+llama-cpp-python
+sounddevice

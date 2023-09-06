@@ -46,11 +46,10 @@ def save_input_audio(fname,input_audio,sr=None,to_int16=False):
     except:
         return False
     
-def audio_to_bytes(audio,sr):
-    bytes_io = io.BytesIO(bytes())
-    sf.write(bytes_io, sr, audio)
+def audio_to_bytes(audio,sr,format='WAV'):
+    bytes_io = io.BytesIO()
+    sf.write(bytes_io, audio, sr, format=format)
     return bytes_io.read()
-
 
 def bytes_to_audio(data):
     bytes_io = io.BytesIO(data)
