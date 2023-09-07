@@ -8,7 +8,7 @@ st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
-from web_utils.contexts import SessionStateContext, st_stderr, st_stdout
+from web_utils.contexts import SessionStateContext
 from web_utils.audio import SUPPORTED_AUDIO, bytes_to_audio, save_input_audio
 
 from webui_utils import gc_collect, get_filenames, get_index, config, i18n, merge_audio
@@ -147,8 +147,7 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
     
 if __name__=="__main__":
-    st_logs = st.empty()
-    with st_stdout(st_logs), st_stderr(st_logs), SessionStateContext("inference",initial_state=init_inference_state()) as state:
+    with SessionStateContext("inference",initial_state=init_inference_state()) as state:
         with st.container():
             left, right = st.columns(2)
             state.input_audio_name = left.selectbox(

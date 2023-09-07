@@ -9,7 +9,7 @@ st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 from types import SimpleNamespace
 from tts_cli import generate_speech
 from vc_infer_pipeline import get_vc, vc_single
-from web_utils.contexts import SessionStateContext, st_stderr, st_stdout
+from web_utils.contexts import SessionStateContext
 from web_utils.audio import save_input_audio
 
 from webui_utils import gc_collect, get_filenames, get_index, config, i18n
@@ -100,8 +100,7 @@ def one_click_speech(state):
 TTS_MODELS = ["speecht5","bark","tacotron2","edge","vits"]
 
 if __name__=="__main__":
-    st_logs = st.empty()
-    with st_stdout(st_logs), st_stderr(st_logs), SessionStateContext("tts",initial_state=init_inference_state()) as state:
+    with SessionStateContext("tts",initial_state=init_inference_state()) as state:
         with st.container():
             left, right = st.columns(2)
             state.tts_method = left.selectbox(

@@ -17,7 +17,7 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
-from web_utils.contexts import SessionStateContext, st_stderr, st_stdout
+from web_utils.contexts import SessionStateContext
 
 from webui_utils import get_filenames, get_index, config, i18n, render_subprocess_list
 
@@ -256,8 +256,7 @@ DEVICE_OPTIONS = ["cpu","cuda"]
 PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
 
 if __name__=="__main__":
-    st_logs = st.empty()
-    with st_stdout(st_logs), st_stderr(st_logs), SessionStateContext("training",init_training_state()) as state:
+    with SessionStateContext("training",init_training_state()) as state:
         
         with st.container():
             col1,col2 = st.columns(2)

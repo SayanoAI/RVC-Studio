@@ -9,7 +9,7 @@ import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
 from webui_utils import render_subprocess_list
-from web_utils.contexts import ProgressBarContext, SessionStateContext, st_stderr, st_stdout
+from web_utils.contexts import ProgressBarContext, SessionStateContext
 
 
 CWD = os.getcwd()
@@ -22,8 +22,7 @@ def start_tensorboard(logdir):
     return p
 
 if __name__=="__main__":
-    st_logs = st.empty()
-    with st_stdout(st_logs), st_stderr(st_logs), SessionStateContext("tensorboard") as state:
+    with SessionStateContext("tensorboard") as state:
         state.logdir=st.text_input("Path to Logs",value=state.logdir if state.logdir else os.path.join(CWD,"logs"))
         if state.logdir:
             st_tensorboard(logdir=state.logdir, port=6006)
