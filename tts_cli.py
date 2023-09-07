@@ -4,7 +4,7 @@ import os
 
 from lib.infer_pack.text.cleaners import english_cleaners
 
-from web_utils.audio import MAX_INT16, load_input_audio
+from web_utils.audio import MAX_INT16, load_input_audio, remix_audio
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -76,7 +76,7 @@ def __tacotron2__(text, device="cpu"):
     speech = (waveforms.cpu().numpy().squeeze() * MAX_INT16).astype(np.int16)
 
     # return as numpy array
-    return speech, 22050
+    return remix_audio((speech, 22050),target_sr=16000,to_mono=True,norm=True)
 
 def __edge__(text, speaker="en-US-JennyNeural"):
     import edge_tts
@@ -92,7 +92,7 @@ def __edge__(text, speaker="en-US-JennyNeural"):
                 elif chunk["type"] == "WordBoundary":
                     print(f"WordBoundary: {chunk}")
         
-        return load_input_audio(tempfile)
+        return load_input_audio(tempfile,sr=16000)
     
     audio, sr = asyncio.run(fetch_audio())
     # audio = np.frombuffer(stream.getbuffer())
