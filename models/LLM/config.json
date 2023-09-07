@@ -1,0 +1,15 @@
+{
+  "b59e03fd054b285a9541490c64060285": {
+    "name": "pygmalion-2-7b.Q5_K_S.gguf",
+    "prompt_template": "{context}\n\n<|system|>\nEnter RP mode. Pretend to be {name} whose persona follows: {persona}\n\n{instruction}\n\n<|user|>\n{prompt}\n\n<|model|>\n",
+    "chat_template": "{role}\n{content}\n",
+    "instruction": "You shall reply to {user} while staying in character as {name} and generate dialog without narrating!",
+    "mapper": {
+      "CHARACTER": "<|model|>",
+      "USER": "<|user|>"
+    },
+    "n_ctx": 2048,
+    "n_gpu_layers": 16,
+    "max_tokens": 64
+  }
+}
