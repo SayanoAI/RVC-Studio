@@ -8,8 +8,8 @@
       "CHARACTER": "<|model|>",
       "USER": "<|user|>"
     },
-    "n_ctx": 2048,
-    "n_gpu_layers": 16,
+    "n_ctx": 4096,
+    "n_gpu_layers": 48,
     "max_tokens": 64
   },
   "2ef522876f62d0b01d4c89910cda6cce": {
@@ -21,9 +21,9 @@
       "CHARACTER": "ASSISTANT",
       "USER": "USER"
     },
-    "n_ctx": 2048,
-    "n_gpu_layers": 36,
-    "max_tokens": 64
+    "n_ctx": 4096,
+    "n_gpu_layers": 64,
+    "max_tokens": 128
   },
   "571c9fe124904d05cf7be1afef16b341": {
     "name": "zarablend-mx-l2-7b.Q4_K_M.gguf",

@@ -83,6 +83,7 @@ def __edge__(text, speaker="en-US-JennyNeural"):
     import asyncio
 
     async def fetch_audio():
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         communicate = edge_tts.Communicate(text, speaker)
         tempfile = os.path.join("output","edge_tts.wav")
         with open(tempfile, "wb") as data:
@@ -96,7 +97,7 @@ def __edge__(text, speaker="en-US-JennyNeural"):
     
     audio, sr = asyncio.run(fetch_audio())
     # audio = np.frombuffer(stream.getbuffer())
-    print(audio.shape,audio.max(),audio.min(),audio.mean(),sr)
+    # print(audio.shape,audio.max(),audio.min(),audio.mean(),sr)
     # return as numpy array
     return audio, sr
 

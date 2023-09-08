@@ -2,12 +2,13 @@ import json
 import os
 import sys
 import streamlit as st
+from web_utils import MENU_ITEMS
+st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
+
 import sounddevice as sd
 from lib.model_utils import get_hash
 from tts_cli import generate_speech
 from vc_infer_pipeline import get_vc, vc_single
-from web_utils import MENU_ITEMS
-st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
 from web_utils.contexts import SessionStateContext
 
@@ -111,7 +112,6 @@ def build_context(state,prompt,memory=100):
         prompt=prompt
         )
 
-    print(chat_history_with_template)
     return chat_history_with_template
 
 def generate_response(state,prompt):
@@ -366,6 +366,7 @@ def render_character_form(state):
 if __name__=="__main__":
     with SessionStateContext("chat",init_state()) as state:
         chat_disabled = not (state.LLM and state.models)
+        st.subheader("Load a LLM and Character to get started!")
 
         col1, col2, col3 = st.columns(3)
         if col1.button("Refresh Files"):

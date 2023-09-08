@@ -13,6 +13,7 @@ hyperparameter. Some cleaners are English-specific. You'll typically want to use
 '''
 
 import re
+import emoji
 from unidecode import unidecode
 from phonemizer import phonemize
 from num2words import num2words
@@ -74,13 +75,7 @@ def basic_cleaners(text):
   return text
 
 def emoji_cleaner(text: str):
-  regrex_pattern = re.compile(pattern = "["
-        u"\U0001F600-\U0001F64F"  # emoticons
-        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-        u"\U0001F680-\U0001F6FF"  # transport & map symbols
-        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                           "]+", flags = re.UNICODE)
-  return regrex_pattern.sub(r'',text)
+  return emoji.demojize(text)
 
 def transliteration_cleaners(text):
   '''Pipeline for non-English text that transliterates to ASCII.'''
@@ -90,7 +85,7 @@ def transliteration_cleaners(text):
   return text
 
 def english_cleaners(text):
-    text = convert_to_ascii(text)
+    text = transliteration_cleaners(text)
     text = lowercase(text)
     text = emoji_cleaner(text)
     text = expand_abbreviations(text)

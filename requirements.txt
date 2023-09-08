@@ -68,3 +68,4 @@ phonemizer==2.2.1
 #required by chat
 llama-cpp-python>=0.1.79 #support for gguf
 sounddevice
+emoji

@@ -6,6 +6,7 @@ import pyworld, os, traceback, faiss, librosa
 from scipy import signal
 from functools import lru_cache
 from web_utils.audio import load_input_audio, remix_audio
+from webui_utils import get_filenames
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -466,7 +467,7 @@ class VC(object):
         return audio_opt
 
 def get_vc(model_path,config,device="cpu"):
-    print("loading %s" % model_path)
+    
     cpt = torch.load(model_path, map_location=device)
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  # n_spk
@@ -497,7 +498,8 @@ def get_vc(model_path,config,device="cpu"):
         net_g = net_g.float()
     vc = VC(tgt_sr, config)
     hubert_model = load_hubert(config)
-    return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model}
+    index_file = get_filenames(root="./models/RVC",folder=".index",exts=["index"],name_filters=[os.path.basename(model_path).split(".")[0]])
+    return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model, "file_index": index_file[0] if len(index_file) else ""}
 
 def load_hubert(config):
     try:

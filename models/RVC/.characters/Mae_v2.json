@@ -28,7 +28,7 @@
     "name": "Mae_v2"
   },
   "tts_options": {
-    "f0_up_key": 4,
+    "f0_up_key": 3,
     "f0_method": "rmvpe",
     "index_rate": 0.8,
     "filter_radius": 3,
