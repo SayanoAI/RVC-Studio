@@ -27,7 +27,7 @@ This project provides a comprehensive platform for training RVC models and gener
 2. Navigate to the project directory and create a virtual environment with the command `virtualenv venv`.
 3. Activate the virtual environment with the command `source venv/bin/activate` on Linux/Mac or `venv\Scripts\activate` on Windows. Or use `conda create -n RVC-Studio & conda activate RVC-Studio` if you're using conda package manager.
 4. Install the required packages with the command `pip install -r requirements.txt`.
-5. Run the streamlit app with the command `streamlit run webui.py`.
+5. Run the streamlit app with the command `streamlit run Home.py`.
 
 ## Instructions for inference
 1. Download all the required models on the webui page or here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main

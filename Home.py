@@ -6,6 +6,7 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
+from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
 
 from web_utils import MENU_ITEMS
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
@@ -94,6 +95,21 @@ if __name__=="__main__":
             to_download = render_model_checkboxes(generator)
             with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                 st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
+
+        with st.expander("STT Models"):
+            col1, col2 = st.columns(2)
+            stt_path = os.path.join(TTS_MODELS_DIR,stt_checkpoint)
+            is_downloaded = os.path.exists(stt_path)
+            col1.checkbox(os.path.basename(stt_path),value=is_downloaded,disabled=True)
+            if col2.button("Download",disabled=is_downloaded,key=stt_path):
+                with st.spinner(f"Downloading {stt_checkpoint} to {stt_path}"):
+                    models = load_stt_models() #hacks the from_pretrained downloader
+                    del models
+                    st.experimental_rerun()
+            pass
+
+        with st.expander("LLM Models"):
+            pass
 
     with audio_tab, SessionStateContext("youtube_downloader") as state:
         st.title("Download Audio from Youtube")
