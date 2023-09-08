@@ -37,10 +37,13 @@ class SessionStateContext:
         else:
             self.__setattr__(name, value)
     def __delitem__(self,name):
-        if name in self.__data__:
-            del self.__data__[name]
-        else:
-            self.__delattr__(name)
+        try:
+            if name in self.__data__:
+                del self.__data__[name]
+            else:
+                self.__delattr__(name)
+        except Exception as e:
+            print(e)
         
     def __getattr__(self, name: str):
         if name.startswith("__") and name.endswith("__"):

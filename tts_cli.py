@@ -131,9 +131,11 @@ def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
     return audio, hps.data.sampling_rate
 
 def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
-    if text and len(text.strip()) == 0:
+    
+    text = english_cleaners(text.strip()) #clean text
+    if text and len(text) == 0:
         return (np.zeros(0).astype(np.int16),16000)
-    text = english_cleaners(text) #clean text
+    
     speaker_embedding = None
     
     if method=="speecht5":
