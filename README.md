@@ -7,13 +7,14 @@ This project provides a comprehensive platform for training RVC models and gener
 * RVC Model fine-tuning: fine-tune an RVC model to mimic any voice you want using your own data.
 * 1-click TTS using RVC model: convert any text to speech using the fine-tuned VC model with just one click.
 * Built-in tensorboard: You can monitor the training progress and performance of your VC model using a built-in tensorboard dashboard.
+* LLM integration: chat with your RVC model in real time using popular LLM.
 
 ## Planned Features
 * Demucs: Meta's vocals and instrumental music source separation.
 * Auto-Playlist: let your RVC model sing songs from your favourite playlist.
 * Audio-postprocessing: You can enhance the quality of your generated songs by adding reverbs, echos, etc.
 * TTS using cloud API: use a cloud-based text-to-speech service to generate high-quality and natural-sounding speech from any text.
-* LLM integration: chat with your RVC model in real time.
+~~* LLM integration: chat with your RVC model in real time.~~
 * Real-time VC interface: convert your voice using your favourite RVC model.
 
 ## Requirements
@@ -29,13 +30,20 @@ This project provides a comprehensive platform for training RVC models and gener
 5. Run the streamlit app with the command `streamlit run webui.py`.
 
 ## Instructions for inference
-1. Download all the required models on the webui page (https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main)
+1. Download all the required models on the webui page or here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
 2. Put your favourite songs in the ./songs folder
 3. Press "Refresh Data" button
 4. Select a song (only wav/flac/ogg/mp3 are supported for now)
 5. Select a voice model (put your RVC v2 models in ./models/RVC/ and index file in ./models/RVC/.index/)
 6. Choose a vocal extraction model (preprocessing model is optional)
 7. Click "Save Options" and "1-Click VC" to get started
+
+## Instructions for chat
+Download one of the following LLM:
+* [airoboros-7B](https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/blob/main/airoboros-l2-7b-2.1.Q4_K_M.gguf)
+* [pygmalion-7B](https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/blob/main/pygmalion-2-7b.Q4_K_M.gguf)
+* [zarablend-7B](https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/blob/main/zarablend-mx-l2-7b.Q4_K_M.gguf)
+Feel free to use larger versions of these models if your computer can handle it. (you will have to build your own config)
 
 ## Dockerize
 Run `docker compose up --build` in the main project folder.
