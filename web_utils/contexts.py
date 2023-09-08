@@ -56,12 +56,13 @@ class SessionStateContext:
         else:
             self.__data__[name] = value
     def __delattr__(self,name):
-        if name.startswith("__") and name.endswith("__"):
-            super().__delattr__(name)
-        elif name in self.__data__:
-            del self.__data__[name]
-        else:
-            print(f"Failed to delete {name}")
+        try:
+            if name.startswith("__") and name.endswith("__"):
+                super().__delattr__(name)
+            elif name in self.__data__:
+                del self.__data__[name]
+        except:
+            pass
 
 class ProgressBarContext:
     def __init__(self, iter: List, func: FunctionType, text: str=""):

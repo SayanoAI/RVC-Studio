@@ -16,7 +16,7 @@
     "name": "airoboros-l2-7b-2.1.Q4_K_M.gguf",
     "prompt_template": "SYSTEM: {instruction}\n{name}'s Persona: {persona}\n\n{context}\nUSER: {prompt}\nASSISTANT: ",
     "chat_template": "{role}: {content}",
-    "instruction": "A meaningful chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
+    "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
     "mapper": {
       "CHARACTER": "ASSISTANT",
       "USER": "USER"

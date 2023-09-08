@@ -181,9 +181,9 @@ def save_character(state):
             "tts_method": state.tts_method
         }
         f.write(json.dumps(loaded_state,indent=2))
-    # del state.models
-    # state.models = get_vc(state.voice_model,config=config,device=state.device)
-    # gc_collect()
+    del state.models
+    state.models = get_vc(state.voice_model,config=config,device=state.device)
+    gc_collect()
     state = refresh_data(state)
     return state
 
@@ -222,9 +222,9 @@ def save_model_config(state):
             "max_tokens": state.llm_options.max_tokens
         }
         f.write(json.dumps(data,indent=2))
-    # del state.LLM
-    # state.LLM = load_model(**vars(state.model_params))
-    # gc_collect()
+    del state.LLM
+    state.LLM = load_model(**vars(state.model_params))
+    gc_collect()
     state = refresh_data(state)
     return state
 

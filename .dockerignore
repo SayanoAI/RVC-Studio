@@ -11,6 +11,10 @@ docker-compose.yml
 .dockerignore
 *.pt
 *.pth
+*.gguf
+*.bin
+*.onnx
+
 models
 songs
 datasets
