@@ -7,7 +7,7 @@ This project provides a comprehensive platform for training RVC models and gener
 * RVC Model fine-tuning: fine-tune an RVC model to mimic any voice you want using your own data.
 * 1-click TTS using RVC model: convert any text to speech using the fine-tuned VC model with just one click.
 * Built-in tensorboard: You can monitor the training progress and performance of your VC model using a built-in tensorboard dashboard.
-* LLM integration: chat with your RVC model in real time using popular LLM.
+* LLM integration: chat with your RVC model in real time using popular LLMs.
 
 ## Planned Features
 * Demucs: Meta's vocals and instrumental music source separation.
@@ -43,6 +43,7 @@ Download one of the following LLM:
 * [airoboros-7B](https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/blob/main/airoboros-l2-7b-2.1.Q4_K_M.gguf)
 * [pygmalion-7B](https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/blob/main/pygmalion-2-7b.Q4_K_M.gguf)
 * [zarablend-7B](https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/blob/main/zarablend-mx-l2-7b.Q4_K_M.gguf)
+
 Feel free to use larger versions of these models if your computer can handle it. (you will have to build your own config)
 
 ## Dockerize

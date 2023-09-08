@@ -34,8 +34,8 @@
       "CHARACTER": "<<AIBOT>>",
       "USER": "<<USER>>"
     },
-    "n_ctx": 2048,
-    "n_gpu_layers": 36,
-    "max_tokens": 64
+    "n_ctx": 4096,
+    "n_gpu_layers": 64,
+    "max_tokens": 128
   }
 }
