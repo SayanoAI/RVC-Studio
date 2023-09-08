@@ -51,7 +51,6 @@ def get_models(folder="."):
     fnames = get_filenames(root="./models",folder=folder,exts=["pth","pt"])
     return fnames
 
-@st.cache_data
 def init_inference_state():
     state = SimpleNamespace(
         models=get_models(folder="RVC"),
@@ -81,7 +80,7 @@ def clear_data(state):
 DEVICE_OPTIONS = ["cpu","cuda"]
 PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 
-@st.cache_data
+
 def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]
     singer = os.path.basename(model_name).split(".")[0]

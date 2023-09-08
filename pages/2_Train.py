@@ -226,7 +226,6 @@ def train_speaker_embedding(exp_dir: str, model_log_dir: str):
     os.makedirs(os.path.dirname(embedding_path), exist_ok=True)
     np.save(embedding_path,embeddings.numpy())
 
-@st.cache_data
 def init_training_state():
     state = SimpleNamespace(
         exp_dir="",
