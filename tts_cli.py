@@ -9,6 +9,7 @@ from web_utils.audio import MAX_INT16, load_input_audio, remix_audio
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
 speecht5_vocoder_checkpoint = "microsoft/speecht5_hifigan"
+stt_checkpoint = "microsoft/speecht5_asr"
 bark_checkpoint = "suno/bark-small"
 bark_voice_presets="v2/en_speaker_0"
 tacotron2_checkpoint = "speechbrain/tts-tacotron2-ljspeech"
@@ -90,8 +91,8 @@ def __edge__(text, speaker="en-US-JennyNeural"):
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     data.write(chunk["data"])
-                elif chunk["type"] == "WordBoundary":
-                    print(f"WordBoundary: {chunk}")
+                # elif chunk["type"] == "WordBoundary":
+                #     print(f"WordBoundary: {chunk}")
         
         return load_input_audio(tempfile,sr=16000)
     
@@ -161,3 +162,29 @@ def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
     elif method=="vits":
         return __vits__(text)
     else: return None
+
+def load_stt_models():
+    from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
+    processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+    generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+    
+    return {
+        "processor": processor,
+        "generator": generator
+    }
+    
+def transcribe_speech(input_audio,stt_models=None):
+    if stt_models is None:
+        stt_models = load_stt_models()
+
+    processor = stt_models["processor"]
+    model = stt_models["generator"]
+
+    inputs = processor(audio=input_audio[0].T, sampling_rate=input_audio[1], return_tensors="pt")
+
+    audio_len = int(len(input_audio[0])//input_audio[1])
+    predicted_ids = model.generate(**inputs, max_length=max(100,audio_len))
+
+    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+    print(transcription)
+    return transcription[0]

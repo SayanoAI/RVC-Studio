@@ -3,11 +3,12 @@ import os
 import sys
 import streamlit as st
 from web_utils import MENU_ITEMS
+from web_utils.audio import bytes_to_audio
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
-
+from audio_recorder_streamlit import audio_recorder
 import sounddevice as sd
 from lib.model_utils import get_hash
-from tts_cli import generate_speech
+from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from vc_infer_pipeline import get_vc, vc_single
 
 from web_utils.contexts import SessionStateContext
@@ -397,7 +398,16 @@ if __name__=="__main__":
                 if msg.get("audio") and st.button("Play",key="Play"+str(msg)):
                     sd.play(*msg["audio"])
 
-        if prompt := st.chat_input(disabled=chat_disabled):
+        prompt = st.chat_input(disabled=chat_disabled)
+        user_audio = audio_recorder(pause_threshold=2.0, sample_rate=16_000, icon_size="2x")
+        if user_audio:
+            if state.stt_models is None: state.stt_models = load_stt_models()
+            input_audio = bytes_to_audio(user_audio)
+            prompt = transcribe_speech(input_audio,state.stt_models)
+            del user_audio
+            user_audio = None
+        
+        if prompt:
             st.chat_message(state.user).write(prompt)
             full_response = ""
             with st.chat_message(state.assistant_template.name):
