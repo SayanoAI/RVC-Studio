@@ -1,7 +1,7 @@
 {
   "b59e03fd054b285a9541490c64060285": {
     "name": "pygmalion-2-7b.Q5_K_S.gguf",
-    "prompt_template": "{context}\n\n<|system|>\nEnter RP mode. Pretend to be {name} whose persona follows: {persona}\n\n{instruction}\n\n<|user|>\n{prompt}\n\n<|model|>\n",
+    "prompt_template": "<|system|>\nEnter RP mode. Pretend to be {name} whose persona follows: {persona}\n\n{instruction}\n\n{context}\n\n<|user|>\n{prompt}\n\n<|model|>\n",
     "chat_template": "{role}\n{content}\n",
     "instruction": "You shall reply to {user} while staying in character as {name} and generate dialog without narrating!",
     "mapper": {
@@ -10,6 +10,32 @@
     },
     "n_ctx": 2048,
     "n_gpu_layers": 16,
+    "max_tokens": 64
+  },
+  "2ef522876f62d0b01d4c89910cda6cce": {
+    "name": "airoboros-l2-7b-2.1.Q4_K_M.gguf",
+    "prompt_template": "SYSTEM: {instruction}\n{name}'s Persona: {persona}\n\n{context}\nUSER: {prompt}\nASSISTANT: ",
+    "chat_template": "{role}: {content}",
+    "instruction": "A meaningful chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
+    "mapper": {
+      "CHARACTER": "ASSISTANT",
+      "USER": "USER"
+    },
+    "n_ctx": 2048,
+    "n_gpu_layers": 36,
+    "max_tokens": 64
+  },
+  "571c9fe124904d05cf7be1afef16b341": {
+    "name": "zarablend-mx-l2-7b.Q4_K_M.gguf",
+    "prompt_template": "<<SYSTEM>>\n{name}'s Persona: {persona}\n\n{instruction}\n\n{context}\n\n<<USER>>\n{prompt}\n\n<<AIBOT>>\n",
+    "chat_template": "{role}\n{content}\n",
+    "instruction": "RP as {name} engaging in a conversation with {user}.",
+    "mapper": {
+      "CHARACTER": "<<AIBOT>>",
+      "USER": "<<USER>>"
+    },
+    "n_ctx": 2048,
+    "n_gpu_layers": 36,
     "max_tokens": 64
   }
 }

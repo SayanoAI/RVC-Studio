@@ -7,6 +7,7 @@ __pycache__
 *.exe
 *.bin
 *.bk
+*.gguf
 .venv
 *.env
 !/logs/mute
