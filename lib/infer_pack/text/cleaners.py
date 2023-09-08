@@ -73,6 +73,14 @@ def basic_cleaners(text):
   text = collapse_whitespace(text)
   return text
 
+def emoji_cleaner(text: str):
+  regrex_pattern = re.compile(pattern = "["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                           "]+", flags = re.UNICODE)
+  return regrex_pattern.sub(r'',text)
 
 def transliteration_cleaners(text):
   '''Pipeline for non-English text that transliterates to ASCII.'''
@@ -84,6 +92,7 @@ def transliteration_cleaners(text):
 def english_cleaners(text):
     text = convert_to_ascii(text)
     text = lowercase(text)
+    text = emoji_cleaner(text)
     text = expand_abbreviations(text)
     text = expand_numbers(text)
     text = collapse_whitespace(text)
