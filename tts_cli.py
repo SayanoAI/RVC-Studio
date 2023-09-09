@@ -181,10 +181,11 @@ def transcribe_speech(input_audio,stt_models=None):
     model = stt_models["generator"]
 
     inputs = processor(audio=input_audio[0].T, sampling_rate=input_audio[1], return_tensors="pt")
+    
+    audio_len = int(len(input_audio[0])*6.25//input_audio[1])+1 #average 2.5 words/s spoken at 2.5 token/word
 
-    audio_len = int(len(input_audio[0])//input_audio[1])
-    predicted_ids = model.generate(**inputs, max_length=max(100,audio_len))
+    predicted_ids = model.generate(**inputs, max_length=min(150,audio_len))
 
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-    print(transcription)
+
     return transcription[0]

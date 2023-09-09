@@ -261,12 +261,14 @@ if __name__=="__main__":
         col1, col2 = st.columns(2)
         uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
         if uploaded_vocals is not None:
-            state.input_vocals = bytes_to_audio(uploaded_vocals.read())
+            state.input_vocals = bytes_to_audio(
+                uploaded_vocals.getvalue())
             state.input_audio_name = uploaded_vocals.name
             del uploaded_vocals
         uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
         if uploaded_instrumentals is not None:
-            state.input_instrumental = bytes_to_audio(uploaded_instrumentals.read())
+            state.input_instrumental = bytes_to_audio(
+                uploaded_instrumentals.getvalue())
             state.input_audio_name = uploaded_instrumentals.name
             del uploaded_instrumentals
 

@@ -399,13 +399,19 @@ if __name__=="__main__":
                     sd.play(*msg["audio"])
 
         prompt = st.chat_input(disabled=chat_disabled)
-        user_audio = audio_recorder(pause_threshold=2.0, sample_rate=16_000, icon_size="2x")
-        if user_audio:
-            if state.stt_models is None: state.stt_models = load_stt_models()
-            input_audio = bytes_to_audio(user_audio)
-            prompt = transcribe_speech(input_audio,state.stt_models)
-            del user_audio
-            user_audio = None
+        if not chat_disabled:
+            user_audio = audio_recorder(
+                text="",
+                pause_threshold=1.,
+                # energy_threshold=[.05,.01],
+                sample_rate=16_000,
+                icon_size="2x")
+            if user_audio:
+                if state.stt_models is None: state.stt_models = load_stt_models()
+                input_audio = bytes_to_audio(user_audio)
+                prompt = transcribe_speech(input_audio,state.stt_models)
+                del user_audio
+                user_audio = None
         
         if prompt:
             st.chat_message(state.user).write(prompt)
