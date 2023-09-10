@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from multiprocessing.managers import DictProxy
 import os
 import queue
 import random
@@ -9,6 +10,8 @@ import numpy as np
 from uvr5_cli import split_audio
 import asyncio
 from vc_infer_pipeline import get_vc, vc_single
+from web_utils.audio import load_input_audio, save_input_audio
+from web_utils.downloader import BASE_CACHE_DIR
 from webui_utils import merge_audio
 import sounddevice as sd
 
@@ -33,6 +36,12 @@ def convert_song(
 
     **kwargs
 ):
+    cache_dir = os.path.join(BASE_CACHE_DIR,"playlist",rvc_models["model_name"])
+    os.makedirs(cache_dir,exist_ok=True)
+    song_path = os.path.join(cache_dir,os.path.basename(audio_path).split(".")+".mp3")
+    if os.path.isfile(song_path):
+        return load_input_audio(song_path)
+    
     print(f"unused args: {kwargs}")
     input_vocals, input_instrumental, input_audio = split_audio(
         uvr5_name,
@@ -57,6 +66,9 @@ def convert_song(
 
     mixed_audio = merge_audio(changed_vocals,input_instrumental,sr=input_audio[1])
 
+    if use_cache:
+        save_input_audio(song_path,mixed_audio)
+
     return mixed_audio
 
 class PlaylistPlayer:
@@ -67,10 +79,8 @@ class PlaylistPlayer:
         self.index = 0 # current song index
         self.paused = False # pause flag
         self.stopped = False # stop flag
-        self.lock = threading.Lock() # lock for synchronization
-        self.queue = queue.Queue(3) # queue for processed songs
-        # self.process1 = mp.Process(target=self.play,args=(self.queue,self.lock),name="player") # process for playing songs
-        # self.process2 = mp.Process(target=self.process,args=(self.queue,self.lock),name="processor") # process for converting songs
+        self.lock = mp.Lock() # lock for synchronization
+        self.queue = mp.Queue(3) # queue for processed songs
         self.model_name = model_name
         self.config = config
         self.args = args
@@ -80,11 +90,9 @@ class PlaylistPlayer:
         
         if shuffle: self.shuffle()
 
-        # self.process1.start() # start the process1
-        # self.process2.start() # start the process2
-        self.thread1 = threading.Thread(target=asyncio.run,args=(self.play(),),name="player")
+        self.thread1 = threading.Thread(target=asyncio.run,args=(self.play_song(),),name="play_song")
         self.thread1.start()
-        self.thread2 = threading.Thread(target=asyncio.run,args=(self.process(),),name="processor") # process for converting songs
+        self.thread2 = threading.Thread(target=asyncio.run,args=(self.process_song(),),name="process_song") # process for converting songs
         self.thread2.start()
 
     def __repr__(self):
@@ -94,28 +102,8 @@ class PlaylistPlayer:
     def __del__(self):
         sd.stop()
         self.stop()
-        self.thread1.join()
-        self.thread2.join()
-
-    def __getstate__(self):
-        # capture what is normally pickled
-        state = self.__dict__.copy()
-        # remove unpicklable/problematic variables
-        state['lock'] = None
-        state['queue'] = None
-        state['process1'] = None
-        state['process2'] = None
-        print("returning state")
-        return state
-
-    def __setstate__(self, state):
-        # restore the normal state
-        self.__dict__.update(state)
-        # recreate the unpicklable/problematic variables
-        # self.lock = mp.Lock()
-        # self.process1 = mp.Process(target=self.play,args=(self.queue,),name="player")
-        # self.process2 = mp.Process(target=self.process,args=(self.queue,),name="processor")
-        print("setting state")
+        self.thread2.join(1) #stop processing
+        self.thread1.join(1) #sto playing
     
     def set_args(self, **args):
         # update arguments
@@ -125,49 +113,25 @@ class PlaylistPlayer:
     def load_model(self):
         return get_vc(self.model_name,config=self.config,device=self.args["device"])
 
-    async def play(self):
+    async def play_song(self):
         
         item = None
         # play the songs from the queue
         while not self.stopped:
             with self.lock:
                 # sd.wait()
-                if not self.queue.empty():
+                if item is None and not self.queue.empty():
                     # get the next song data and sample rate from the queue
                     item = self.queue.get(block=False)
-                    sd.wait()
 
                 if item and not self.stopped and not self.paused:
                     self.current_song, input_audio = item
-
                     data, fs = input_audio
+                    sd.wait() # wait for old song to finish
                     sd.play((data*self.volume).astype("int16"),samplerate=fs)
-                    # if data.ndim==1:
-                    #     data = np.stack([data,data],axis=-1)
-
-                    # create a sounddevice stream object
-                    # stream = sd.OutputStream(samplerate=fs,channels=2)
-
-                    # print(f"data: {data.shape}, fs={fs}, stream={stream}")
-                    # # open the stream
-                    # stream.start()
-                    # # play the song data in chunks
-                    # chunk_size = 1024 # number of samples per chunk
-                    # for i in range(0, len(data), chunk_size):
-                        
-                    #     if not self.paused and not self.stopped:
-                    #         print(f"{i}/{len(data)} step={chunk_size}")
-                    #         # write the chunk to the stream
-                    #         stream.write(data[i:i+chunk_size].ascontiguousarray())
-                    #     else:
-                    #         # wait until unpaused or stopped
-                    #         while self.paused and not self.stopped:
-                    #             time.sleep(chunk_size/fs)
-                    # # close the stream
-                    # stream.stop()
                     item=None
 
-    async def process(self):
+    async def process_song(self):
         
         # convert the songs in the playlist and put them in the queue
         rvc_models = self.load_model()
@@ -177,13 +141,14 @@ class PlaylistPlayer:
                 if not self.queue.full() and not self.paused:
                     # get the next song filename from the playlist
                     song = self.playlist[self.index]
-                    # call the convert_song function on it (replace with your own function)
-                    input_audio = convert_song(song,rvc_models,**self.args)
-                    # load the converted song data and sample rate
-                    # data, fs = sf.read(song)
-                    # put the song data and sample rate in the queue
-                    self.queue.put((song, input_audio))
-                    # if not self.thread1.is_alive(): self.thread1.start() # start playing
+
+                    try:
+                        # call the convert_song function on it (replace with your own function)
+                        input_audio = convert_song(song,rvc_models,**self.args)
+                        # put the song data and sample rate in the queue
+                        self.queue.put((song, input_audio))
+                    except Exception as e:
+                        print(e)
                     await asyncio.sleep(1)
                     # increment the index
                     self.index += 1
