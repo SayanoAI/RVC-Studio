@@ -4,7 +4,7 @@ import os
 
 from lib.infer_pack.text.cleaners import english_cleaners
 
-from web_utils.audio import MAX_INT16, load_input_audio, remix_audio
+from webui.audio import MAX_INT16, load_input_audio, remix_audio
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"

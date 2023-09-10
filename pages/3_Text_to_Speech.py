@@ -2,17 +2,17 @@ import os
 import sys
 import streamlit as st
 
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS, config, i18n
 
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from types import SimpleNamespace
 from tts_cli import generate_speech
 from vc_infer_pipeline import get_vc, vc_single
-from web_utils.contexts import SessionStateContext
-from web_utils.audio import save_input_audio
+from webui.contexts import SessionStateContext
+from webui.audio import save_input_audio
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n
+from webui.utils import gc_collect, get_filenames, get_index
 
 CWD = os.getcwd()
 if CWD not in sys.path:

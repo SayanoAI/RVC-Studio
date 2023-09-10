@@ -2,8 +2,8 @@ import json
 import os
 import sys
 import streamlit as st
-from web_utils import MENU_ITEMS
-from web_utils.audio import bytes_to_audio
+from webui import MENU_ITEMS, config, i18n
+from webui.audio import bytes_to_audio
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 from audio_recorder_streamlit import audio_recorder
 import sounddevice as sd
@@ -11,13 +11,13 @@ from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from vc_infer_pipeline import get_vc, vc_single
 
-from web_utils.contexts import SessionStateContext
+from webui.contexts import SessionStateContext
 
 from llama_cpp import Llama
 import time
 from types import SimpleNamespace
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n
+from webui.utils import gc_collect, get_filenames, get_index
 
 CWD = os.getcwd()
 if CWD not in sys.path:

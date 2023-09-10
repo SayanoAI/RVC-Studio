@@ -8,7 +8,7 @@ import torch
 from tqdm import tqdm
 from lib.model_utils import get_hash
 
-from webui_utils import gc_collect
+from webui.utils import gc_collect
 import onnxruntime as ort
 print(ort.get_available_providers())
 

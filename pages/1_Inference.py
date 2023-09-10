@@ -2,18 +2,18 @@ import os
 import sys
 import streamlit as st
 
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from web_utils.components import file_uploader_form
-from web_utils.downloader import SONG_DIR
+from webui.components import file_uploader_form
+from webui.downloader import SONG_DIR
 
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
-from web_utils.contexts import SessionStateContext
-from web_utils.audio import SUPPORTED_AUDIO, bytes_to_audio, save_input_audio
+from webui.contexts import SessionStateContext
+from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, save_input_audio
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n, merge_audio
+from webui.utils import gc_collect, get_filenames, get_index
 from uvr5_cli import split_audio
 
 CWD = os.getcwd()
@@ -64,7 +64,7 @@ def init_inference_state():
         output_vocals=None,
         convert_params=SimpleNamespace(
             f0_up_key=0,
-            f0_method="rmvpe",
+            f0_method=["rmvpe"],
             index_rate=.75,
             filter_radius=3,
             resample_sr=0,
@@ -89,7 +89,7 @@ def clear_data(state):
     return state
 
 DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
+PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe","mangio-crepe","rmvpe+"]
 
 def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]
@@ -165,9 +165,9 @@ def render_vocal_separation_form(state):
 def render_vocal_conversion_form(state):
     with st.form("inference.convert_vocals.expander"):
         f0_up_key = st.select_slider(i18n("inference.f0_up_key"),options=[-12,-5,0,7,12],value=state.convert_params.f0_up_key)
-        f0_method = st.selectbox(i18n("inference.f0_method"),
+        f0_method = st.multiselect(i18n("inference.f0_method"),
                                             options=PITCH_EXTRACTION_OPTIONS,
-                                            index=get_index(PITCH_EXTRACTION_OPTIONS,state.convert_params.f0_method))
+                                            default=state.convert_params.f0_method)
         resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                             options=[0,16000,24000,22050,40000,44100,48000],
                                             value=state.convert_params.resample_sr)

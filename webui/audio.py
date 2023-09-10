@@ -55,3 +55,17 @@ def bytes_to_audio(data):
     bytes_io = io.BytesIO(data)
     audio = sf.read(bytes_io)
     return audio
+
+def pad_audio(*audios):
+    maxlen = max(len(a) for a in audios if a is not None)
+    stack = librosa.util.stack([librosa.util.pad_center(a,maxlen) for a in audios if a is not None],axis=0)
+    return stack
+
+def merge_audio(audio1,audio2,sr=40000):
+    print(f"merging audio audio1={audio1[0].shape,audio1[1]} audio2={audio2[0].shape,audio2[1]} sr={sr}")
+    m1,_=remix_audio(audio1,target_sr=sr)
+    m2,_=remix_audio(audio2,target_sr=sr)
+    
+    mixed = pad_audio(m1,m2)
+
+    return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)

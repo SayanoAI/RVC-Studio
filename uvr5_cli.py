@@ -2,8 +2,8 @@ import argparse
 import os, sys, torch, warnings
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
-from web_utils.audio import load_input_audio, remix_audio, save_input_audio
-from webui_utils import gc_collect
+from webui.audio import load_input_audio, remix_audio, save_input_audio
+from webui.utils import gc_collect
 
 CWD = os.getcwd()
 if CWD not in sys.path:

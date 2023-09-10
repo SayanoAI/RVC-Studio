@@ -4,14 +4,14 @@ import sys
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from web_utils.components import file_uploader_form
-from web_utils.downloader import BASE_MODELS_DIR, DATASETS_DIR
+from webui.components import active_subprocess_list, file_uploader_form
+from webui.downloader import BASE_MODELS_DIR, DATASETS_DIR
 from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
 
-from web_utils.audio import load_input_audio, save_input_audio
+from webui.audio import load_input_audio, save_input_audio
 
 
 
@@ -20,9 +20,9 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
-from web_utils.contexts import SessionStateContext
+from webui.contexts import SessionStateContext
 
-from webui_utils import get_filenames, get_index, config, i18n, render_subprocess_list
+from webui.utils import get_filenames, get_index
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -331,4 +331,4 @@ if __name__=="__main__":
                 train_speaker_embedding(state.exp_dir,model_log_dir)
             else: st.markdown(f"*Only required for speecht5 TTS*")
 
-        render_subprocess_list()
+        active_subprocess_list()

@@ -6,8 +6,9 @@ import librosa, traceback
 from scipy.io import wavfile
 from lib.audio import load_audio
 from vc_infer_pipeline import load_hubert
-from web_utils.audio import load_input_audio
-from webui_utils import gc_collect, config
+from webui.audio import load_input_audio
+from webui.utils import gc_collect
+from webui import config
 import torch
 
 class Preprocess:
