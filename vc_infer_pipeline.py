@@ -88,6 +88,7 @@ class VC(object):
         f0_max = 1100
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
+        
         x = librosa.effects.pitch_shift(x, sr=self.sr, n_steps=f0_up_key) if f0_up_key!=0 else x #pitch shift input
         if f0_method == "pm":
             import parselmouth
@@ -466,9 +467,9 @@ class VC(object):
             torch.cuda.empty_cache()
         return audio_opt
 
-def get_vc(model_path,config,device="cpu"):
+def get_vc(model_path,config,device=None):
     
-    cpt = torch.load(model_path, map_location=device)
+    cpt = torch.load(model_path, map_location="cpu")
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  # n_spk
     if_f0 = cpt.get("f0", 1)
@@ -491,7 +492,7 @@ def get_vc(model_path,config,device="cpu"):
     del net_g.enc_q
     
     net_g.load_state_dict(cpt["weight"], strict=False)
-    net_g.eval().to(device)
+    net_g.eval().to(device if device else config.device)
     if config.is_half:
         net_g = net_g.half()
     else:

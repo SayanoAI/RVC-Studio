@@ -100,13 +100,16 @@ def get_subprocesses(pid = os.getpid()):
 def render_subprocess_list():
     with st.expander(i18n("process.pids")):
         for p in get_subprocesses():
-            col1,col2,col3,col4=st.columns(4)
-            col1.write(p.pid)
-            col2.write(p.name)
-            col3.write(p.time_started)
-            if col4.button(i18n("process.kill_one_pid"),key=f"process.kill_one_pid.{p.pid}"):
-                for c in get_subprocesses(p.pid):
-                    c.kill()
-                p.kill()
-                gc_collect()
-                st.experimental_rerun()
+            try:
+                col1,col2,col3,col4=st.columns(4)
+                col1.write(p.pid)
+                col2.write(p.name)
+                col3.write(p.time_started)
+                if col4.button(i18n("process.kill_one_pid"),key=f"process.kill_one_pid.{p.pid}"):
+                    for c in get_subprocesses(p.pid):
+                        c.kill()
+                    p.kill()
+                    gc_collect()
+                    st.experimental_rerun()
+            except Exception as e:
+                print(e)

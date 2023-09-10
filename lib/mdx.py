@@ -10,7 +10,6 @@ from lib.model_utils import get_hash
 
 from webui_utils import gc_collect
 import onnxruntime as ort
-print(ort.get_available_providers())
 
 warnings.filterwarnings("ignore")
 stem_naming = {'Vocals': 'Instrumental', 'Other': 'Instruments', 'Instrumental': 'Vocals', 'Drums': 'Drumless', 'Bass': 'Bassless'}
