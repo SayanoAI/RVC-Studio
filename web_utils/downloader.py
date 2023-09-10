@@ -1,11 +1,16 @@
-from typing import List, Tuple
+from typing import IO, List, Tuple
 import requests
 import os
+import zipfile
 
 RVC_DOWNLOAD_LINK = 'https://huggingface.co/datasets/SayanoAI/RVC-Studio/resolve/main/'
 
 BASE_DIR = os.getcwd()
 BASE_MODELS_DIR = os.path.join(BASE_DIR,"models")
+SONG_DIR = os.path.join(BASE_DIR,"songs")
+BASE_CACHE_DIR = os.path.join(BASE_DIR,".cache")
+DATASETS_DIR = os.path.join(BASE_DIR,"datasets")
+LOG_DIR = os.path.join(BASE_DIR,"logs")
 
 MDX_MODELS = ["MDXNET/Kim_Vocal_2.onnx","MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
 VR_MODELS = ["UVR/UVR-DeEcho-DeReverb.pth","UVR/HP5-vocals+instrumentals.pth"]
@@ -40,3 +45,31 @@ def download_link_generator(download_link: str,model_list: List[str]):
     for model in model_list:
         model_path = os.path.join(BASE_MODELS_DIR,model)
         yield (model_path, f"{download_link}{model}")
+
+def save_file(params: Tuple[str, any]):
+    (data_path, datum) = params
+    if "zip" in os.path.splitext(data_path)[-1]: save_zipped_files(params) # unzip
+    else: 
+        with open(data_path,"wb") as f:
+            f.write(datum)
+
+def save_file_generator(save_dir: str, data: List[IO]):
+    for datum in data:
+        data_path = os.path.join(save_dir,datum.name)
+        yield (data_path, datum.read())
+
+def save_zipped_files(params: Tuple[str, any]):
+    (data_path, datum) = params
+
+    temp_dir = os.path.join(BASE_CACHE_DIR,"zips")
+    os.makedirs(temp_dir,exist_ok=True)
+    name = os.path.basename(data_path)
+    zip_path = os.path.join(temp_dir,name)
+
+    with open(zip_path,"wb") as f:
+        f.write(datum)
+
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(os.path.dirname(data_path))
+    
+    os.remove(zip_path) # cleanup

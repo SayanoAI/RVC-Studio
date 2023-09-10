@@ -6,12 +6,16 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
-from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
-
 from web_utils import MENU_ITEMS
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
-from lib.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, download_file
+from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
+
+from web_utils.audio import SUPPORTED_AUDIO
+from web_utils.components import file_uploader_form
+
+
+from web_utils.downloader import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file, save_file_generator
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -51,6 +55,12 @@ def render_model_checkboxes(generator):
                 st.experimental_rerun()
     return not_downloaded
 
+def rvc_index_path_mapper(params):
+    (data_path, data) = params
+    if "index" not in data_path.split(".")[-1]:
+        return params
+    else: return (os.path.join(BASE_MODELS_DIR,"RVC",".index",os.path.basename(data_path)), data) # index file
+
 if __name__=="__main__":
 
     model_tab, audio_tab = st.tabs(["Model Download","Audio Download"])
@@ -79,6 +89,11 @@ if __name__=="__main__":
 
         st.subheader("Required Models for inference")
         with st.expander("RVC Models"):
+            file_uploader_form(
+                os.path.join(BASE_MODELS_DIR,"RVC"),"Upload your RVC model",
+                types=["pth","index","zip"],
+                accept_multiple_files=True,
+                params_mapper=rvc_index_path_mapper)
             generator = download_link_generator(RVC_DOWNLOAD_LINK, RVC_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-rvc-models",disabled=len(to_download)==0):
@@ -112,19 +127,28 @@ if __name__=="__main__":
             pass
 
     with audio_tab, SessionStateContext("youtube_downloader") as state:
+        
         st.title("Download Audio from Youtube")
+
         state.url = st.text_input("Insert Youtube URL:",value=state.url if state.url else "")
         if st.button("Fetch",disabled=not state.url):
             with st.spinner("Downloading Audio Stream from Youtube..."):
                 state.downloaded_audio = download_audio_to_buffer(state.url)
+
+        if state.downloaded_audio:
+            title, data = state.downloaded_audio
             st.subheader("Title")
-            st.write(state.downloaded_audio[0])
-            title_vid = Path(state.downloaded_audio[0]).with_suffix(".mp3").name
+            st.write(title)
+            fname = Path(title).with_suffix(".mp3").name
             st.subheader("Listen to Audio")
-            st.audio(state.downloaded_audio[1], format='audio/mpeg')
+            st.audio(data, format='audio/mpeg')
             st.subheader("Download Audio File")
-            st.download_button(
-                label="Download mp3",
-                data=state.downloaded_audio[1],
-                file_name=title_vid,
-                mime="audio/mpeg")
+            if st.button("Download Song"):
+                params = (os.path.join(SONG_DIR,fname),data.read())
+                save_file(params)
+
+            # st.download_button(
+            #     label="Download mp3",
+            #     data=state.downloaded_audio[1],
+            #     file_name=title_vid,
+            #     mime="audio/mpeg")
