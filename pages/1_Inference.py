@@ -3,8 +3,10 @@ import sys
 import streamlit as st
 
 from web_utils import MENU_ITEMS
-
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
+
+from web_utils.components import file_uploader_form
+from web_utils.downloader import SONG_DIR
 
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
@@ -189,6 +191,10 @@ def render_vocal_conversion_form(state):
 
 if __name__=="__main__":
     with SessionStateContext("inference",initial_state=init_inference_state()) as state:
+        file_uploader_form(
+                SONG_DIR,"Upload your songs",
+                types=SUPPORTED_AUDIO+["zip"],
+                accept_multiple_files=True)
         with st.container():
             left, right = st.columns(2)
             state.input_audio_name = left.selectbox(
@@ -259,13 +265,13 @@ if __name__=="__main__":
             state = render_vocal_conversion_form(state)
 
         col1, col2 = st.columns(2)
-        uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
+        uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type="wav")
         if uploaded_vocals is not None:
             state.input_vocals = bytes_to_audio(
                 uploaded_vocals.getvalue())
             state.input_audio_name = uploaded_vocals.name
             del uploaded_vocals
-        uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
+        uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type="wav")
         if uploaded_instrumentals is not None:
             state.input_instrumental = bytes_to_audio(
                 uploaded_instrumentals.getvalue())

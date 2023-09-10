@@ -4,13 +4,16 @@ import sys
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
-
-from lib.downloader import BASE_MODELS_DIR
-from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
 from web_utils import MENU_ITEMS
+st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
+
+from web_utils.components import file_uploader_form
+from web_utils.downloader import BASE_MODELS_DIR, DATASETS_DIR
+from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
+
 from web_utils.audio import load_input_audio, save_input_audio
 
-st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
+
 
 from types import SimpleNamespace
 import subprocess
@@ -252,7 +255,7 @@ def init_training_state():
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
 SR_MAP = {"40k": 40000, "48k": 48000}
 DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["harvest","crepe","rmvpe"]
+PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 
 if __name__=="__main__":
     with SessionStateContext("training",init_training_state()) as state:
@@ -275,7 +278,9 @@ if __name__=="__main__":
             #preprocess_data(exp_dir, sr, trainset_dir, n_threads)
             st.subheader(i18n("training.preprocess_data.title"))
             st.write(i18n("training.preprocess_data.text"))
-            state.trainset_dir=st.text_input(i18n("training.preprocess_data.trainset_dir"),placeholder="./datasets/Sayano")
+            file_uploader_form(DATASETS_DIR,"Upload a zipped folder of your dataset (make sure the files are in a folder)",types="zip")
+            state.trainset_dir=st.text_input(i18n("training.preprocess_data.trainset_dir"),placeholder="./datasets/name_of_zipped_folder")
+
             disabled = not (state.trainset_dir and state.exp_dir and os.path.exists(state.trainset_dir))
             if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
                 preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version)
