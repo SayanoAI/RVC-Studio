@@ -3,19 +3,17 @@ import sys
 import pandas as pd
 import streamlit as st
 
-from web_utils import MENU_ITEMS
+from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, i18n, config
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-# from web_utils.playlist import PlaylistPlayer
+from webui.components import active_subprocess_list
+from webui.utils import gc_collect, get_filenames, get_index
 
 
-from web_utils.player import PlaylistPlayer
+from webui.player import PlaylistPlayer
 from types import SimpleNamespace
-from vc_infer_pipeline import get_vc
-from web_utils.contexts import SessionStateContext
-from web_utils.audio import SUPPORTED_AUDIO
-
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n, render_subprocess_list
+from webui.contexts import SessionStateContext
+from webui.audio import SUPPORTED_AUDIO
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -44,7 +42,7 @@ def init_inference_state():
         ),
         vocal_change_config=SimpleNamespace(
             f0_up_key=0,
-            f0_method="rmvpe",
+            f0_method=["rmvpe"],
             index_rate=.75,
             filter_radius=3,
             resample_sr=0,
@@ -64,9 +62,6 @@ def refresh_data(state):
     state.playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
     return state
-
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
@@ -108,9 +103,9 @@ def render_vocal_separation_form(state):
 def render_vocal_conversion_form(state):
     with st.form("inference.convert_vocals.expander"):
         f0_up_key = st.select_slider(i18n("inference.f0_up_key"),options=[-12,-5,0,7,12],value=state.vocal_change_config.f0_up_key)
-        f0_method = st.selectbox(i18n("inference.f0_method"),
+        f0_method = st.multiselect(i18n("inference.f0_method"),
                                             options=PITCH_EXTRACTION_OPTIONS,
-                                            index=get_index(PITCH_EXTRACTION_OPTIONS,state.vocal_change_config.f0_method))
+                                            default=state.vocal_change_config.f0_method)
         resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                             options=[0,16000,24000,22050,40000,44100,48000],
                                             value=state.vocal_change_config.resample_sr)
@@ -192,7 +187,7 @@ if __name__=="__main__":
             with vc_tab:
                 state = render_vocal_conversion_form(state)
 
-        render_subprocess_list()
+        active_subprocess_list()
 
         if state.player:
             st.write(state.player)

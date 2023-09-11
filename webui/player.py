@@ -33,7 +33,7 @@ def convert_song(
 ):
     cache_dir = os.path.join(BASE_CACHE_DIR,"playlist",rvc_models["model_name"])
     os.makedirs(cache_dir,exist_ok=True)
-    song_path = os.path.join(cache_dir,os.path.basename(audio_path).split(".")+".mp3")
+    song_path = os.path.join(cache_dir,os.path.basename(audio_path).split(".")[0]+".mp3")
     if os.path.isfile(song_path):
         return load_input_audio(song_path)
     
@@ -97,8 +97,8 @@ class PlaylistPlayer:
     def __del__(self):
         sd.stop()
         self.stop()
-        self.thread2.join(1) #stop processing
-        self.thread1.join(1) #sto playing
+        # self.thread2.join(1) #stop processing
+        # self.thread1.join(1) #stop playing
     
     def set_args(self, **args):
         # update arguments
