@@ -18,7 +18,7 @@ RVC_MODELS = [
     "RVC/Sayano.pth","RVC/.index/added_IVF1063_Flat_nprobe_1_Sayano_v2.index",
     "RVC/Mae_v2.pth",
     "RVC/Fuji.pth","RVC/.index/added_IVF985_Flat_nprobe_1_Fuji_v2.index",
-    "RVC/Yuuko.pth","RVC/.index/added_IVF522_Flat_nprobe_1_Yuuko_v2.index"]
+    "RVC/Monika.pth","RVC/.index/Monika_v2.index"]
 BASE_MODELS = ["hubert_base.pt", "rmvpe.pt"]
 VITS_MODELS = ["VITS/pretrained_ljs.pth"]
 PRETRAINED_MODELS = [

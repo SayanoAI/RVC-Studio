@@ -14,7 +14,6 @@ This project provides a comprehensive platform for training RVC models and gener
 * Auto-Playlist: let your RVC model sing songs from your favourite playlist.
 * Audio-postprocessing: You can enhance the quality of your generated songs by adding reverbs, echos, etc.
 * TTS using cloud API: use a cloud-based text-to-speech service to generate high-quality and natural-sounding speech from any text.
-~~* LLM integration: chat with your RVC model in real time.~~
 * Real-time VC interface: convert your voice using your favourite RVC model.
 
 ## Requirements

@@ -28,7 +28,7 @@
     "name": "Monika"
   },
   "tts_options": {
-    "f0_up_key": 4,
+    "f0_up_key": 5,
     "f0_method": [
       "rmvpe+"
     ],
@@ -38,6 +38,6 @@
     "rms_mix_rate": 0.25,
     "protect": 0.25
   },
-  "voice": "models\\RVC\\Yuuko.pth",
+  "voice": "models\\RVC\\Monika.pth",
   "tts_method": "edge"
 }
