@@ -317,8 +317,7 @@ def render_tts_options_form(state):
     return state
 
 def render_assistant_template_form(state):
-    state.assistant_template.name = st.text_input("Character Name",
-                                                    value=os.path.basename(state.voice_model).split(".")[0] if state.voice_model else state.assistant_template.name)
+    state.assistant_template.name = st.text_input("Character Name",value=state.assistant_template.name)
     ROLE_OPTIONS = ["CHARACTER", "USER"]
     state.assistant_template.background = st.text_area("Background", value=state.assistant_template.background, max_chars=400)
     state.assistant_template.personality = st.text_area("Personality", value=state.assistant_template.personality, max_chars=400)
@@ -338,13 +337,12 @@ def render_character_form(state):
     DEVICE_OPTIONS = ["cpu","cuda"]
 
     col1, col2, col3 =st.columns(3)
-    state.user = col1.text_input("Your Name", value=state.user)
-    state.selected_character = col2.selectbox("Character",
+    state.selected_character = col1.selectbox("Character",
                                               options=state.characters,
                                               index=get_index(state.characters,state.selected_character),
                                               format_func=lambda x: os.path.basename(x))
-    col2.markdown("*Please create a character below if it doesn't exist!*")
-    state.device = col3.radio(
+    col1.markdown("*Please create a character below if it doesn't exist!*")
+    state.device = col2.radio(
         i18n("inference.device"),
         disabled=not config.has_gpu,
         options=DEVICE_OPTIONS,horizontal=True,
@@ -387,6 +385,8 @@ if __name__=="__main__":
                 state = render_llm_form(state)
             with character_tab:
                 state = render_character_form(state)
+        
+        state.user = col1.text_input("Your Name", value=state.user)
 
         if len(state.messages)==0 and state.assistant_template.greeting and state.user:
             state.messages.append({"role": state.assistant_template.name, "content": state.assistant_template.greeting.format(
