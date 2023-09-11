@@ -82,25 +82,26 @@ def __tacotron2__(text, device="cpu"):
 def __edge__(text, speaker="en-US-JennyNeural"):
     import edge_tts
     import asyncio
+    from threading import Thread
+    tempfile = os.path.join("output","edge_tts.wav")
 
     async def fetch_audio():
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         communicate = edge_tts.Communicate(text, speaker)
-        tempfile = os.path.join("output","edge_tts.wav")
         with open(tempfile, "wb") as data:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     data.write(chunk["data"])
-                # elif chunk["type"] == "WordBoundary":
-                #     print(f"WordBoundary: {chunk}")
-        
-        return load_input_audio(tempfile,sr=16000)
     
-    audio, sr = asyncio.run(fetch_audio())
-    # audio = np.frombuffer(stream.getbuffer())
-    # print(audio.shape,audio.max(),audio.min(),audio.mean(),sr)
-    # return as numpy array
-    return audio, sr
+    thread = Thread(target=asyncio.run, args=(fetch_audio(),),name="edge-tts")
+    thread.start()
+    thread.join()
+    try:
+        audio, sr = load_input_audio(tempfile,sr=16000)
+        return audio, sr
+    except Exception as e:
+        print(e)
+        return None
 
 def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
     from lib.infer_pack.models import SynthesizerTrn

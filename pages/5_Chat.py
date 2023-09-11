@@ -309,7 +309,7 @@ def render_tts_options_form(state):
                                             default=state.tts_options.f0_method)
     state.tts_options.resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                         options=[0,16000,24000,22050,40000,44100,48000],
-                                        value=state.resample_sr)
+                                        value=state.tts_options.resample_sr)
     state.tts_options.index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.index_rate)
     state.tts_options.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.tts_options.filter_radius)
     state.tts_options.rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.rms_mix_rate)
@@ -377,6 +377,7 @@ if __name__=="__main__":
             del state.messages
             state.messages = []
             gc_collect()
+            st.experimental_rerun()
 
         with st.expander(f"Chat Settings: voice_model={state.voice_model} LLM={state.LLM} character={state.assistant_template.name}", expanded=chat_disabled):
             
@@ -399,18 +400,19 @@ if __name__=="__main__":
 
         prompt = st.chat_input(disabled=chat_disabled)
         if not chat_disabled:
-            user_audio = audio_recorder(
-                text="",
-                pause_threshold=1.,
-                # energy_threshold=[.05,.01],
-                sample_rate=16_000,
-                icon_size="2x")
+            user_audio = None
+            if st.button("Record"):
+                user_audio = audio_recorder(
+                    text="",
+                    pause_threshold=1.,
+                    # energy_threshold=[.05,.01],
+                    sample_rate=16_000,
+                    icon_size="2x")
             if user_audio:
                 if state.stt_models is None: state.stt_models = load_stt_models()
                 input_audio = bytes_to_audio(user_audio)
                 prompt = transcribe_speech(input_audio,state.stt_models)
                 del user_audio
-                user_audio = None
         
         if prompt:
             st.chat_message(state.user).write(prompt)

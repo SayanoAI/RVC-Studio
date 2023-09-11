@@ -301,7 +301,7 @@ if __name__=="__main__":
             col1,col2,col3=st.columns(3)
             state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
             state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
-            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=10,value=state.save_epoch)
+            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=5,value=state.save_epoch)
             state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
             state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
             state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)
