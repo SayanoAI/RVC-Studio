@@ -2,7 +2,7 @@ import os
 import sys
 import streamlit as st
 
-from webui import MENU_ITEMS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, config, i18n
 
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
@@ -57,7 +57,7 @@ def init_inference_state():
         device="cuda" if config.has_gpu else "cpu",
         tts_options=SimpleNamespace(
             f0_up_key=6,
-            f0_method="rmvpe",
+            f0_method=["rmvpe"],
             index_rate=.8,
             filter_radius=3,
             resample_sr=0,
@@ -76,10 +76,6 @@ def clear_data(state):
     del state.vc, state.cpt, state.net_g, state.hubert_model
     gc_collect()
     return state
-
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
-
 
 def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]
@@ -135,9 +131,9 @@ if __name__=="__main__":
                     index=get_index(DEVICE_OPTIONS,state.device))
                 
                 f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
-                f0_method = st.selectbox(i18n("inference.f0_method"),
-                                                    options=PITCH_EXTRACTION_OPTIONS,
-                                                    index=get_index(PITCH_EXTRACTION_OPTIONS,state.tts_options.f0_method))
+                f0_method = st.multiselect(i18n("inference.f0_method"),
+                                            options=PITCH_EXTRACTION_OPTIONS,
+                                            default=state.tts_options.f0_method)
                 resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                                     options=[0,16000,24000,22050,40000,44100,48000],
                                                     value=state.tts_options.resample_sr)

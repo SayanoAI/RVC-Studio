@@ -30,6 +30,11 @@ PRETRAINED_MODELS = [
     "pretrained_v2/f0G48k.pth",
     "pretrained_v2/f0D40k.pth",
     "pretrained_v2/f0G40k.pth"]
+LLM_MODELS = [
+    "https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/resolve/main/airoboros-l2-7b-2.1.Q4_K_M.gguf",
+    "https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/resolve/main/pygmalion-2-7b.Q4_K_M.gguf",
+    "https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/resolve/main/zarablend-mx-l2-7b.Q4_K_M.gguf"
+]
 
 def download_file(params: Tuple[str, str]):
     model_path, download_link = params

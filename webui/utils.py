@@ -37,7 +37,8 @@ def get_filenames(root=".",folder="**",exts=["*"],name_filters=[""]):
 def get_filenames(root=".",folder="**",exts=["*"],name_filters=[""]):
     fnames = []
     for ext in exts:
-        fnames.extend(glob.glob(f"{root}/{folder}/*.{ext}",recursive=True))
+        # fnames.extend(glob.glob(f"{root}/{folder}/*.{ext}",recursive=True))
+        fnames.extend(glob.glob(os.path.join(root,folder,f"*.{ext}"),recursive=True))
     return sorted([ele for ele in fnames if any([nf.lower() in ele.lower() for nf in name_filters])])
 
 def get_index(arr,value): return arr.index(value) if value in arr else 0

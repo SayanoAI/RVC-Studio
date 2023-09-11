@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
-from webui import MENU_ITEMS, config, i18n
+from webui import MENU_ITEMS, N_THREADS_OPTIONS, PITCH_EXTRACTION_OPTIONS, SR_MAP, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import active_subprocess_list, file_uploader_form
@@ -251,11 +251,6 @@ def init_training_state():
         pids=[],
         device="cuda")
     return vars(state)
-
-N_THREADS_OPTIONS=[1,2,4,8,12,16]
-SR_MAP = {"40k": 40000, "48k": 48000}
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 
 if __name__=="__main__":
     with SessionStateContext("training",init_training_state()) as state:

@@ -2,7 +2,7 @@ import os
 import sys
 import streamlit as st
 
-from webui import MENU_ITEMS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import file_uploader_form
@@ -88,8 +88,7 @@ def clear_data(state):
     gc_collect()
     return state
 
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe","mangio-crepe","rmvpe+"]
+
 
 def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]

@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import streamlit as st
-from webui import MENU_ITEMS, config, i18n
+from webui import MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, TTS_MODELS, config, i18n
 from webui.audio import bytes_to_audio
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 from audio_recorder_streamlit import audio_recorder
@@ -26,15 +26,15 @@ if CWD not in sys.path:
 DEVICE_OPTIONS = ["GPU", "CPU"]
 
 def get_model_list():
-    models_list = get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])]
     return models_list
 
 def get_voice_list():
-    models_list = get_filenames(root="./models",folder="RVC",exts=["pth"])
+    models_list = [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC",exts=["pth"])]
     return models_list
 
 def get_character_list():
-    models_list = get_filenames(root="./models",folder="RVC/.characters",exts=["json"])
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC/.characters",exts=["json"])]
     return models_list
 
 def load_model(fname,n_ctx,n_gpu_layers):
@@ -146,7 +146,7 @@ def init_state():
         model_list=get_model_list(),
         tts_options=SimpleNamespace(
             f0_up_key=6,
-            f0_method="rmvpe",
+            f0_method=["rmvpe"],
             index_rate=.8,
             filter_radius=3,
             resample_sr=0,
@@ -155,7 +155,7 @@ def init_state():
         ),
         llm_options=init_llm_options(),
         messages = [],
-        user = "USER",
+        user = "",
         device = "cuda",
         LLM=None,
         tts_method=None
@@ -288,8 +288,6 @@ def render_llm_form(state):
     return state
 
 def render_tts_options_form(state):
-    PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
-    TTS_MODELS = ["edge","vits","speecht5","bark","tacotron2"]
 
     col1, col2 =st.columns(2)
     state.tts_method = col1.selectbox(
@@ -306,9 +304,9 @@ def render_tts_options_form(state):
             )
     
     state.tts_options.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
-    state.tts_options.f0_method = st.selectbox(i18n("inference.f0_method"),
-                                        options=PITCH_EXTRACTION_OPTIONS,
-                                        index=get_index(PITCH_EXTRACTION_OPTIONS,state.tts_options.f0_method))
+    state.tts_options.f0_method = st.multiselect(i18n("inference.f0_method"),
+                                            options=PITCH_EXTRACTION_OPTIONS,
+                                            default=state.tts_options.f0_method)
     state.tts_options.resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                         options=[0,16000,24000,22050,40000,44100,48000],
                                         value=state.resample_sr)
@@ -390,8 +388,9 @@ if __name__=="__main__":
             with character_tab:
                 state = render_character_form(state)
 
-        if len(state.messages)==0 and state.assistant_template.greeting:
-            state.messages.append({"role": state.assistant_template.name, "content": state.assistant_template.greeting})
+        if len(state.messages)==0 and state.assistant_template.greeting and state.user:
+            state.messages.append({"role": state.assistant_template.name, "content": state.assistant_template.greeting.format(
+                name=state.assistant_template.name, user=state.user)})
         for i,msg in enumerate(state.messages):
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
