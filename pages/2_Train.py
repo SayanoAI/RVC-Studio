@@ -236,7 +236,7 @@ def init_training_state():
         if_f0=True,
         trainset_dir="",
         spk_id=0,
-        f0method="rmvpe",
+        f0method=["rmvpe"],
         save_epoch=0,
         total_epoch=100,
         batch_size=4,
@@ -289,8 +289,7 @@ if __name__=="__main__":
             st.write(i18n("training.extract_features.text"))
             col1,col2 = st.columns(2)
             state.if_f0=col1.checkbox(i18n("training.if_f0"),value=state.if_f0)
-            state.f0method=col2.radio(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,
-                                    horizontal=True,index=get_index(PITCH_EXTRACTION_OPTIONS,state.f0method))
+            state.f0method=col2.multiselect(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,default=state.f0method)
             disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
             if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
                 extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr)
