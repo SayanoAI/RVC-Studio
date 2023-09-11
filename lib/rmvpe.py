@@ -1,6 +1,7 @@
 import torch, numpy as np, pdb
 import torch.nn as nn
 import torch.nn.functional as F
+
 import torch, pdb
 import numpy as np
 import torch.nn.functional as F
@@ -70,7 +71,6 @@ class STFT(torch.nn.Module):
         out the same sizes before and after in all overlap add setups is tough. Right now,
         this code should work with hop lengths that are half the filter length (50% overlap
         between frames).
-
         Keyword Arguments:
             filter_length {int} -- Length of filters used (default: {1024})
             hop_length {int} -- Hop length of STFT (restrict to 50% overlap between frames) (default: {512})
@@ -113,10 +113,8 @@ class STFT(torch.nn.Module):
 
     def transform(self, input_data):
         """Take input data (audio) to STFT domain.
-
         Arguments:
             input_data {tensor} -- Tensor of floats, with shape (num_batch, num_samples)
-
         Returns:
             magnitude {tensor} -- Magnitude of STFT with shape (num_batch,
                 num_frequencies, num_frames)
@@ -154,13 +152,11 @@ class STFT(torch.nn.Module):
     def inverse(self, magnitude, phase):
         """Call the inverse STFT (iSTFT), given magnitude and phase tensors produced
         by the ```transform``` function.
-
         Arguments:
             magnitude {tensor} -- Magnitude of STFT with shape (num_batch,
                 num_frequencies, num_frames)
             phase {tensor} -- Phase of STFT with shape (num_batch,
                 num_frequencies, num_frames)
-
         Returns:
             inverse_transform {tensor} -- Reconstructed audio given magnitude and phase. Of
                 shape (num_batch, num_samples)
@@ -205,10 +201,8 @@ class STFT(torch.nn.Module):
 
     def forward(self, input_data):
         """Take input data (audio) to STFT domain and then back to audio.
-
         Arguments:
             input_data {tensor} -- Tensor of floats, with shape (num_batch, num_samples)
-
         Returns:
             reconstruction {tensor} -- Reconstructed audio given magnitude and phase. Of
                 shape (num_batch, num_samples)
@@ -563,17 +557,18 @@ class MelSpectrogram(torch.nn.Module):
 
 
 class RMVPE:
-    def __init__(self, model_path, is_half, device=None):
+    def __init__(self, model_path, is_half, onnx=False, device=None):
         self.resample_kernel = {}
         self.resample_kernel = {}
         self.is_half = is_half
+        self.onnx = onnx
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
         self.mel_extractor = MelSpectrogram(
             is_half, 128, 16000, 1024, 160, None, 30, 8000
         ).to(device)
-        if "privateuseone" in str(device):
+        if onnx:
             import onnxruntime as ort
 
             ort_session = ort.InferenceSession(
@@ -598,7 +593,8 @@ class RMVPE:
             mel = F.pad(
                 mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect"
             )
-            if "privateuseone" in str(self.device):
+            #if "privateuseone" in str(self.device):
+            if self.onnx:
                 onnx_input_name = self.model.get_inputs()[0].name
                 onnx_outputs_names = self.model.get_outputs()[0].name
                 hidden = self.model.run(
@@ -617,29 +613,49 @@ class RMVPE:
         return f0
 
     def infer_from_audio(self, audio, thred=0.03):
-        # torch.cuda.synchronize()
-        t0 = ttime()
-        mel = self.mel_extractor(
-            torch.from_numpy(audio).float().to(self.device).unsqueeze(0), center=True
-        )
-        # print(123123123,mel.device.type)
-        # torch.cuda.synchronize()
-        t1 = ttime()
-        hidden = self.mel2hidden(mel)
-        # torch.cuda.synchronize()
-        t2 = ttime()
-        # print(234234,hidden.device.type)
-        if "privateuseone" not in str(self.device):
+        if self.onnx == False:
+            audio = torch.from_numpy(audio).float().to(self.device).unsqueeze(0)
+            mel = self.mel_extractor(audio, center=True)
+            hidden = self.mel2hidden(mel)
             hidden = hidden.squeeze(0).cpu().numpy()
+            if self.is_half == True:
+                hidden = hidden.astype("float32")
+            f0 = self.decode(hidden, thred=thred)
+            return f0
         else:
-            hidden = hidden[0]
+            # torch.cuda.synchronize()
+            t0 = ttime()
+            mel = self.mel_extractor(
+                torch.from_numpy(audio).float().to(self.device).unsqueeze(0), center=True
+            )
+            # print(123123123,mel.device.type)
+            # torch.cuda.synchronize()
+            t1 = ttime()
+            hidden = self.mel2hidden(mel)
+            # torch.cuda.synchronize()
+            t2 = ttime()
+            # print(234234,hidden.device.type)
+            if not self.onnx:
+                hidden = hidden.squeeze(0).cpu().numpy()
+            else:
+                hidden = hidden[0]
+            if self.is_half == True:
+                hidden = hidden.astype("float32")
+            f0 = self.decode(hidden, thred=thred)
+            # torch.cuda.synchronize()
+            t3 = ttime()
+            # print("hmvpe:%s\t%s\t%s\t%s"%(t1-t0,t2-t1,t3-t2,t3-t0))
+            return f0
+    
+    def infer_from_audio_with_pitch(self, audio, thred=0.03, f0_min=50, f0_max=1100):
+        audio = torch.from_numpy(audio).float().to(self.device).unsqueeze(0)
+        mel = self.mel_extractor(audio, center=True)
+        hidden = self.mel2hidden(mel)
+        hidden = hidden.squeeze(0).cpu().numpy()
         if self.is_half == True:
             hidden = hidden.astype("float32")
-
         f0 = self.decode(hidden, thred=thred)
-        # torch.cuda.synchronize()
-        t3 = ttime()
-        # print("hmvpe:%s\t%s\t%s\t%s"%(t1-t0,t2-t1,t3-t2,t3-t0))
+        f0[(f0 < f0_min) | (f0 > f0_max)] = 0  
         return f0
 
     def to_local_average_cents(self, salience, thred=0.05):

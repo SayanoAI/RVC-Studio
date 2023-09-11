@@ -2,8 +2,8 @@ import json
 import os
 import sys
 import streamlit as st
-from web_utils import MENU_ITEMS
-from web_utils.audio import bytes_to_audio
+from webui import MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, TTS_MODELS, config, i18n
+from webui.audio import bytes_to_audio
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 from audio_recorder_streamlit import audio_recorder
 import sounddevice as sd
@@ -11,13 +11,13 @@ from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from vc_infer_pipeline import get_vc, vc_single
 
-from web_utils.contexts import SessionStateContext
+from webui.contexts import SessionStateContext
 
 from llama_cpp import Llama
 import time
 from types import SimpleNamespace
 
-from webui_utils import gc_collect, get_filenames, get_index, config, i18n
+from webui.utils import gc_collect, get_filenames, get_index
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -26,15 +26,15 @@ if CWD not in sys.path:
 DEVICE_OPTIONS = ["GPU", "CPU"]
 
 def get_model_list():
-    models_list = get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])]
     return models_list
 
 def get_voice_list():
-    models_list = get_filenames(root="./models",folder="RVC",exts=["pth"])
+    models_list = [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC",exts=["pth"])]
     return models_list
 
 def get_character_list():
-    models_list = get_filenames(root="./models",folder="RVC/.characters",exts=["json"])
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC/.characters",exts=["json"])]
     return models_list
 
 def load_model(fname,n_ctx,n_gpu_layers):
@@ -146,7 +146,7 @@ def init_state():
         model_list=get_model_list(),
         tts_options=SimpleNamespace(
             f0_up_key=6,
-            f0_method="rmvpe",
+            f0_method=["rmvpe"],
             index_rate=.8,
             filter_radius=3,
             resample_sr=0,
@@ -155,7 +155,7 @@ def init_state():
         ),
         llm_options=init_llm_options(),
         messages = [],
-        user = "USER",
+        user = "",
         device = "cuda",
         LLM=None,
         tts_method=None
@@ -288,8 +288,6 @@ def render_llm_form(state):
     return state
 
 def render_tts_options_form(state):
-    PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
-    TTS_MODELS = ["edge","vits","speecht5","bark","tacotron2"]
 
     col1, col2 =st.columns(2)
     state.tts_method = col1.selectbox(
@@ -306,12 +304,12 @@ def render_tts_options_form(state):
             )
     
     state.tts_options.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
-    state.tts_options.f0_method = st.selectbox(i18n("inference.f0_method"),
-                                        options=PITCH_EXTRACTION_OPTIONS,
-                                        index=get_index(PITCH_EXTRACTION_OPTIONS,state.tts_options.f0_method))
+    state.tts_options.f0_method = st.multiselect(i18n("inference.f0_method"),
+                                            options=PITCH_EXTRACTION_OPTIONS,
+                                            default=state.tts_options.f0_method)
     state.tts_options.resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                         options=[0,16000,24000,22050,40000,44100,48000],
-                                        value=state.resample_sr)
+                                        value=state.tts_options.resample_sr)
     state.tts_options.index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.index_rate)
     state.tts_options.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.tts_options.filter_radius)
     state.tts_options.rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.rms_mix_rate)
@@ -319,8 +317,7 @@ def render_tts_options_form(state):
     return state
 
 def render_assistant_template_form(state):
-    state.assistant_template.name = st.text_input("Character Name",
-                                                    value=os.path.basename(state.voice_model).split(".")[0] if state.voice_model else state.assistant_template.name)
+    state.assistant_template.name = st.text_input("Character Name",value=state.assistant_template.name)
     ROLE_OPTIONS = ["CHARACTER", "USER"]
     state.assistant_template.background = st.text_area("Background", value=state.assistant_template.background, max_chars=400)
     state.assistant_template.personality = st.text_area("Personality", value=state.assistant_template.personality, max_chars=400)
@@ -340,13 +337,12 @@ def render_character_form(state):
     DEVICE_OPTIONS = ["cpu","cuda"]
 
     col1, col2, col3 =st.columns(3)
-    state.user = col1.text_input("Your Name", value=state.user)
-    state.selected_character = col2.selectbox("Character",
+    state.selected_character = col1.selectbox("Character",
                                               options=state.characters,
                                               index=get_index(state.characters,state.selected_character),
                                               format_func=lambda x: os.path.basename(x))
-    col2.markdown("*Please create a character below if it doesn't exist!*")
-    state.device = col3.radio(
+    col1.markdown("*Please create a character below if it doesn't exist!*")
+    state.device = col2.radio(
         i18n("inference.device"),
         disabled=not config.has_gpu,
         options=DEVICE_OPTIONS,horizontal=True,
@@ -381,6 +377,7 @@ if __name__=="__main__":
             del state.messages
             state.messages = []
             gc_collect()
+            st.experimental_rerun()
 
         with st.expander(f"Chat Settings: voice_model={state.voice_model} LLM={state.LLM} character={state.assistant_template.name}", expanded=chat_disabled):
             
@@ -389,9 +386,12 @@ if __name__=="__main__":
                 state = render_llm_form(state)
             with character_tab:
                 state = render_character_form(state)
+        
+        state.user = col1.text_input("Your Name", value=state.user)
 
-        if len(state.messages)==0 and state.assistant_template.greeting:
-            state.messages.append({"role": state.assistant_template.name, "content": state.assistant_template.greeting})
+        if len(state.messages)==0 and state.assistant_template.greeting and state.user:
+            state.messages.append({"role": state.assistant_template.name, "content": state.assistant_template.greeting.format(
+                name=state.assistant_template.name, user=state.user)})
         for i,msg in enumerate(state.messages):
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
@@ -400,18 +400,19 @@ if __name__=="__main__":
 
         prompt = st.chat_input(disabled=chat_disabled)
         if not chat_disabled:
-            user_audio = audio_recorder(
-                text="",
-                pause_threshold=1.,
-                # energy_threshold=[.05,.01],
-                sample_rate=16_000,
-                icon_size="2x")
+            user_audio = None
+            if st.button("Record"):
+                user_audio = audio_recorder(
+                    text="",
+                    pause_threshold=1.,
+                    # energy_threshold=[.05,.01],
+                    sample_rate=16_000,
+                    icon_size="2x")
             if user_audio:
                 if state.stt_models is None: state.stt_models = load_stt_models()
                 input_audio = bytes_to_audio(user_audio)
                 prompt = transcribe_speech(input_audio,state.stt_models)
                 del user_audio
-                user_audio = None
         
         if prompt:
             st.chat_message(state.user).write(prompt)

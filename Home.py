@@ -6,22 +6,21 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
 
-from web_utils.audio import SUPPORTED_AUDIO
-from web_utils.components import file_uploader_form
+from webui.components import file_uploader_form
 
 
-from web_utils.downloader import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file, save_file_generator
+from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file, save_file_generator
 
 CWD = os.getcwd()
 if CWD not in sys.path:
     sys.path.append(CWD)
 
-from web_utils.contexts import ProgressBarContext, SessionStateContext
+from webui.contexts import ProgressBarContext, SessionStateContext
 
 @st.cache_data(show_spinner=False)
 def download_audio_to_buffer(url):
@@ -111,7 +110,7 @@ if __name__=="__main__":
             with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
                 st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
 
-        with st.expander("STT Models"):
+        with st.expander("Chat Models"):
             col1, col2 = st.columns(2)
             stt_path = os.path.join(TTS_MODELS_DIR,stt_checkpoint)
             is_downloaded = os.path.exists(stt_path)
@@ -121,10 +120,10 @@ if __name__=="__main__":
                     models = load_stt_models() #hacks the from_pretrained downloader
                     del models
                     st.experimental_rerun()
-            pass
-
-        with st.expander("LLM Models"):
-            pass
+            generator = [(os.path.join(BASE_MODELS_DIR,"LLM",os.path.basename(link)),link) for link in LLM_MODELS]
+            to_download = render_model_checkboxes(generator)
+            with ProgressBarContext(to_download,download_file,"Downloading models") as pb:
+                st.button("Download All",key="download-all-chat-models",disabled=len(to_download)==0,on_click=pb.run)
 
     with audio_tab, SessionStateContext("youtube_downloader") as state:
         

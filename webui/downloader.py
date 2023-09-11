@@ -18,7 +18,7 @@ RVC_MODELS = [
     "RVC/Sayano.pth","RVC/.index/added_IVF1063_Flat_nprobe_1_Sayano_v2.index",
     "RVC/Mae_v2.pth",
     "RVC/Fuji.pth","RVC/.index/added_IVF985_Flat_nprobe_1_Fuji_v2.index",
-    "RVC/Yuuko.pth","RVC/.index/added_IVF522_Flat_nprobe_1_Yuuko_v2.index"]
+    "RVC/Monika.pth","RVC/.index/Monika_v2_40k.index"]
 BASE_MODELS = ["hubert_base.pt", "rmvpe.pt"]
 VITS_MODELS = ["VITS/pretrained_ljs.pth"]
 PRETRAINED_MODELS = [
@@ -30,6 +30,11 @@ PRETRAINED_MODELS = [
     "pretrained_v2/f0G48k.pth",
     "pretrained_v2/f0D40k.pth",
     "pretrained_v2/f0G40k.pth"]
+LLM_MODELS = [
+    "https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/resolve/main/airoboros-l2-7b-2.1.Q4_K_M.gguf",
+    "https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/resolve/main/pygmalion-2-7b.Q4_K_M.gguf",
+    "https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/resolve/main/zarablend-mx-l2-7b.Q4_K_M.gguf"
+]
 
 def download_file(params: Tuple[str, str]):
     model_path, download_link = params
@@ -61,6 +66,7 @@ def save_file_generator(save_dir: str, data: List[IO]):
 def save_zipped_files(params: Tuple[str, any]):
     (data_path, datum) = params
 
+    print(f"saving zip file: {data_path}")
     temp_dir = os.path.join(BASE_CACHE_DIR,"zips")
     os.makedirs(temp_dir,exist_ok=True)
     name = os.path.basename(data_path)
@@ -69,7 +75,9 @@ def save_zipped_files(params: Tuple[str, any]):
     with open(zip_path,"wb") as f:
         f.write(datum)
 
+    print(f"extracting zip file: {zip_path}")
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(os.path.dirname(data_path))
+    print(f"finished extracting zip file")
     
     os.remove(zip_path) # cleanup

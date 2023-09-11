@@ -14,7 +14,6 @@ This project provides a comprehensive platform for training RVC models and gener
 * Auto-Playlist: let your RVC model sing songs from your favourite playlist.
 * Audio-postprocessing: You can enhance the quality of your generated songs by adding reverbs, echos, etc.
 * TTS using cloud API: use a cloud-based text-to-speech service to generate high-quality and natural-sounding speech from any text.
-~~* LLM integration: chat with your RVC model in real time.~~
 * Real-time VC interface: convert your voice using your favourite RVC model.
 
 ## Requirements
@@ -68,5 +67,6 @@ This project uses code and AI models from the following repositories:
 - [Bark: A Speech Synthesis Toolkit for Bengali Language](https://github.com/suno-ai/bark) by suno-ai.
 - [SpeechT5: A Self-Supervised Pre-training Model for Speech Recognition and Generation](https://github.com/microsoft/SpeechT5) by microsoft.
 - [VITS: Conditional Variational Autoencoder with Adversarial Learning for End-to-End Text-to-Speech](https://github.com/jaywalnut310/vits) by jaywalnut310 et al.
+- [Applio-RVC-Fork](https://github.com/IAHispano/Applio-RVC-Fork) by IAHispano
 
 We thank all the authors and contributors of these repositories for their amazing work and for making their code and models publicly available.

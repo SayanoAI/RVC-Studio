@@ -36,6 +36,6 @@
     "rms_mix_rate": 0.25,
     "protect": 0.25
   },
-  "voice": "./models/RVC\\Sayano.pth",
+  "voice": "models\\RVC\\Sayano.pth",
   "tts_method": "edge"
 }

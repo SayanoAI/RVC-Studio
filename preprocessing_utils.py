@@ -5,9 +5,11 @@ from lib.slicer2 import Slicer
 import librosa, traceback
 from scipy.io import wavfile
 from lib.audio import load_audio
+from pitch_extraction import FeatureExtractor
 from vc_infer_pipeline import load_hubert
-from web_utils.audio import load_input_audio
-from webui_utils import gc_collect, config
+from webui.audio import load_input_audio
+from webui.utils import gc_collect
+from webui import config
 import torch
 
 class Preprocess:
@@ -117,7 +119,7 @@ class Preprocess:
         except:
             self.println("Fail. %s" % traceback.format_exc())
 
-class FeatureInput(object):
+class FeatureInput(FeatureExtractor):
     def __init__(self, f0_method, exp_dir, samplerate=16000, hop_size=160, device="cpu", version="v2", if_f0=False):
         self.sr = samplerate
         self.hop = hop_size
@@ -134,6 +136,8 @@ class FeatureInput(object):
         self.f0_mel_max = 1127 * np.log(1 + self.f0_max / 700)
 
         self.model = load_hubert(config)
+        
+        super().__init__(samplerate, config, onnx=False)
 
     def printt(self,strr):
         print(strr)
@@ -170,97 +174,20 @@ class FeatureInput(object):
 
     def compute_f0(self,x):
         p_len = x.shape[0] // self.hop
-        time_step = self.hop / self.sr * 1000
         
-        if self.f0_method == "pm":
-            import parselmouth
-            time_step = 160 / 16000 * 1000
-            f0 = (
-                parselmouth.Sound(x, self.sr)
-                .to_pitch_ac(
-                    time_step=time_step / 1000,
-                    voicing_threshold=0.6,
-                    pitch_floor=self.f0_min,
-                    pitch_ceiling=self.f0_max,
-                )
-                .selected_array["frequency"]
-            )
-            pad_size = (p_len - len(f0) + 1) // 2
-            if pad_size > 0 or p_len - len(f0) - pad_size > 0:
-                f0 = np.pad(
-                    f0, [[pad_size, p_len - len(f0) - pad_size]], mode="constant"
-                )
-        elif self.f0_method == "harvest":
-            import pyworld
-            f0, t = pyworld.harvest(
-                x.astype(np.double),
-                fs=self.sr,
-                f0_ceil=self.f0_max,
-                f0_floor=self.f0_min,
-                frame_period=1000 * self.hop / self.sr,
-            )
-            f0 = pyworld.stonemask(x.astype(np.double), f0, t, self.sr)
-        elif self.f0_method == "dio":
-            import pyworld
-            f0, t = pyworld.dio(
-                x.astype(np.double),
-                fs=self.sr,
-                f0_ceil=self.f0_max,
-                f0_floor=self.f0_min,
-                frame_period=1000 * self.hop / self.sr,
-            )
-            f0 = pyworld.stonemask(x.astype(np.double), f0, t, self.sr)
-        elif self.f0_method == "rmvpe":
-            if hasattr(self, "model_rmvpe") == False:
-                from lib.rmvpe import RMVPE
+        return self.get_f0(x,p_len,0,self.f0_method,self.hop)
 
-                print("loading rmvpe model")
-                self.model_rmvpe = RMVPE("./models/rmvpe.pt", is_half=False, device=self.device)
-            f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
-        elif self.f0_method == "crepe":
-            import torch, torchcrepe
+        # f0_mel = 1127 * np.log(1 + f0 / 700)
+        # f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - self.f0_mel_min) * (
+        #     self.f0_bin - 2
+        # ) / (self.f0_mel_max - self.f0_mel_min) + 1
 
-            model = "full"
-            # Pick a batch size that doesn't cause memory errors on your gpu
-            batch_size = 512
-            # Compute pitch using first gpu
-            
-            audio = torch.tensor(np.copy(x))[None].float()
-            f0, pd = torchcrepe.predict(
-                audio,
-                self.sr,
-                self.hop,
-                self.f0_min,
-                self.f0_max,
-                model,
-                batch_size=batch_size,
-                device=self.device,
-                return_periodicity=True,
-            )
-            pd = torchcrepe.filter.median(pd, 3)
-            f0 = torchcrepe.filter.mean(f0, 3)
-            f0[pd < 0.1] = 0
-            f0 = f0[0].cpu().numpy()
-        elif self.f0_method == "rmvpe":
-            if hasattr(self, "model_rmvpe") == False:
-                from lib.rmvpe import RMVPE
+        # # use 0 or 1
+        # f0_mel[f0_mel <= 1] = 1
+        # f0_mel[f0_mel > self.f0_bin - 1] = self.f0_bin - 1
+        # f0_coarse = np.clip(np.rint(f0_mel).astype(int),a_min=1,a_max=255)
 
-                print("loading rmvpe model")
-                self.model_rmvpe = RMVPE(
-                    "./models/rmvpe.pt", is_half=self.is_half, device=self.device
-                )
-            f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
-        f0_mel = 1127 * np.log(1 + f0 / 700)
-        f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - self.f0_mel_min) * (
-            self.f0_bin - 2
-        ) / (self.f0_mel_max - self.f0_mel_min) + 1
-
-        # use 0 or 1
-        f0_mel[f0_mel <= 1] = 1
-        f0_mel[f0_mel > self.f0_bin - 1] = self.f0_bin - 1
-        f0_coarse = np.clip(np.rint(f0_mel).astype(int),a_min=1,a_max=255)
-
-        return f0_coarse, f0
+        # return f0_coarse, f0
     
     def go(self, paths):
         if len(paths) == 0:

@@ -5,7 +5,7 @@ if CWD not in sys.path:
     sys.path.append(CWD)
 
 from collections import OrderedDict
-from webui_utils import i18n
+from webui import i18n
 
 def show_info(path):
     try:

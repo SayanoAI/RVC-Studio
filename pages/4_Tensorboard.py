@@ -4,12 +4,12 @@ import sys
 from time import sleep
 import psutil
 from streamlit_tensorboard import st_tensorboard
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-from webui_utils import render_subprocess_list
-from web_utils.contexts import ProgressBarContext, SessionStateContext
+from webui.components import active_subprocess_list
+from webui.contexts import ProgressBarContext, SessionStateContext
 
 
 CWD = os.getcwd()
@@ -33,4 +33,4 @@ if __name__=="__main__":
                     start_tensorboard(state.logdir)
                     pb.run()
 
-        render_subprocess_list()
+        active_subprocess_list()

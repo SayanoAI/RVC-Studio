@@ -25,7 +25,7 @@
       }
     ],
     "greeting": "Welcome home! I've been waiting for you.",
-    "name": "Mae_v2"
+    "name": "Mae"
   },
   "tts_options": {
     "f0_up_key": 3,
@@ -36,6 +36,6 @@
     "rms_mix_rate": 0.25,
     "protect": 0.25
   },
-  "voice": "./models/RVC\\Mae_v2.pth",
+  "voice": "models\\RVC\\Mae_v2.pth",
   "tts_method": "edge"
 }

@@ -4,14 +4,14 @@ import sys
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
-from web_utils import MENU_ITEMS
+from webui import MENU_ITEMS, N_THREADS_OPTIONS, PITCH_EXTRACTION_OPTIONS, SR_MAP, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from web_utils.components import file_uploader_form
-from web_utils.downloader import BASE_MODELS_DIR, DATASETS_DIR
+from webui.components import active_subprocess_list, file_uploader_form
+from webui.downloader import BASE_MODELS_DIR, DATASETS_DIR
 from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
 
-from web_utils.audio import load_input_audio, save_input_audio
+from webui.audio import load_input_audio, save_input_audio
 
 
 
@@ -20,9 +20,9 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
-from web_utils.contexts import SessionStateContext
+from webui.contexts import SessionStateContext
 
-from webui_utils import get_filenames, get_index, config, i18n, render_subprocess_list
+from webui.utils import get_filenames, get_index
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -236,7 +236,7 @@ def init_training_state():
         if_f0=True,
         trainset_dir="",
         spk_id=0,
-        f0method="rmvpe",
+        f0method=["rmvpe"],
         save_epoch=0,
         total_epoch=100,
         batch_size=4,
@@ -251,11 +251,6 @@ def init_training_state():
         pids=[],
         device="cuda")
     return vars(state)
-
-N_THREADS_OPTIONS=[1,2,4,8,12,16]
-SR_MAP = {"40k": 40000, "48k": 48000}
-DEVICE_OPTIONS = ["cpu","cuda"]
-PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe"]
 
 if __name__=="__main__":
     with SessionStateContext("training",init_training_state()) as state:
@@ -294,8 +289,7 @@ if __name__=="__main__":
             st.write(i18n("training.extract_features.text"))
             col1,col2 = st.columns(2)
             state.if_f0=col1.checkbox(i18n("training.if_f0"),value=state.if_f0)
-            state.f0method=col2.radio(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,
-                                    horizontal=True,index=get_index(PITCH_EXTRACTION_OPTIONS,state.f0method))
+            state.f0method=col2.multiselect(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,default=state.f0method)
             disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
             if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
                 extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr)
@@ -307,7 +301,7 @@ if __name__=="__main__":
             col1,col2,col3=st.columns(3)
             state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
             state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
-            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=10,value=state.save_epoch)
+            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=5,value=state.save_epoch)
             state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
             state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
             state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)
@@ -331,4 +325,4 @@ if __name__=="__main__":
                 train_speaker_embedding(state.exp_dir,model_log_dir)
             else: st.markdown(f"*Only required for speecht5 TTS*")
 
-        render_subprocess_list()
+        active_subprocess_list()
