@@ -21,7 +21,8 @@
     "inference.convert_vocals.expander.form_submit_button": "Save Options",
     
     "inference.f0_up_key": "Recommended +12 key for male to female conversion, and -12 key for female to male conversion. If the sound range goes too far and the voice is distorted, you can also adjust it to the appropriate range by yourself.",
-    "inference.f0_method": "Select the pitch extraction algorithm ('crepe': better quality but GPU intensive, 'rmvpe': best quality, and little GPU requirement)",
+    "inference.f0_method": "Select the pitch extraction algorithm ('crepe': better quality but GPU intensive, 'rmvpe': fast and best quality, and little GPU requirement, others: use them if you really want to...)",
+    "inference.f0_autotune": "Enable autotuning of extracted pitch",
     "inference.filter_radius": "If >=3: apply median filtering to the harvested pitch results. The value represents the filter radius and can reduce breathiness.",
     "inference.index_rate": "Search feature ratio (controls accent strength, too high has artifacting):",
     "inference.resample_sr": "Resample the output audio in post-processing to the final sample rate. Set to 0 for no resampling:",

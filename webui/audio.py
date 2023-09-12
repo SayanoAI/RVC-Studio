@@ -6,6 +6,20 @@ import soundfile as sf
 
 MAX_INT16 = 32768
 SUPPORTED_AUDIO = ["wav","mp3","flac","ogg"]
+AUTOTUNE_NOTES = np.array([
+    65.41, 69.30, 73.42, 77.78, 82.41, 87.31,
+    92.50, 98.00, 103.83, 110.00, 116.54, 123.47,
+    130.81, 138.59, 146.83, 155.56, 164.81, 174.61,
+    185.00, 196.00, 207.65, 220.00, 233.08, 246.94,
+    261.63, 277.18, 293.66, 311.13, 329.63, 349.23,
+    369.99, 392.00, 415.30, 440.00, 466.16, 493.88,
+    523.25, 554.37, 587.33, 622.25, 659.25, 698.46,
+    739.99, 783.99, 830.61, 880.00, 932.33, 987.77,
+    1046.50, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91,
+    1479.98, 1567.98, 1661.22, 1760.00, 1864.66, 1975.53,
+    2093.00, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83,
+    2959.96, 3135.96, 3322.44, 3520.00, 3729.31, 3951.07
+])
 
 def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,to_mono=False,axis=0,**kwargs):
     audio = np.array(input_audio[0],dtype="float32")
@@ -69,3 +83,31 @@ def merge_audio(audio1,audio2,sr=40000):
     mixed = pad_audio(m1,m2)
 
     return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)
+
+def autotune_f0(f0, threshold=0.):
+    # autotuned_f0 = []
+    # for freq in f0:
+        # closest_notes = [x for x in self.note_dict if abs(x - freq) == min(abs(n - freq) for n in self.note_dict)]
+        # autotuned_f0.append(random.choice(closest_notes))
+    # for note in self.note_dict:
+    #     closest_notes = np.where((f0 - note)/note<.05,f0,note)
+    print("autotuning f0 using note_dict...")
+
+    autotuned_f0 = []
+    # Loop through each value in array1
+    for freq in f0:
+        # Find the absolute difference between x and each value in array2
+        diff = np.abs(AUTOTUNE_NOTES - freq)
+        # Find the index of the minimum difference
+        idx = np.argmin(diff)
+        # Find the corresponding value in array2
+        y = AUTOTUNE_NOTES[idx]
+        # Check if the difference is less than threshold
+        if diff[idx] < threshold:
+            # Keep the value in array1
+            autotuned_f0.append(freq)
+        else:
+            # Use the nearest value in array2
+            autotuned_f0.append(y)
+    # Return the result as a numpy array
+    return np.array(autotuned_f0, dtype="float32")
