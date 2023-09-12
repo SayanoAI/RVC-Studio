@@ -110,9 +110,12 @@ class PlaylistPlayer:
             self.thread1.join(1.)
         except Exception as e:
             print(f"failed to close thread1: {e}")
+        try:
+            self.stop()
+            if self.stream: self.stream.close()
+        except Exception as e:
+            print(f"failed to close stream: {e}")
         del self.rvc_model
-        self.stop()
-        if self.stream: self.stream.close()
         gc_collect()
     
     def set_args(self, **args):
@@ -127,37 +130,38 @@ class PlaylistPlayer:
     async def play_song(self):
         # initialize portaudio
         p = pyaudio.PyAudio()
-        item = input_audio = None
+        item = None
         # play the songs from the queue
         while not self.stopped:
-            if not (self.stopped or self.paused):
-                with self.lock:
-                    if not self.queue.empty():
+            with self.lock:
+                if item is None:
+                    if self.queue.qsize()>0:
                         # get the next song data and sample rate from the queue
                         item = self.queue.get(block=False)
-                        self.current_song, input_audio = item
-                        audio, sr = input_audio
-                        format = pyaudio.paInt16 if np.abs(audio).max()>1 else pyaudio.paFloat32
-                        dtype = "int16" if np.abs(audio).max()>1 else "float32" 
+                elif not (self.stopped or self.paused):
+                    self.current_song, input_audio = item
+                    audio, sr = input_audio
+                    format = pyaudio.paInt16 if np.abs(audio).max()>1 else pyaudio.paFloat32
+                    dtype = "int16" if np.abs(audio).max()>1 else "float32" 
+                    try:
                         self.stream = p.open(format=format, channels=1, rate=sr, output=True)
                         self.stream.start_stream()
-                        try:
-                            for i in range(0,len(audio),self.CHUNKSIZE):
-                                if not (self.paused or self.stopped):
-                                    data = (audio[i:i+self.CHUNKSIZE]*self.volume).astype(dtype)
-                                    if self.stream.is_stopped(): break
-                                    self.stream.write(data.tostring())
-                                else:
-                                    if self.stopped:
-                                        break
-                                    while self.paused and not self.stopped:
-                                        await asyncio.sleep(self.CHUNKSIZE/sr)
-                        except Exception as e:
-                            print(f"failed to stream {self.current_song}: {e}")
+                    
+                        for i in range(0,len(audio),self.CHUNKSIZE):
+                            if not (self.paused or self.stopped):
+                                data = (audio[i:i+self.CHUNKSIZE]*self.volume).astype(dtype)
+                                if self.stream.is_stopped(): break
+                                self.stream.write(data.tostring())
+                            else:
+                                if self.stopped:
+                                    break
+                                while self.paused and not self.stopped:
+                                    await asyncio.sleep(self.CHUNKSIZE/sr)
                         self.stream.stop_stream()
                         self.stream.close()
-                        item=input_audio=None
-        
+                    except Exception as e:
+                        print(f"failed to stream {self.current_song}: {e}")
+                    finally: item=None
         p.terminate()
 
     async def process_song(self):

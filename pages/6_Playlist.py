@@ -136,7 +136,6 @@ def set_loop(state):
     if state.player and state.loop!=state.player.loop: state.player.set_loop(state.loop)
 def set_shuffle(state):
     if state.player:
-        print(state.shuffle,state.player.shuffled)
         if state.shuffle:
             if not state.player.shuffled: state.player.shuffle()
         else:
