@@ -74,7 +74,7 @@ class PlaylistPlayer:
     def __init__(self, playlist: Iterable[str], model_name, config, volume=1.0, shuffle=False, loop=False, **args):
 
         # playlist is a list of song filenames
-        self.playlist = np.array(playlist)
+        self.playlist = playlist
         self.index = 0 # current song index
         self.paused = False # pause flag
         self.stopped = False # stop flag
@@ -91,7 +91,6 @@ class PlaylistPlayer:
         self.rvc_model = None
         
         if shuffle: self.shuffle()
-        self.shuffled = shuffle
 
         self.thread1 = threading.Thread(target=asyncio.run,args=(self.play_song(),),name="play_song")
         self.thread1.start()
@@ -99,7 +98,7 @@ class PlaylistPlayer:
         self.thread2.start()
 
     def __repr__(self):
-        status = "paused" if self.paused else f"playing: {self.current_song}"
+        status = "paused" if self.paused else f"{'looping' if self.loop else 'playing'}: {self.current_song}"
         return f"PlaylistPlayer[{self.index+1}/{len(self.playlist)}] {self.thread1} {self.thread2} {status} ({self.queue.qsize()} in queue)"
     
     def __del__(self):
@@ -188,7 +187,10 @@ class PlaylistPlayer:
 
     def shuffle(self):
         # shuffle the playlist order
-        random.shuffle(self.playlist)
+        not_played = self.playlist[self.index+1:]
+        random.shuffle(not_played)
+        self.playlist = self.playlist[:self.index+1] + not_played
+        self.shuffled =True
 
     def set_volume(self, volume):
         # shuffle the playlist order

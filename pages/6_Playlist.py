@@ -6,7 +6,7 @@ import streamlit as st
 
 from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, i18n, config
 from webui.downloader import SONG_DIR
-st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
+st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import active_subprocess_list, file_uploader_form
 from webui.utils import gc_collect, get_filenames, get_index
@@ -136,6 +136,7 @@ def set_loop(state):
     if state.player and state.loop!=state.player.loop: state.player.set_loop(state.loop)
 def set_shuffle(state):
     if state.player:
+        print(state.shuffle,state.player.shuffled)
         if state.shuffle:
             if not state.player.shuffled: state.player.shuffle()
         else:
@@ -152,22 +153,26 @@ if __name__=="__main__":
                 types=SUPPORTED_AUDIO+["zip"],
                 accept_multiple_files=True)
 
-        col1, col2, col3 = st.columns(3)
-        state.model_name = col1.selectbox(
+        col1, col2 = st.columns(2)
+        state.model_name = st.selectbox(
             i18n("inference.voice.selectbox"),
             options=state.models,
             index=get_index(state.models,state.model_name),
             format_func=lambda option: os.path.basename(option).split(".")[0],
             disabled=state.player is not None
             )
-        state.volume = col2.select_slider("Volume",options=np.linspace(0.,1.,21),value=state.volume,
-                                          format_func=lambda x:f"{x*100:3.0f}%")
-        set_volume(state)
-        state.loop = col3.checkbox("Loop",value=state.loop)
-        set_loop(state)
-
-        state.shuffle = col3.checkbox("Shuffle",value=state.shuffle)
-        set_shuffle(state)
+        
+        with st.form("song.settings.form"):
+            state.volume = st.select_slider("Volume",options=np.linspace(0.,1.,21),value=state.volume,
+                                            format_func=lambda x:f"{x*100:3.0f}%")
+            col1, col2 = st.columns(2)
+            state.loop = col1.checkbox("Loop",value=state.loop)
+            state.shuffle = col2.checkbox("Shuffle",value=state.shuffle)
+            
+            if st.form_submit_button("Update"):
+                set_volume(state)
+                set_loop(state)
+                set_shuffle(state)
 
         col1, col2, col3, col4 = st.columns(4)
 
