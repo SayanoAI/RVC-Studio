@@ -79,7 +79,7 @@ class PlaylistPlayer:
         self.paused = False # pause flag
         self.stopped = False # stop flag
         self.lock = threading.Lock() # lock for synchronization
-        self.queue = queue.Queue(2) # queue for processed songs
+        self.queue = queue.Queue(1) # queue for processed songs
         self.model_name = model_name
         self.config = config
         self.args = args
@@ -91,6 +91,7 @@ class PlaylistPlayer:
         self.rvc_model = None
         
         if shuffle: self.shuffle()
+        self.shuffled = shuffle
 
         self.thread1 = threading.Thread(target=asyncio.run,args=(self.play_song(),),name="play_song")
         self.thread1.start()

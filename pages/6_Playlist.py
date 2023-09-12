@@ -136,8 +136,11 @@ def set_loop(state):
     if state.player and state.loop!=state.player.loop: state.player.set_loop(state.loop)
 def set_shuffle(state):
     if state.player:
-        if state.shuffle: state.player.shuffle()
-        else: state.player.playlist = state.playlist
+        if state.shuffle:
+            if not state.player.shuffled: state.player.shuffle()
+        else:
+            state.player.playlist = state.playlist
+            state.player.shuffled = False
 def update_player_args(**args):
     if state.player: state.player.set_args(**args)
 
@@ -215,5 +218,7 @@ if __name__=="__main__":
             st.write(state.player)
             df = pd.DataFrame(state.player.playlist,columns=["Songs"])
             index = np.arange(len(df))
-            df.index=np.where(state.player.playlist==state.player.current_song,"⭐",index)
+            df.index=np.where([False if state.player.current_song is None else
+                               state.player.current_song in song
+                               for song in state.player.playlist],"⭐",index)
             st.table(df)
