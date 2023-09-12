@@ -34,7 +34,7 @@ def load_input_audio(fname,sr=None,**kwargs):
    
 def save_input_audio(fname,input_audio,sr=None,to_int16=False):
     print(f"saving sound to {fname}")
-    audio=np.array(input_audio[0],dtype="float32")
+    audio=np.array(input_audio[0],dtype="int16" if np.abs(input_audio[0]).max()>1 else "float32")
     if to_int16:
         max_a = np.abs(audio).max() * .99
         if max_a<1:

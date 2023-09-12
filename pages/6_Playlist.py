@@ -1,12 +1,14 @@
 import os
 import sys
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, i18n, config
+from webui.downloader import SONG_DIR
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-from webui.components import active_subprocess_list
+from webui.components import active_subprocess_list, file_uploader_form
 from webui.utils import gc_collect, get_filenames, get_index
 
 
@@ -97,6 +99,7 @@ def render_vocal_separation_form(state):
                 uvr5_name=uvr5_name,
                 merge_type=merge_type
             )
+            update_player_args(**vars(state.split_vocal_config))
         elif len(uvr5_name)<1: st.write(i18n("inference.uvr5_name"))
     return state
 
@@ -124,26 +127,44 @@ def render_vocal_conversion_form(state):
                 rms_mix_rate=rms_mix_rate,
                 protect=protect
             )
+            update_player_args(**vars(state.vocal_change_config))
     return state
 
-def update_volume(state):
-    def __set_volume():
-        if state.player: state.player.set_volume(state.volume)
-    return __set_volume
+def set_volume(state):
+    if state.player and state.volume!=state.player.volume: state.player.set_volume(state.volume)
+def set_loop(state):
+    if state.player and state.loop!=state.player.loop: state.player.set_loop(state.loop)
+def set_shuffle(state):
+    if state.player:
+        if state.shuffle: state.player.shuffle()
+        else: state.player.playlist = state.playlist
+def update_player_args(**args):
+    if state.player: state.player.set_args(**args)
 
 if __name__=="__main__":
     with SessionStateContext("playlist",initial_state=init_inference_state()) as state:
+
+        file_uploader_form(
+                SONG_DIR,"Upload your songs",
+                types=SUPPORTED_AUDIO+["zip"],
+                accept_multiple_files=True)
 
         col1, col2, col3 = st.columns(3)
         state.model_name = col1.selectbox(
             i18n("inference.voice.selectbox"),
             options=state.models,
             index=get_index(state.models,state.model_name),
-            format_func=lambda option: os.path.basename(option).split(".")[0]
+            format_func=lambda option: os.path.basename(option).split(".")[0],
+            disabled=state.player is not None
             )
-        state.volume = col2.slider("Volume",min_value=0.0, max_value=1.0,step=0.1, value=state.volume, on_change=update_volume(state))
+        state.volume = col2.select_slider("Volume",options=np.linspace(0.,1.,21),value=state.volume,
+                                          format_func=lambda x:f"{x*100:3.0f}%")
+        set_volume(state)
         state.loop = col3.checkbox("Loop",value=state.loop)
+        set_loop(state)
+
         state.shuffle = col3.checkbox("Shuffle",value=state.shuffle)
+        set_shuffle(state)
 
         col1, col2, col3, col4 = st.columns(4)
 
@@ -151,7 +172,7 @@ if __name__=="__main__":
             state = refresh_data(state)
             st.experimental_rerun()
 
-        if col2.button("Pause" if state.player else "Play", type="primary",use_container_width=True,
+        if col2.button("Play" if state.player is None else ("Resume" if state.player.paused else "Pause"), type="primary",use_container_width=True,
                     disabled=not (state.split_vocal_config.uvr5_name and state.model_name)):
             if state.player is None:
                 state.player = PlaylistPlayer(state.playlist,
@@ -169,13 +190,14 @@ if __name__=="__main__":
                     state.player.pause()
             st.experimental_rerun()
 
-        if col3.button("Skip", use_container_width=True,disabled = state.player is None):
+        if col3.button("Next", use_container_width=True,disabled = state.player is None):
             state.player.skip()
             st.experimental_rerun()
         if col4.button("Stop",type="primary",use_container_width=True,disabled = state.player is None):
             if state.player is not None: state.player.stop()
             del state.player
             state.player = None
+            gc_collect()
             st.experimental_rerun()
             
         with st.expander("Settings", expanded=not (state.player and len(state.split_vocal_config.uvr5_name))):
@@ -192,4 +214,6 @@ if __name__=="__main__":
         if state.player:
             st.write(state.player)
             df = pd.DataFrame(state.player.playlist,columns=["Songs"])
+            index = np.arange(len(df))
+            df.index=np.where(state.player.playlist==state.player.current_song,"⭐",index)
             st.table(df)

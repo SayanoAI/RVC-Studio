@@ -8,10 +8,10 @@ This project provides a comprehensive platform for training RVC models and gener
 * 1-click TTS using RVC model: convert any text to speech using the fine-tuned VC model with just one click.
 * Built-in tensorboard: You can monitor the training progress and performance of your VC model using a built-in tensorboard dashboard.
 * LLM integration: chat with your RVC model in real time using popular LLMs.
+* Auto-Playlist: let your RVC model sing songs from your favourite playlist.
 
 ## Planned Features
 * Demucs: Meta's vocals and instrumental music source separation.
-* Auto-Playlist: let your RVC model sing songs from your favourite playlist.
 * Audio-postprocessing: You can enhance the quality of your generated songs by adding reverbs, echos, etc.
 * TTS using cloud API: use a cloud-based text-to-speech service to generate high-quality and natural-sounding speech from any text.
 * Real-time VC interface: convert your voice using your favourite RVC model.

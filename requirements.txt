@@ -70,3 +70,4 @@ llama-cpp-python>=0.1.79 #support for gguf
 sounddevice
 emoji
 audio-recorder-streamlit
+pyaudio

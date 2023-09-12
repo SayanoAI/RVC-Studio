@@ -35,15 +35,15 @@ def convert_vocals(_state,input_audio,**kwargs):
     _state.convert_params = SimpleNamespace(**kwargs)
     return vc_single(input_audio=input_audio,**models,**kwargs)
 
-def get_models(folder="."):
-    fnames = get_filenames(root="./models",folder=folder,exts=["pth","pt"])
+def get_rvc_models():
+    fnames = get_filenames(root="./models",folder="RVC",exts=["pth","pt"])
     return fnames
 
 def init_inference_state():
     state = SimpleNamespace(
         rvc_models=None,
         device="cuda" if config.has_gpu else "cpu",
-        models=get_models(folder="RVC"),
+        models=get_rvc_models(),
         model_name=None,
         uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
         preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
@@ -77,7 +77,7 @@ def init_inference_state():
 def refresh_data(state):
     state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
     state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
-    state.models = get_models(folder="RVC")
+    state.models = get_rvc_models()
     state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
     return state
@@ -87,8 +87,6 @@ def clear_data(state):
     state.rvc_models = None
     gc_collect()
     return state
-
-
 
 def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]
