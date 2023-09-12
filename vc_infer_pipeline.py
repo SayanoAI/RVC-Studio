@@ -358,7 +358,7 @@ def vc_single(
     resample_sr=0,
     rms_mix_rate=.25,
     protect=0.33,
-    crepe_hop_length=128,
+    crepe_hop_length=160,
     f0_autotune=False,
     is_onnx=False,
     **kwargs #prevents function from breaking

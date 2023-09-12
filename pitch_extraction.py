@@ -2,13 +2,14 @@ from functools import partial
 from multiprocessing.pool import ThreadPool
 import os
 import random
-import signal
 import numpy as np
+from scipy import signal
 import torch, torchcrepe, pyworld
 
 from lib.rmvpe import RMVPE
 from webui.audio import pad_audio
 from webui.downloader import BASE_MODELS_DIR
+from webui.utils import get_optimal_threads, get_optimal_torch_device
 
 class FeatureExtractor:
     def __init__(self, tgt_sr, config, onnx=False):
@@ -57,17 +58,6 @@ class FeatureExtractor:
             2093.00, 2217.46, 2349.32, 2489.02, 2637.02, 2793.83,
             2959.96, 3135.96, 3322.44, 3520.00, 3729.31, 3951.07
         ]
-        
-
-    # Fork Feature: Get the best torch device to use for f0 algorithms that require a torch device. Will return the type (torch.device)
-    def get_optimal_torch_device(self, index: int = 0) -> torch.device:
-        if torch.cuda.is_available():
-            return torch.device(
-                f"cuda:{index % torch.cuda.device_count()}"
-            )  # Very fast
-        elif torch.backends.mps.is_available():
-            return torch.device("mps")
-        return torch.device("cpu")
 
     # Fork Feature: Compute f0 with the crepe method
     def get_f0_crepe_computation(
@@ -83,7 +73,7 @@ class FeatureExtractor:
             np.float32
         )  # fixes the F.conv2D exception. We needed to convert double to float.
         x /= np.quantile(np.abs(x), 0.999)
-        torch_device = self.get_optimal_torch_device()
+        torch_device = get_optimal_torch_device()
         audio = torch.from_numpy(x).to(torch_device, copy=True)
         audio = torch.unsqueeze(audio, dim=0)
         if audio.ndim == 2 and audio.shape[0] > 1:
@@ -218,7 +208,8 @@ class FeatureExtractor:
         p_len,
         filter_radius,
         crepe_hop_length,
-        time_step
+        time_step,
+        **kwargs
     ):
         # Get various f0 methods from input to use in the computation stack
         params = {'x': x, 'p_len': p_len, 'f0_min': f0_min, 
@@ -242,7 +233,7 @@ class FeatureExtractor:
                 f0 = f0[1:]  # Get rid of first frame.
             return f0
 
-        with ThreadPool(len(methods_list)) as pool:
+        with ThreadPool(get_optimal_threads()) as pool:
             f0_computation_stack = pool.starmap(_get_f0,[(method,params) for method in methods_list])
 
         f0_computation_stack = pad_audio(*f0_computation_stack) # prevents uneven f0
@@ -258,8 +249,8 @@ class FeatureExtractor:
         p_len,
         f0_up_key,
         f0_method,
-        crepe_hop_length=160,
         filter_radius=3,
+        crepe_hop_length=160,
         f0_autotune=False,
         rmvpe_onnx=False,
         inp_f0=None,
@@ -276,16 +267,7 @@ class FeatureExtractor:
 
         if type(f0_method) == list:
             # Perform hybrid median pitch estimation
-            f0 = self.get_f0_hybrid_computation(
-                f0_method,
-                x,
-                f0_min,
-                f0_max,
-                p_len,
-                filter_radius,
-                crepe_hop_length,
-                time_step,
-            )
+            f0 = self.get_f0_hybrid_computation(f0_method,**params)
         else:
             print(f"f0_method={f0_method}")
             f0 = self.f0_method_dict[f0_method](**params)

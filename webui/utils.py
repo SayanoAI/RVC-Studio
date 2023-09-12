@@ -2,9 +2,11 @@ from datetime import datetime
 import gc
 import glob
 from importlib.util import LazyLoader, find_spec, module_from_spec
+import multiprocessing
 import os
 from sys import modules
 from types import SimpleNamespace
+import numpy as np
 import psutil
 import torch
 
@@ -61,3 +63,16 @@ def lazyload(name):
         modules[name] = module
         loader.exec_module(module)
         return module
+    
+def get_optimal_torch_device(index = 0) -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device(
+            f"cuda:{index % torch.cuda.device_count()}"
+        )  # Very fast
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+def get_optimal_threads(offset=0):
+    cores = multiprocessing.cpu_count() - offset
+    return max(np.floor(cores * (1-psutil.cpu_percent())),1)
