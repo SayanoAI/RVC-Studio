@@ -46,8 +46,8 @@ def init_inference_state():
         models=get_rvc_models(),
         model_name=None,
         uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
-        preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
-        preprocess_model="",
+        preprocess_models=get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
+        preprocess_model=[],
         agg=10,
         merge_type="median",
         dereverb=False,
@@ -65,6 +65,7 @@ def init_inference_state():
         convert_params=SimpleNamespace(
             f0_up_key=0,
             f0_method=["rmvpe"],
+            f0_autotune=False,
             index_rate=.75,
             filter_radius=3,
             resample_sr=0,
@@ -76,7 +77,7 @@ def init_inference_state():
 
 def refresh_data(state):
     state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
-    state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
+    state.preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_rvc_models()
     state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
@@ -97,7 +98,7 @@ def one_click_convert(state):
     state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
         state.uvr5_name,
         audio_path=state.input_audio_name,
-        preprocess_model=state.preprocess_model,
+        preprocess_models=state.preprocess_model,
         device=state.device,
         agg=state.agg,
         use_cache=state.use_cache,
@@ -124,10 +125,10 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
-        preprocess_model = st.selectbox(
+        preprocess_model = st.multiselect(
             i18n("inference.preprocess_model"),
             options=state.preprocess_models,
-            index=get_index(state.preprocess_models,state.preprocess_model))
+            default=state.preprocess_model)
         uvr5_name = st.multiselect(
             i18n("inference.uvr5_name"),
             options=state.uvr5_models,
@@ -165,6 +166,7 @@ def render_vocal_conversion_form(state):
         f0_method = st.multiselect(i18n("inference.f0_method"),
                                             options=PITCH_EXTRACTION_OPTIONS,
                                             default=state.convert_params.f0_method)
+        f0_autotune = st.checkbox(i18n("inference.f0_autotune"),value=state.convert_params.f0_autotune)
         resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                             options=[0,16000,24000,22050,40000,44100,48000],
                                             value=state.convert_params.resample_sr)
@@ -181,7 +183,8 @@ def render_vocal_conversion_form(state):
                 index_rate=index_rate,
                 filter_radius=filter_radius,
                 rms_mix_rate=rms_mix_rate,
-                protect=protect
+                protect=protect,
+                f0_autotune=f0_autotune
             )
             st.experimental_rerun()
     return state
@@ -234,7 +237,7 @@ if __name__=="__main__":
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
                 state.uvr5_name,
                 audio_path=state.input_audio_name,
-                preprocess_model=state.preprocess_model,
+                preprocess_models=state.preprocess_model,
                 device=state.device,
                 agg=state.agg,
                 use_cache=state.use_cache,
@@ -242,7 +245,6 @@ if __name__=="__main__":
                 )
                 
         with st.container():
-            
             if state.input_audio is not None:
                 st.write("Input Audio")
                 st.audio(state.input_audio[0],sample_rate=state.input_audio[1])

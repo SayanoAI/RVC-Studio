@@ -1,3 +1,5 @@
+> :warning: **The main branch is bleeding edge**: Expect frequent updates and many breaking changes after every commit :warning:
+
 # RVC Studio
 This project provides a comprehensive platform for training RVC models and generating AI voice covers. Use the app to download the required files before using or manually download them here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
 

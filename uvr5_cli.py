@@ -2,20 +2,21 @@ import argparse
 import os, sys, torch, warnings
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
-from webui.audio import load_input_audio, remix_audio, save_input_audio
-from webui.utils import gc_collect
+from webui.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
+from webui.downloader import BASE_CACHE_DIR
+from webui.utils import gc_collect, get_optimal_threads
 
 CWD = os.getcwd()
 if CWD not in sys.path:
     sys.path.append(CWD)
-CACHE_DIR = os.path.join(CWD,".cache","songs")
+CACHED_SONGS_DIR = os.path.join(BASE_CACHE_DIR,"songs")
 
 warnings.filterwarnings("ignore")
 import librosa
 import numpy as np
 
 class Separator:
-    def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=CACHE_DIR, **kwargs):
+    def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=CACHED_SONGS_DIR, **kwargs):
         dereverb = "reverb" in model_path.lower()
         deecho = "echo"  in model_path.lower()
         denoise = dereverb or deecho
@@ -71,15 +72,16 @@ def get_filename(*args,**kwargs):
     return name
 
 def __run_inference_worker(arg):
-    (model_path,audio_path,agg,device,use_cache,cache_dir) = arg
+    (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads) = arg
     
     model = Separator(
             agg=agg,
             model_path=model_path,
             device=device,
-            is_half=device=="cuda",
+            is_half="cuda" in device,
             use_cache=use_cache,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            num_threads = num_threads
             )
     vocals, instrumental, input_audio = model.run_inference(audio_path)
     del model
@@ -87,47 +89,45 @@ def __run_inference_worker(arg):
 
     return vocals, instrumental, input_audio
     
-def split_audio(uvr5_models,audio_path,preprocess_model=None,device="cuda",agg=10,use_cache=False,merge_type="mean"):
-    cache_dir = CACHE_DIR #default cache dir
-    if preprocess_model:
-        song_name = os.path.basename(audio_path).split(".")[0]
-        output_name = get_filename(os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
-        preprocess_path = os.path.join(CACHE_DIR,song_name,output_name)
-        if os.path.exists(preprocess_path): input_audio = load_input_audio(preprocess_path,mono=True)
-        else:
-            model = Separator(
-                agg=agg,
-                model_path=preprocess_model,
-                device=device,
-                is_half="cuda" in device,
-                use_cache=use_cache,
-                num_threads = max(os.cpu_count()//2,1)
-                )
-            print("preprocessing")
-            _, instrumental, input_audio = model.run_inference(audio_path)
-            # saves preprocessed file to cache and use as input
-            save_input_audio(preprocess_path,instrumental,to_int16=True)
-            del model
-            gc_collect()
-        cache_dir = os.path.join(CACHE_DIR,song_name)
-        audio_path = preprocess_path
+def split_audio(uvr5_models,audio_path,preprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean"):
+    merge_func = np.nanmedian if merge_type=="median" else np.nanmean
+    num_threads = max(get_optimal_threads(-1),1)
+    song_name = os.path.basename(audio_path).split(".")[0]
+    cache_dir = CACHED_SONGS_DIR
+
+    if len(preprocess_models):
+        output_name = get_filename(*sorted([os.path.basename(name).split(".")[0] for name in preprocess_models]),agg=agg) + ".mp3"
+        preprocessed_file = os.path.join(cache_dir,song_name,output_name)
+        
+        # read from cache
+        if os.path.isfile(preprocessed_file): input_audio = load_input_audio(preprocessed_file,mono=True)
+        else: # preprocess audio
+            wav_instrument = []
+            for preprocess_model in preprocess_models:
+                args = (preprocess_model,audio_path,agg,device,use_cache,cache_dir,num_threads)
+                _, instrumental, input_audio = __run_inference_worker(args)
+                wav_instrument.append(instrumental[0])
+
+            wav_instrument = merge_func(pad_audio(*wav_instrument,axis=0),axis=0)
+            instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
+            save_input_audio(preprocessed_file,instrumental,to_int16=True)
+        audio_path = preprocessed_file
+        cache_dir = os.path.join(CACHED_SONGS_DIR,song_name)
     else:
         input_audio = load_input_audio(audio_path,mono=True)
+        cache_dir = CACHED_SONGS_DIR
         
     wav_instrument = []
     wav_vocals = []
-    max_len = 0
 
     for model_path in uvr5_models:
-        args = (model_path,audio_path,agg,device,use_cache,cache_dir)
+        args = (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads)
         vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])
         wav_instrument.append(instrumental[0])
-        max_len = max(max_len,len(vocals[0]),len(instrumental[0]))
 
-    merge_func = np.nanmedian if merge_type=="median" else np.nanmean
-    wav_instrument = merge_func([librosa.util.pad_center(wav,max_len) for wav in wav_instrument],axis=0)
-    wav_vocals = merge_func([librosa.util.pad_center(wav,max_len) for wav in wav_vocals],axis=0)
+    wav_instrument = merge_func(pad_audio(*wav_instrument),axis=0)
+    wav_vocals = merge_func(pad_audio(*wav_vocals),axis=0)
     instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
     vocals = remix_audio((wav_vocals,vocals[1]),norm=True,to_int16=True,to_mono=True)
 
