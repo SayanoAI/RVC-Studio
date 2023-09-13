@@ -1,3 +1,4 @@
+import hashlib
 import numpy as np
 import torch
 import os
@@ -5,6 +6,7 @@ import os
 from lib.infer_pack.text.cleaners import english_cleaners
 
 from webui.audio import MAX_INT16, load_input_audio, remix_audio
+from webui.downloader import BASE_CACHE_DIR
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -83,19 +85,26 @@ def __edge__(text, speaker="en-US-JennyNeural"):
     import edge_tts
     import asyncio
     from threading import Thread
-    tempfile = os.path.join("output","edge_tts.wav")
+    temp_dir = os.path.join(BASE_CACHE_DIR,"tts","edge",speaker)
+    os.makedirs(temp_dir,exist_ok=True)
+    tempfile = os.path.join(temp_dir,f"{hashlib.md5(text.encode('utf-8')).hexdigest()}.wav")
 
     async def fetch_audio():
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         communicate = edge_tts.Communicate(text, speaker)
-        with open(tempfile, "wb") as data:
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    data.write(chunk["data"])
+
+        try:
+            with open(tempfile, "wb") as data:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        data.write(chunk["data"])
+        except Exception as e:
+            print(e)
     
     thread = Thread(target=asyncio.run, args=(fetch_audio(),),name="edge-tts")
     thread.start()
     thread.join()
+    
     try:
         audio, sr = load_input_audio(tempfile,sr=16000)
         return audio, sr

@@ -131,6 +131,8 @@ class PlaylistPlayer:
                     if self.queue.qsize()>0:
                         # get the next song data and sample rate from the queue
                         item = self.queue.get(block=False)
+                    elif self.index == len(self.playlist) and not self.loop:
+                        self.stop()
                 elif not (self.stopped or self.paused):
                     self.current_song, input_audio = item
                     audio, sr = input_audio
@@ -155,6 +157,7 @@ class PlaylistPlayer:
                     except Exception as e:
                         print(f"failed to stream {self.current_song}: {e}")
                     finally: item=None
+
         p.terminate()
 
     async def process_song(self):
