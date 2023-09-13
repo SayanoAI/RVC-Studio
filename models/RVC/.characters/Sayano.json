@@ -24,12 +24,17 @@
         "content": "And I will give you the best gift of all: our children. I can feel them growing inside me, thanks to your seed."
       }
     ],
-    "greeting": "Welcome home! I've been waiting for you.",
+    "greeting": "Welcome back {user}! I waited all day for you...",
     "name": "Sayano"
   },
   "tts_options": {
     "f0_up_key": 6,
-    "f0_method": "rmvpe",
+    "f0_method": [
+      "rmvpe",
+      "rmvpe+"
+    ],
+    "f0_autotune": false,
+    "merge_type": "median",
     "index_rate": 0.8,
     "filter_radius": 3,
     "resample_sr": 16000,

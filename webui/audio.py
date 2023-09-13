@@ -1,5 +1,6 @@
 
 import io
+import os
 import numpy as np
 import librosa
 import soundfile as sf
@@ -48,6 +49,7 @@ def load_input_audio(fname,sr=None,**kwargs):
    
 def save_input_audio(fname,input_audio,sr=None,to_int16=False):
     print(f"saving sound to {fname}")
+    os.makedirs(os.path.dirname(fname),exist_ok=True)
     audio=np.array(input_audio[0],dtype="int16" if np.abs(input_audio[0]).max()>1 else "float32")
     if to_int16:
         max_a = np.abs(audio).max() * .99

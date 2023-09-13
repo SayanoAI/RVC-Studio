@@ -11,6 +11,7 @@ SONG_DIR = os.path.join(BASE_DIR,"songs")
 BASE_CACHE_DIR = os.path.join(BASE_DIR,".cache")
 DATASETS_DIR = os.path.join(BASE_DIR,"datasets")
 LOG_DIR = os.path.join(BASE_DIR,"logs")
+OUTPUT_DIR = os.path.join(BASE_DIR,"output")
 
 MDX_MODELS = ["MDXNET/Kim_Vocal_2.onnx","MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
 VR_MODELS = ["UVR/UVR-DeEcho-DeReverb.pth","UVR/HP5-vocals+instrumentals.pth"]

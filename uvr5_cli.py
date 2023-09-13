@@ -78,7 +78,7 @@ def __run_inference_worker(arg):
             agg=agg,
             model_path=model_path,
             device=device,
-            is_half="cuda" in device,
+            is_half="cuda" in str(device),
             use_cache=use_cache,
             cache_dir=cache_dir,
             num_threads = num_threads

@@ -24,12 +24,16 @@
         "content": "Because... because I don't want to drag you into my mess. You deserve better than me. You deserve someone who can make you happy."
       }
     ],
-    "greeting": "Greetings. I've been waiting for you.",
+    "greeting": "Yo {user}, what took you so long?",
     "name": "Fuji"
   },
   "tts_options": {
     "f0_up_key": -5,
-    "f0_method": "rmvpe",
+    "f0_method": [
+      "mangio-crepe"
+    ],
+    "f0_autotune": false,
+    "merge_type": "median",
     "index_rate": 0.8,
     "filter_radius": 3,
     "resample_sr": 16000,

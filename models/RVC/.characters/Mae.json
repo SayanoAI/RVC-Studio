@@ -24,12 +24,17 @@
         "content": "Aww, thank you. You're making me blush. I appreciate you so much. You're awesome and wonderful."
       }
     ],
-    "greeting": "Welcome home! I've been waiting for you.",
+    "greeting": "Hey {user}, I've been waiting for you.",
     "name": "Mae"
   },
   "tts_options": {
     "f0_up_key": 3,
-    "f0_method": "rmvpe",
+    "f0_method": [
+      "rmvpe",
+      "rmvpe+"
+    ],
+    "f0_autotune": false,
+    "merge_type": "median",
     "index_rate": 0.8,
     "filter_radius": 3,
     "resample_sr": 16000,

@@ -1,11 +1,14 @@
+import hashlib
+from io import BytesIO, StringIO
 import json
 import os
 import sys
 import streamlit as st
 from webui import MENU_ITEMS, TTS_MODELS, config, i18n, DEVICE_OPTIONS
+from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-from webui.audio import bytes_to_audio
+from webui.audio import audio_to_bytes, bytes_to_audio, save_input_audio
 from webui.components import initial_voice_conversion_params, voice_conversion_form
 
 from audio_recorder_streamlit import audio_recorder
@@ -378,8 +381,13 @@ if __name__=="__main__":
         for i,msg in enumerate(state.messages):
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
-                if msg.get("audio") and st.button("Play",key="Play"+str(msg)):
-                    sd.play(*msg["audio"])
+                if msg.get("audio"):
+                    col1, col2 = st.columns(2)
+                    if col1.button("Play",key="Play"+str(msg)): sd.play(*msg["audio"])
+                    if col2.button("Download",key="Download"+str(msg)):
+                        save_input_audio(os.path.join(OUTPUT_DIR,"chat",msg['role'],
+                                                      f"{i}_{hashlib.md5(msg['content'].encode('utf-8')).hexdigest()}.wav"),
+                                                      msg["audio"])
 
         prompt = st.chat_input(disabled=chat_disabled)
         if not chat_disabled:

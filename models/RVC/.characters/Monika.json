@@ -32,6 +32,8 @@
     "f0_method": [
       "rmvpe+"
     ],
+    "f0_autotune": true,
+    "merge_type": "median",
     "index_rate": 0.8,
     "filter_radius": 3,
     "resample_sr": 16000,

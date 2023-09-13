@@ -28,7 +28,7 @@ def __speecht5__(text, speaker_embedding=None, device="cpu"):
     input_ids = inputs["input_ids"]
     input_ids = input_ids[..., :tts_model.config.max_text_positions]
 
-    dtype = torch.float32 if "cpu" in device else torch.float16
+    dtype = torch.float32 if "cpu" in str(device) else torch.float16
     speech = tts_model.generate_speech(input_ids.to(device), speaker_embedding.to(device).to(dtype), vocoder=tts_vocoder)
     speech = (speech.cpu().numpy() * MAX_INT16).astype(np.int16)
     return speech, 16000
@@ -42,7 +42,7 @@ def cast_to_device(tensor, device):
     
 def __bark__(text, device="cpu"):
     from transformers import AutoProcessor, BarkModel
-    dtype = torch.float32 if "cpu" in device else torch.float16
+    dtype = torch.float32 if "cpu" in str(device) else torch.float16
     bark_processor = AutoProcessor.from_pretrained(
         bark_checkpoint,
         cache_dir=os.path.join(TTS_MODELS_DIR,bark_checkpoint),

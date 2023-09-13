@@ -1,8 +1,10 @@
+import hashlib
 import os
 import sys
 import streamlit as st
 
 from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
+from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import initial_voice_conversion_params, voice_conversion_form
@@ -76,12 +78,6 @@ def get_filename(audio_name,model_name):
     song = os.path.basename(audio_name).split(".")[0]
     singer = os.path.basename(model_name).split(".")[0]
     return f"{singer}.{song}"
-
-def download_song(output_audio,output_audio_name,ext="mp3"):
-    output_dir = os.sep.join([os.getcwd(),"output"])
-    os.makedirs(output_dir,exist_ok=True)
-    output_file = os.sep.join([output_dir,f"{output_audio_name}.{ext}"])
-    return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
     
 def one_click_speech(state):
     state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
@@ -151,4 +147,8 @@ if __name__=="__main__":
                 if state.converted_voice:
                     col2.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])
                     if col2.button("Save Converted Speech"):
-                        download_song(state.converted_voice,get_filename(state.model_name,str(hash(state.tts_text))[-8:]),ext="wav")
+                        name = os.path.basename(state.model_name).split(".")[0]
+                        save_input_audio(
+                            os.path.join(OUTPUT_DIR,"tts",name,
+                                         f"{hashlib.md5(state.tts_text.encode('utf-8')).hexdigest()}.wav"),
+                                         state.converted_voice)
