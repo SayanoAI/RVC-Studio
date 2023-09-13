@@ -181,7 +181,7 @@ class VC(FeatureExtractor):
                 protect,
             )[t_pad_tgt : -t_pad_tgt]
 
-    def pipeline(self, model, net_g, sid, audio, times, f0_up_key, f0_method,
+    def pipeline(self, model, net_g, sid, audio, times, f0_up_key, f0_method, merge_type,
             file_index, index_rate, if_f0, filter_radius, tgt_sr, resample_sr, rms_mix_rate,
             version, protect, crepe_hop_length, f0_autotune, rmvpe_onnx, f0_file=None, f0_min=50, f0_max=1100):
         
@@ -239,7 +239,7 @@ class VC(FeatureExtractor):
 
         if if_f0:
             pitch, pitchf = self.get_f0(
-                audio_pad, p_len, f0_up_key, f0_method,
+                audio_pad, p_len, f0_up_key, f0_method, merge_type,
                 filter_radius, crepe_hop_length, f0_autotune, rmvpe_onnx, inp_f0, f0_min, f0_max)
             
             pitch = pitch[:p_len].astype(np.int64 if self.device != 'mps' else np.float32)
@@ -352,6 +352,7 @@ def vc_single(
     f0_up_key=0,
     f0_file=None,
     f0_method="crepe",
+    merge_type="median",
     file_index="",  # .index file
     index_rate=.75,
     filter_radius=3,
@@ -360,7 +361,7 @@ def vc_single(
     protect=0.33,
     crepe_hop_length=160,
     f0_autotune=False,
-    is_onnx=False,
+    is_onnx=False,    
     **kwargs #prevents function from breaking
 ):
     print(f"vc_single unused args: {kwargs}")
@@ -398,6 +399,7 @@ def vc_single(
             times,
             f0_up_key,
             f0_method if len(f0_method)>1 else f0_method[0], # more than 1 f0_method in list means hybrid
+            merge_type,
             file_index,
             index_rate,
             if_f0,

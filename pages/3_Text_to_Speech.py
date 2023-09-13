@@ -2,9 +2,12 @@ import os
 import sys
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, config, i18n
-
+from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
+
+from webui.components import initial_voice_conversion_params, voice_conversion_form
+
+
 
 from types import SimpleNamespace
 from tts_cli import generate_speech
@@ -12,7 +15,7 @@ from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
 from webui.audio import save_input_audio
 
-from webui.utils import gc_collect, get_filenames, get_index
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -54,16 +57,8 @@ def get_models(folder="."):
 def init_inference_state():
     state = SimpleNamespace(
         models=get_models(folder="RVC"),
-        device="cuda" if config.has_gpu else "cpu",
-        tts_options=SimpleNamespace(
-            f0_up_key=6,
-            f0_method=["rmvpe"],
-            index_rate=.8,
-            filter_radius=3,
-            resample_sr=0,
-            rms_mix_rate=.25,
-            protect=0.25
-        )
+        device=get_optimal_torch_device(),
+        tts_options=initial_voice_conversion_params(),
     )
     return vars(state)
 
@@ -130,28 +125,10 @@ if __name__=="__main__":
                     options=DEVICE_OPTIONS,horizontal=True,
                     index=get_index(DEVICE_OPTIONS,state.device))
                 
-                f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
-                f0_method = st.multiselect(i18n("inference.f0_method"),
-                                            options=PITCH_EXTRACTION_OPTIONS,
-                                            default=state.tts_options.f0_method)
-                resample_sr = st.select_slider(i18n("inference.resample_sr"),
-                                                    options=[0,16000,24000,22050,40000,44100,48000],
-                                                    value=state.tts_options.resample_sr)
-                index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.index_rate)
-                filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.tts_options.filter_radius)
-                rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.rms_mix_rate)
-                protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.tts_options.protect)
-                
+                tts_options = voice_conversion_form(state.tts_options)
+
                 if st.form_submit_button(i18n("inference.save.button")):
-                    state.tts_options = SimpleNamespace(
-                        f0_up_key=f0_up_key,
-                        f0_method=f0_method,
-                        resample_sr=resample_sr,
-                        index_rate=index_rate,
-                        filter_radius=filter_radius,
-                        rms_mix_rate=rms_mix_rate,
-                        protect=protect
-                    )
+                    state.tts_options = tts_options
                     state.device=device
                     st.experimental_rerun()
 

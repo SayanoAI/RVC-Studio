@@ -10,7 +10,7 @@
     "inference.split_vocals": "Extract Vocals",
     "inference.split_vocals.expander": "Extract Vocals Options",
     "inference.preprocess_model": "Choose a preprocessing model",
-    "inference.uvr5_name": "Choose a vocal extraction model",
+    "inference.model_paths": "Choose a vocal extraction model",
     "inference.device": "Device",
     "inference.merge_type": "Merge Type",
     "inference.agg": "Aggressiveness in isolating vocals",
@@ -20,7 +20,7 @@
     "inference.convert_vocals.expander": "Change Vocals Options",
     "inference.convert_vocals.expander.form_submit_button": "Save Options",
     
-    "inference.f0_up_key": "Recommended +12 key for male to female conversion, and -12 key for female to male conversion. If the sound range goes too far and the voice is distorted, you can also adjust it to the appropriate range by yourself.",
+    "inference.f0_up_key": "Recommended +7 or +12 key for male to female conversion, and -12 or -5 key for female to male conversion. If the sound range goes too far and the voice is distorted, you can also adjust it to the appropriate range by yourself.",
     "inference.f0_method": "Select the pitch extraction algorithm ('crepe': better quality but GPU intensive, 'rmvpe': fast and best quality, and little GPU requirement, others: use them if you really want to...)",
     "inference.f0_autotune": "Enable autotuning of extracted pitch",
     "inference.filter_radius": "If >=3: apply median filtering to the harvested pitch results. The value represents the filter radius and can reduce breathiness.",

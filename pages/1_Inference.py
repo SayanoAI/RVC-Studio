@@ -2,10 +2,10 @@ import os
 import sys
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from webui.components import file_uploader_form
+from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
 from webui.downloader import SONG_DIR
 
 from types import SimpleNamespace
@@ -13,7 +13,7 @@ from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
 from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, save_input_audio
 
-from webui.utils import gc_collect, get_filenames, get_index
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 from uvr5_cli import split_audio
 
 CWD = os.getcwd()
@@ -42,18 +42,10 @@ def get_rvc_models():
 def init_inference_state():
     state = SimpleNamespace(
         rvc_models=None,
-        device="cuda" if config.has_gpu else "cpu",
+        device=get_optimal_torch_device(),
         models=get_rvc_models(),
         model_name=None,
-        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
-        preprocess_models=get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
-        preprocess_model=[],
-        agg=10,
-        merge_type="median",
-        dereverb=False,
-        uvr5_name=[],
-        use_cache=True,
-        hubert_model=None,
+        
         audio_files=get_filenames(exts=SUPPORTED_AUDIO,folder="songs"),
         input_audio_name=None,
         input_audio=None,
@@ -62,22 +54,15 @@ def init_inference_state():
         output_audio=None,
         output_audio_name=None,
         output_vocals=None,
-        convert_params=SimpleNamespace(
-            f0_up_key=0,
-            f0_method=["rmvpe"],
-            f0_autotune=False,
-            index_rate=.75,
-            filter_radius=3,
-            resample_sr=0,
-            rms_mix_rate=.2,
-            protect=0.2,
-        )
+
+        uvr5_params=initial_vocal_separation_params(),
+        convert_params=initial_voice_conversion_params()
     )
     return vars(state)
 
 def refresh_data(state):
-    state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
-    state.preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
+    state.uvr5_params.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
+    state.uvr5_params.uvr5_preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_rvc_models()
     state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
@@ -96,20 +81,15 @@ def get_filename(audio_name,model_name):
 
 def one_click_convert(state):
     state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
-        state.uvr5_name,
         audio_path=state.input_audio_name,
-        preprocess_models=state.preprocess_model,
         device=state.device,
-        agg=state.agg,
-        use_cache=state.use_cache,
-        merge_type=state.merge_type
+        **vars(state.uvr5_params),
         )
-    params = vars(state.convert_params)
     
     changed_vocals = convert_vocals(
         state,
         state.input_vocals,
-        **params)
+        **vars(state.convert_params))
     state.output_vocals = changed_vocals
     mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_audio[1])
     state.output_audio_name = get_filename(
@@ -125,67 +105,20 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
-        preprocess_model = st.multiselect(
-            i18n("inference.preprocess_model"),
-            options=state.preprocess_models,
-            default=state.preprocess_model)
-        uvr5_name = st.multiselect(
-            i18n("inference.uvr5_name"),
-            options=state.uvr5_models,
-            format_func=lambda item: os.path.basename(item),
-            default=[name for name in state.uvr5_name if name in state.uvr5_models])
-        
-        col1, col2 = st.columns(2)
-        device = col1.radio(
-            i18n("inference.device"),
-            disabled=not config.has_gpu,
-            options=DEVICE_OPTIONS,horizontal=True,
-            index=get_index(DEVICE_OPTIONS,state.device))
-        merge_type = col1.radio(
-            i18n("inference.merge_type"),
-            options=["median","mean"],horizontal=True,
-            index=get_index(["median","mean"],state.merge_type))
-        
-        agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
-        use_cache=col2.checkbox(i18n("inference.use_cache"),value=state.use_cache)
-        
-        if col1.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.agg=agg
-            state.use_cache=use_cache
-            state.device=device
-            state.preprocess_model=preprocess_model
-            state.uvr5_name=uvr5_name
-            state.merge_type=merge_type
-            st.experimental_rerun()
-        elif len(uvr5_name)<1: st.write(i18n("inference.uvr5_name"))
-    return state
-
-def render_vocal_conversion_form(state):
-    with st.form("inference.convert_vocals.expander"):
-        f0_up_key = st.select_slider(i18n("inference.f0_up_key"),options=[-12,-5,0,7,12],value=state.convert_params.f0_up_key)
-        f0_method = st.multiselect(i18n("inference.f0_method"),
-                                            options=PITCH_EXTRACTION_OPTIONS,
-                                            default=state.convert_params.f0_method)
-        f0_autotune = st.checkbox(i18n("inference.f0_autotune"),value=state.convert_params.f0_autotune)
-        resample_sr = st.select_slider(i18n("inference.resample_sr"),
-                                            options=[0,16000,24000,22050,40000,44100,48000],
-                                            value=state.convert_params.resample_sr)
-        index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.index_rate)
-        filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.convert_params.filter_radius)
-        rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.convert_params.rms_mix_rate)
-        protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.convert_params.protect)
+        uvr5_params = vocal_separation_form(state.uvr5_params)
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.convert_params = SimpleNamespace(
-                f0_up_key=f0_up_key,
-                f0_method=f0_method,
-                resample_sr=resample_sr,
-                index_rate=index_rate,
-                filter_radius=filter_radius,
-                rms_mix_rate=rms_mix_rate,
-                protect=protect,
-                f0_autotune=f0_autotune
-            )
+            state.uvr5_params = SimpleNamespace(**vars(uvr5_params))
+            st.experimental_rerun()
+        elif uvr5_params.model_paths is None: st.write(i18n("inference.model_paths"))
+    return state
+
+def render_voice_conversion_form(state):
+    with st.form("inference.convert_vocals.expander"):
+        convert_params = voice_conversion_form(state.convert_params)
+        
+        if st.form_submit_button(i18n("inference.save.button"),type="primary"):
+            state.convert_params = SimpleNamespace(**vars(convert_params))
             st.experimental_rerun()
     return state
 
@@ -209,7 +142,7 @@ if __name__=="__main__":
                 st.experimental_rerun()
 
             if col2.button(i18n("inference.one_click.button"), type="primary",use_container_width=True,
-                        disabled=not (state.uvr5_name and state.input_audio_name and state.model_name)):
+                        disabled=not (state.uvr5_params.model_paths and state.input_audio_name and state.model_name)):
                 with st.spinner(i18n("inference.one_click.button")):
                     state = one_click_convert(state)
             
@@ -228,20 +161,21 @@ if __name__=="__main__":
                 state = clear_data(state)
                 st.experimental_rerun()
             
+        state.device = st.radio(
+            i18n("inference.device"),
+            disabled=not config.has_gpu,
+            options=DEVICE_OPTIONS,horizontal=True,
+            index=get_index(DEVICE_OPTIONS,state.device))
 
         st.subheader(i18n("inference.split_vocals"))
-        with st.expander(i18n("inference.split_vocals.expander"),expanded=not (state.input_audio_name and len(state.uvr5_name))):
+        with st.expander(i18n("inference.split_vocals.expander"),expanded=not (state.input_audio_name and len(state.uvr5_params.model_paths))):
             state = render_vocal_separation_form(state)
 
-        if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_name))):
+        if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_params.model_paths))):
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
-                state.uvr5_name,
                 audio_path=state.input_audio_name,
-                preprocess_models=state.preprocess_model,
                 device=state.device,
-                agg=state.agg,
-                use_cache=state.use_cache,
-                merge_type=state.merge_type
+                **vars(state.uvr5_params),
                 )
                 
         with st.container():
@@ -261,7 +195,7 @@ if __name__=="__main__":
         
         st.subheader(i18n("inference.convert_vocals"))
         with st.expander(f"{i18n('inference.convert_vocals.expander')} - index={os.path.basename(state.rvc_models['file_index']) if state.rvc_models else 'None'}"):
-            state = render_vocal_conversion_form(state)
+            state = render_voice_conversion_form(state)
 
         col1, col2 = st.columns(2)
         uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type="wav")

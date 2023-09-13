@@ -183,6 +183,7 @@ class FeatureExtractor:
     def get_f0_hybrid_computation(
         self,
         methods_list,
+        merge_type,
         x,
         f0_min,
         f0_max,
@@ -219,8 +220,9 @@ class FeatureExtractor:
 
         f0_computation_stack = pad_audio(*f0_computation_stack) # prevents uneven f0
 
-        print(f"Calculating hybrid median f0 from the stack of: {methods_list}")
-        f0_median_hybrid = np.nanmedian(f0_computation_stack, axis=0)
+        print(f"Calculating hybrid median f0 from the stack of: {methods_list} using {merge_type} merge")
+        merge_func = np.nanmedian if merge_type=="median" else np.nanmean
+        f0_median_hybrid = merge_func(f0_computation_stack, axis=0)
 
         return f0_median_hybrid
 
@@ -230,6 +232,7 @@ class FeatureExtractor:
         p_len,
         f0_up_key,
         f0_method,
+        merge_type,
         filter_radius=3,
         crepe_hop_length=160,
         f0_autotune=False,
@@ -248,7 +251,7 @@ class FeatureExtractor:
 
         if type(f0_method) == list:
             # Perform hybrid median pitch estimation
-            f0 = self.get_f0_hybrid_computation(f0_method,**params)
+            f0 = self.get_f0_hybrid_computation(f0_method,merge_type,**params)
         else:
             print(f"f0_method={f0_method}")
             f0 = self.f0_method_dict[f0_method](**params)

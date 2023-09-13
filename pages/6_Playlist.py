@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, i18n, config
+from webui import DEVICE_OPTIONS, MENU_ITEMS, i18n, config
 from webui.downloader import SONG_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from webui.components import active_subprocess_list, file_uploader_form
-from webui.utils import gc_collect, get_filenames, get_index
+from webui.components import active_subprocess_list, file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 
 from webui.player import PlaylistPlayer
@@ -31,35 +31,19 @@ def init_inference_state():
         playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs"),
         models=get_models(folder="RVC"),
         model_name=None,
-        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
-        preprocess_models=[""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"]),
         
-        split_vocal_config=SimpleNamespace(
-            agg=10,
-            device="cuda" if config.has_gpu else "cpu",
-            preprocess_model="",
-            uvr5_name=[],
-            merge_type="median",
-            use_cache=True,
-        ),
-        vocal_change_config=SimpleNamespace(
-            f0_up_key=0,
-            f0_method=["rmvpe"],
-            index_rate=.75,
-            filter_radius=3,
-            resample_sr=0,
-            rms_mix_rate=.2,
-            protect=0.2,
-        ),
+        split_vocal_config=initial_vocal_separation_params(),
+        vocal_change_config=initial_voice_conversion_params(),
         shuffle=False,
         loop=False,
-        volume=1.0
+        volume=1.0,
+        device=get_optimal_torch_device()
     )
     return vars(state)
 
 def refresh_data(state):
-    state.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
-    state.preprocess_models = [""]+get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
+    state.split_vocal_config.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
+    state.split_vocal_config.uvr5_preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise"])
     state.models = get_models(folder="RVC")
     state.playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
@@ -67,67 +51,20 @@ def refresh_data(state):
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
-        preprocess_model = st.selectbox(
-            i18n("inference.preprocess_model"),
-            options=state.preprocess_models,
-            index=get_index(state.preprocess_models,state.split_vocal_config.preprocess_model))
-        uvr5_name = st.multiselect(
-            i18n("inference.uvr5_name"),
-            options=state.uvr5_models,
-            format_func=lambda item: os.path.basename(item),
-            default=[name for name in state.split_vocal_config.uvr5_name if name in state.uvr5_models])
+        split_vocal_config = vocal_separation_form(state.split_vocal_config)
         
-        col1, col2 = st.columns(2)
-        device = col1.radio(
-            i18n("inference.device"),
-            disabled=not config.has_gpu,
-            options=DEVICE_OPTIONS,horizontal=True,
-            index=get_index(DEVICE_OPTIONS,state.split_vocal_config.device))
-        merge_type = col1.radio(
-            i18n("inference.merge_type"),
-            options=["median","mean"],horizontal=True,
-            index=get_index(["median","mean"],state.split_vocal_config.merge_type))
-        
-        agg = col2.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.split_vocal_config.agg)
-        # use_cache=col2.checkbox(i18n("inference.use_cache"),value=state.use_cache)
-        
-        if col1.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.split_vocal_config = SimpleNamespace(
-                agg=agg,
-                device=device,
-                preprocess_model=preprocess_model,
-                uvr5_name=uvr5_name,
-                merge_type=merge_type
-            )
-            update_player_args(**vars(state.split_vocal_config))
-        elif len(uvr5_name)<1: st.write(i18n("inference.uvr5_name"))
+        if st.form_submit_button(i18n("inference.save.button"),type="primary"):
+            state.split_vocal_config = split_vocal_config
+            update_player_args(split_audio_params=vars(state.split_vocal_config))
     return state
 
 def render_vocal_conversion_form(state):
     with st.form("inference.convert_vocals.expander"):
-        f0_up_key = st.select_slider(i18n("inference.f0_up_key"),options=[-12,-5,0,7,12],value=state.vocal_change_config.f0_up_key)
-        f0_method = st.multiselect(i18n("inference.f0_method"),
-                                            options=PITCH_EXTRACTION_OPTIONS,
-                                            default=state.vocal_change_config.f0_method)
-        resample_sr = st.select_slider(i18n("inference.resample_sr"),
-                                            options=[0,16000,24000,22050,40000,44100,48000],
-                                            value=state.vocal_change_config.resample_sr)
-        index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.vocal_change_config.index_rate)
-        filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.vocal_change_config.filter_radius)
-        rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.vocal_change_config.rms_mix_rate)
-        protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.vocal_change_config.protect)
+        vocal_change_config = voice_conversion_form(state.vocal_change_config)
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.vocal_change_config = SimpleNamespace(
-                f0_up_key=f0_up_key,
-                f0_method=f0_method,
-                resample_sr=resample_sr,
-                index_rate=index_rate,
-                filter_radius=filter_radius,
-                rms_mix_rate=rms_mix_rate,
-                protect=protect
-            )
-            update_player_args(**vars(state.vocal_change_config))
+            state.vocal_change_config = vocal_change_config
+            update_player_args(vc_single_params=vars(state.vocal_change_config))
     return state
 
 def set_volume(state):
@@ -164,9 +101,14 @@ if __name__=="__main__":
         with st.form("song.settings.form"):
             state.volume = st.select_slider("Volume",options=np.linspace(0.,1.,21),value=state.volume,
                                             format_func=lambda x:f"{x*100:3.0f}%")
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             state.loop = col1.checkbox("Loop",value=state.loop)
             state.shuffle = col2.checkbox("Shuffle",value=state.shuffle)
+            state.device = col3.radio(
+                i18n("inference.device"),
+                disabled=not config.has_gpu,
+                options=DEVICE_OPTIONS,horizontal=True,
+                index=get_index(DEVICE_OPTIONS,state.device))
             
             if st.form_submit_button("Update"):
                 set_volume(state)
@@ -180,7 +122,7 @@ if __name__=="__main__":
             st.experimental_rerun()
 
         if col2.button("Play" if state.player is None else ("Resume" if state.player.paused else "Pause"), type="primary",use_container_width=True,
-                    disabled=not (state.split_vocal_config.uvr5_name and state.model_name)):
+                    disabled=not (state.split_vocal_config.model_paths and state.model_name)):
             if state.player is None:
                 state.player = PlaylistPlayer(state.playlist,
                                               shuffle=state.shuffle,
@@ -188,8 +130,9 @@ if __name__=="__main__":
                                               volume=state.volume,
                                                 model_name=state.model_name,
                                                 config=config,
-                                                **vars(state.split_vocal_config),
-                                                **vars(state.vocal_change_config))
+                                                device=state.device,
+                                                split_audio_params=vars(state.split_vocal_config),
+                                                vc_single_params=vars(state.vocal_change_config))
             else:
                 if state.player.paused:
                     state.player.resume()
@@ -207,7 +150,7 @@ if __name__=="__main__":
             gc_collect()
             st.experimental_rerun()
             
-        with st.expander("Settings", expanded=not (state.player and len(state.split_vocal_config.uvr5_name))):
+        with st.expander("Settings", expanded=not (state.player and len(state.split_vocal_config.model_paths))):
             vs_tab, vc_tab = st.tabs(["Split Vocal", "Vocal Change"])
 
             with vs_tab:

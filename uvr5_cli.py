@@ -89,7 +89,8 @@ def __run_inference_worker(arg):
 
     return vocals, instrumental, input_audio
     
-def split_audio(uvr5_models,audio_path,preprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean"):
+def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean",**kwargs):
+    print(f"unused kwargs={kwargs}")
     merge_func = np.nanmedian if merge_type=="median" else np.nanmean
     num_threads = max(get_optimal_threads(-1),1)
     song_name = os.path.basename(audio_path).split(".")[0]
@@ -120,7 +121,7 @@ def split_audio(uvr5_models,audio_path,preprocess_models=[],device="cuda",agg=10
     wav_instrument = []
     wav_vocals = []
 
-    for model_path in uvr5_models:
+    for model_path in model_paths:
         args = (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads)
         vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])

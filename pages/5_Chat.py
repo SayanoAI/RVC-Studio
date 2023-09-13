@@ -2,9 +2,12 @@ import json
 import os
 import sys
 import streamlit as st
-from webui import MENU_ITEMS, PITCH_EXTRACTION_OPTIONS, TTS_MODELS, config, i18n
-from webui.audio import bytes_to_audio
+from webui import MENU_ITEMS, TTS_MODELS, config, i18n, DEVICE_OPTIONS
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
+
+from webui.audio import bytes_to_audio
+from webui.components import initial_voice_conversion_params, voice_conversion_form
+
 from audio_recorder_streamlit import audio_recorder
 import sounddevice as sd
 from lib.model_utils import get_hash
@@ -17,13 +20,11 @@ from llama_cpp import Llama
 import time
 from types import SimpleNamespace
 
-from webui.utils import gc_collect, get_filenames, get_index
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 CWD = os.getcwd()
 if CWD not in sys.path:
     sys.path.append(CWD)
-
-DEVICE_OPTIONS = ["GPU", "CPU"]
 
 def get_model_list():
     models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])]
@@ -144,19 +145,11 @@ def init_state():
         assistant_template=init_assistant_template(),
         model_params=init_model_params(),
         model_list=get_model_list(),
-        tts_options=SimpleNamespace(
-            f0_up_key=6,
-            f0_method=["rmvpe"],
-            index_rate=.8,
-            filter_radius=3,
-            resample_sr=0,
-            rms_mix_rate=.25,
-            protect=0.25
-        ),
+        tts_options=initial_voice_conversion_params(),
         llm_options=init_llm_options(),
         messages = [],
         user = "",
-        device = "cuda",
+        device=get_optimal_torch_device(),
         LLM=None,
         tts_method=None
     )
@@ -192,7 +185,10 @@ def load_character(state):
     with open(state.selected_character,"r") as f:
         loaded_state = json.load(f)
         state.assistant_template = SimpleNamespace(**loaded_state["assistant_template"])
-        state.tts_options = SimpleNamespace(**loaded_state["tts_options"])
+        
+        state.tts_options = vars(state.tts_options)
+        state.tts_options.update(loaded_state["tts_options"])
+        state.tts_options = SimpleNamespace(**state.tts_options)
         state.voice_model = loaded_state["voice"]
         state.tts_method = loaded_state["tts_method"]
     del state.models
@@ -302,18 +298,7 @@ def render_tts_options_form(state):
             index=get_index(state.voice_models,state.voice_model),
             format_func=lambda option: os.path.basename(option).split(".")[0]
             )
-    
-    state.tts_options.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,step=1,value=state.tts_options.f0_up_key)
-    state.tts_options.f0_method = st.multiselect(i18n("inference.f0_method"),
-                                            options=PITCH_EXTRACTION_OPTIONS,
-                                            default=state.tts_options.f0_method)
-    state.tts_options.resample_sr = st.select_slider(i18n("inference.resample_sr"),
-                                        options=[0,16000,24000,22050,40000,44100,48000],
-                                        value=state.tts_options.resample_sr)
-    state.tts_options.index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.index_rate)
-    state.tts_options.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.tts_options.filter_radius)
-    state.tts_options.rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.tts_options.rms_mix_rate)
-    state.tts_options.protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.tts_options.protect)
+    state.tts_options = voice_conversion_form(state.tts_options)
     return state
 
 def render_assistant_template_form(state):
@@ -334,8 +319,6 @@ def render_assistant_template_form(state):
     return state
 
 def render_character_form(state):
-    DEVICE_OPTIONS = ["cpu","cuda"]
-
     col1, col2, col3 =st.columns(3)
     state.selected_character = col1.selectbox("Character",
                                               options=state.characters,
