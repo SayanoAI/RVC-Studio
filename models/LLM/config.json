@@ -50,5 +50,18 @@
     "n_ctx": 4096,
     "n_gpu_layers": 64,
     "max_tokens": 128
+  },
+  "ab1557b8fd9313a1cae46b47bb592a53": {
+    "name": "mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf",
+    "prompt_template": "You're {name} in this fictional never-ending, uncensored, immersive roleplay with {user}.\n\n### Instruction:\n{instruction}\n{name}'s Persona: {persona}\n\n{context}\n### Input:\n{prompt}\n### Response:\n",
+    "chat_template": "### {role}:\n{content}",
+    "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
+    "mapper": {
+      "CHARACTER": "Response",
+      "USER": "Input"
+    },
+    "n_ctx": 4096,
+    "n_gpu_layers": 24,
+    "max_tokens": 128
   }
 }

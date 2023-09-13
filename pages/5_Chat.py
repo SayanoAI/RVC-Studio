@@ -307,8 +307,8 @@ def render_tts_options_form(state):
 def render_assistant_template_form(state):
     state.assistant_template.name = st.text_input("Character Name",value=state.assistant_template.name)
     ROLE_OPTIONS = ["CHARACTER", "USER"]
-    state.assistant_template.background = st.text_area("Background", value=state.assistant_template.background, max_chars=400)
-    state.assistant_template.personality = st.text_area("Personality", value=state.assistant_template.personality, max_chars=400)
+    state.assistant_template.background = st.text_area("Background", value=state.assistant_template.background, max_chars=900)
+    state.assistant_template.personality = st.text_area("Personality", value=state.assistant_template.personality, max_chars=900)
     state.assistant_template.examples = st.data_editor(state.assistant_template.examples,
                                                         column_order=("role","content"),
                                                         column_config={
@@ -318,7 +318,7 @@ def render_assistant_template_form(state):
                                                         use_container_width=True,
                                                         num_rows="dynamic",
                                                         hide_index =True)
-    state.assistant_template.greeting = st.text_input("Greeting",value=state.assistant_template.greeting,max_chars=100)
+    state.assistant_template.greeting = st.text_input("Greeting",value=state.assistant_template.greeting,max_chars=200)
     return state
 
 def render_character_form(state):
