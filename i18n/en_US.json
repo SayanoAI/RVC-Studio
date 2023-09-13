@@ -9,8 +9,8 @@
 
     "inference.split_vocals": "Extract Vocals",
     "inference.split_vocals.expander": "Extract Vocals Options",
-    "inference.preprocess_model": "Choose a preprocessing model",
-    "inference.model_paths": "Choose a vocal extraction model",
+    "inference.preprocess_model": "Choose a preprocessing model (sequential)",
+    "inference.model_paths": "Choose a vocal extraction model (parallel)",
     "inference.device": "Device",
     "inference.merge_type": "Merge Type",
     "inference.agg": "Aggressiveness in isolating vocals",

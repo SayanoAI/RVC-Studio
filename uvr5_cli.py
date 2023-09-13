@@ -12,7 +12,6 @@ if CWD not in sys.path:
 CACHED_SONGS_DIR = os.path.join(BASE_CACHE_DIR,"songs")
 
 warnings.filterwarnings("ignore")
-import librosa
 import numpy as np
 
 class Separator:
@@ -97,20 +96,25 @@ def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10
     cache_dir = CACHED_SONGS_DIR
 
     if len(preprocess_models):
-        output_name = get_filename(*sorted([os.path.basename(name).split(".")[0] for name in preprocess_models]),agg=agg) + ".mp3"
+        output_name = get_filename(*[os.path.basename(name).split(".")[0] for name in preprocess_models],agg=agg) + ".mp3"
         preprocessed_file = os.path.join(cache_dir,song_name,output_name)
         
         # read from cache
         if os.path.isfile(preprocessed_file): input_audio = load_input_audio(preprocessed_file,mono=True)
         else: # preprocess audio
-            wav_instrument = []
-            for preprocess_model in preprocess_models:
-                args = (preprocess_model,audio_path,agg,device,use_cache,cache_dir,num_threads)
-                _, instrumental, input_audio = __run_inference_worker(args)
-                wav_instrument.append(instrumental[0])
+            for i,preprocess_model in enumerate(preprocess_models):
+                output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
+                intermediary_file = os.path.join(cache_dir,song_name,output_name)
+                if os.path.isfile(intermediary_file):
+                    if i==len(preprocess_model)-1: #last model
+                        input_audio = load_input_audio(intermediary_file, mono=True)
+                else:
+                    args = (preprocess_model,audio_path,agg,device,use_cache,cache_dir,num_threads)
+                    _, instrumental, input_audio = __run_inference_worker(args)
+                    output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
+                    save_input_audio(intermediary_file,instrumental,to_int16=True)
+                audio_path = intermediary_file
 
-            wav_instrument = merge_func(pad_audio(*wav_instrument,axis=0),axis=0)
-            instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
             save_input_audio(preprocessed_file,instrumental,to_int16=True)
         audio_path = preprocessed_file
         cache_dir = os.path.join(CACHED_SONGS_DIR,song_name)

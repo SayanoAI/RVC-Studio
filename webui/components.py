@@ -51,7 +51,7 @@ def initial_vocal_separation_params():
         uvr5_preprocess_models=get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
     )
 def vocal_separation_form(state):
-    state.preprocess_model = st.multiselect(
+    state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),
             options=state.uvr5_preprocess_models,
             default=[name for name in state.preprocess_models if name in state.uvr5_preprocess_models])
