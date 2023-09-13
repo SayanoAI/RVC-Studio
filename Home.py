@@ -44,11 +44,12 @@ def render_download_ffmpeg(lib_name="ffmpeg.exe"):
 def render_model_checkboxes(generator):
     not_downloaded = []
     for model_path,link in generator:
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         is_downloaded = os.path.exists(model_path)
         col1.checkbox(os.path.basename(model_path),value=is_downloaded,disabled=True)
         if not is_downloaded: not_downloaded.append((model_path,link))
-        if col2.button("Download",disabled=is_downloaded,key=model_path):
+        col2.markdown(f"[Download Link]({link})")
+        if col3.button("Download",disabled=is_downloaded,key=model_path):
             with st.spinner(f"Downloading from {link} to {model_path}"):
                 download_file((model_path,link))
                 st.experimental_rerun()
