@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 import numpy as np
 
 class Separator:
-    def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=CACHED_SONGS_DIR, **kwargs):
+    def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=None, **kwargs):
         dereverb = "reverb" in model_path.lower()
         deecho = "echo"  in model_path.lower()
         denoise = dereverb or deecho
@@ -40,7 +40,9 @@ class Separator:
             **self.args) + ".mp3"
         
         # handles loading of previous processed data
-        music_dir = os.path.join(self.cache_dir,os.path.basename(audio_path).split(".")[0])
+        music_dir = os.path.join(
+            os.path.dirname(audio_path) if self.cache_dir is None else self.cache_dir,
+            os.path.basename(audio_path).split(".")[0])
         vocals_path = os.path.join(music_dir,".vocals")
         instrumental_path = os.path.join(music_dir,".instrumental")
         vocals_file = os.path.join(vocals_path,song_name)
@@ -109,7 +111,7 @@ def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10
                     if i==len(preprocess_model)-1: #last model
                         input_audio = load_input_audio(intermediary_file, mono=True)
                 else:
-                    args = (preprocess_model,audio_path,agg,device,use_cache,cache_dir,num_threads)
+                    args = (preprocess_model,audio_path,agg,device,use_cache,None,num_threads)
                     _, instrumental, input_audio = __run_inference_worker(args)
                     output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
                     save_input_audio(intermediary_file,instrumental,to_int16=True)

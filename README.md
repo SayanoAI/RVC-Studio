@@ -1,4 +1,4 @@
-> :warning: **The main branch is bleeding edge**: Expect frequent updates and many breaking changes after every commit :warning:
+> :warning: **The main branch is bleeding edge**: Expect frequent updates and many breaking changes after every commit
 
 # RVC Studio
 This project provides a comprehensive platform for training RVC models and generating AI voice covers. Use the app to download the required files before using or manually download them here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
@@ -46,6 +46,7 @@ Download one of the following LLM:
 * [airoboros-7B](https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/blob/main/airoboros-l2-7b-2.1.Q4_K_M.gguf)
 * [pygmalion-7B](https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/blob/main/pygmalion-2-7b.Q4_K_M.gguf)
 * [zarablend-7B](https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/blob/main/zarablend-mx-l2-7b.Q4_K_M.gguf)
+* [Mythomax-L2-Kimiko-13B](https://huggingface.co/TheBloke/MythoMax-L2-Kimiko-v2-13B-GGUF/resolve/main/mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf)
 
 Feel free to use larger versions of these models if your computer can handle it. (you will have to build your own config)
 

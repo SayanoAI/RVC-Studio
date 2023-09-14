@@ -21,3 +21,4 @@ datasets
 dist
 .cache
 .gitignore
+.venv
