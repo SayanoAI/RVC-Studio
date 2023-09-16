@@ -23,7 +23,12 @@ This project provides a comprehensive platform for training RVC models and gener
 - Pip
 - Virtualenv or conda package manager
 
-## Installation
+## Easy Install
+1. Clone this repository or download the zip file and extract it.
+2. Download and install latest version of conda package manager if you haven't: https://docs.conda.io/projects/miniconda/en/latest/
+3. Double-click "conda-start.bat"
+
+## Manual Installation
 1. Clone this repository or download the zip file.
 2. Navigate to the project directory and create a virtual environment with the command `virtualenv venv`.
 3. Activate the virtual environment with the command `source venv/bin/activate` on Linux/Mac or `venv\Scripts\activate` on Windows. Or use `conda create -n RVC-Studio & conda activate RVC-Studio` if you're using conda package manager.
