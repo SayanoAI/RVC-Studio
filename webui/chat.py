@@ -5,7 +5,6 @@ from llama_cpp import Llama
 from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from webui.downloader import BASE_MODELS_DIR
-import speech_recognition as sr
 import sounddevice as sd
 
 from webui.utils import gc_collect
@@ -211,6 +210,7 @@ class Character:
     # Define a method to run the STT and TTS in the background and be non-blocking
     def speak_and_listen(self, st=None):
         assert self.loaded, "Please load the models first"
+        import speech_recognition as sr
 
         # Create a speech recognizer instance
         r = sr.Recognizer()
