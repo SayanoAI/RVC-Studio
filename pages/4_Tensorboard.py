@@ -18,7 +18,7 @@ if CWD not in sys.path:
     
 def start_tensorboard(logdir):
     cmd = f"tensorboard --logdir={logdir}"
-    p = subprocess.Popen(cmd, shell=True, cwd=CWD,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=True, cwd=CWD)
     return p
 
 if __name__=="__main__":
@@ -32,5 +32,6 @@ if __name__=="__main__":
                 with ProgressBarContext([1]*5,sleep,"Waiting for tensorboard to load") as pb:
                     start_tensorboard(state.logdir)
                     pb.run()
+                    st.experimental_rerun()
 
         active_subprocess_list()
