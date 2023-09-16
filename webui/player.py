@@ -82,6 +82,7 @@ class PlaylistPlayer:
         self.stream = None
         self.rvc_model = None
         self.use_cache = use_cache
+        self.shuffled = False
         
         if shuffle: self.shuffle()
 
