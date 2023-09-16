@@ -34,10 +34,8 @@ class Separator:
     def __del__(self):
         gc_collect()
 
-    def run_inference(self, audio_path):
-        song_name = get_filename(
-            os.path.basename(self.model_path).split(".")[0],
-            **self.args) + ".mp3"
+    def run_inference(self, audio_path, format="mp3"):
+        song_name = get_filename(os.path.basename(self.model_path).split(".")[0],**self.args) + f".{format}"
         
         # handles loading of previous processed data
         music_dir = os.path.join(
@@ -111,7 +109,7 @@ def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10
                     if i==len(preprocess_model)-1: #last model
                         input_audio = load_input_audio(intermediary_file, mono=True)
                 else:
-                    args = (preprocess_model,audio_path,agg,device,use_cache,None,num_threads)
+                    args = (preprocess_model,audio_path,agg,device,use_cache,CACHED_SONGS_DIR if i==0 else None,num_threads)
                     _, instrumental, input_audio = __run_inference_worker(args)
                     output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
                     save_input_audio(intermediary_file,instrumental,to_int16=True)

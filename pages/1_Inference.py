@@ -114,7 +114,9 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     output_dir = os.sep.join([os.getcwd(),"output"])
     os.makedirs(output_dir,exist_ok=True)
     output_file = os.sep.join([output_dir,f"{output_audio_name}.{ext}"])
-    return f"saved to {output_file}.{ext}: {save_input_audio(output_file,output_audio,to_int16=True)}"
+    if save_input_audio(output_file,output_audio,to_int16=True):
+        return f"successfully saved to {output_file}"
+    else: "failed to save"
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
@@ -260,4 +262,4 @@ if __name__=="__main__":
                 col2.write("Converted Song")
                 col2.audio(state.output_audio[0],sample_rate=state.output_audio[1])
                 if col2.button(i18n("inference.download.button")):
-                    download_song(state.output_audio,state.output_audio_name)
+                    st.toast(download_song(state.output_audio,state.output_audio_name))

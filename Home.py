@@ -7,6 +7,7 @@ import sys
 from pytube import YouTube
 import streamlit as st
 from webui import MENU_ITEMS
+from webui.audio import bytes_to_audio
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
@@ -146,9 +147,4 @@ if __name__=="__main__":
             if st.button("Download Song"):
                 params = (os.path.join(SONG_DIR,fname),data.read())
                 save_file(params)
-
-            # st.download_button(
-            #     label="Download mp3",
-            #     data=state.downloaded_audio[1],
-            #     file_name=title_vid,
-            #     mime="audio/mpeg")
+                st.toast(f"File saved to ${params[0]}")

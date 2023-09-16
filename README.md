@@ -25,8 +25,8 @@ This project provides a comprehensive platform for training RVC models and gener
 
 ## Easy Install
 1. Clone this repository or download the zip file and extract it.
-2. Download and install latest version of conda package manager if you haven't: https://docs.conda.io/projects/miniconda/en/latest/
-3. Double-click "conda-start.bat"
+2. Double-click "conda-installer.bat" to install the latest version of [conda package manager](https://docs.conda.io/projects/miniconda/en/latest/)
+3. Double-click "conda-start.bat" (if you skipped step 2.)
 
 ## Manual Installation
 1. Clone this repository or download the zip file.
