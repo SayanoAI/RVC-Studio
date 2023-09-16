@@ -20,6 +20,7 @@ hifigan_checkpoint = "speechbrain/tts-hifigan-ljspeech"
 EMBEDDING_CHECKPOINT = "speechbrain/spkrec-xvect-voxceleb"
 os.makedirs(os.path.join(CWD,"models","TTS","embeddings"),exist_ok=True)
 TTS_MODELS_DIR = os.path.join(CWD,"models","TTS")
+STT_MODELS_DIR = os.path.join(CWD,"models","STT")
 DEFAULT_SPEAKER = os.path.join(TTS_MODELS_DIR,"embeddings","Sayano.npy")
 
 def __speecht5__(text, speaker_embedding=None, device="cpu"):
@@ -195,10 +196,20 @@ def load_stt_models(method="vosk",recognizer=None):
     if method=="vosk":
         assert recognizer is not None, "Must provide recognizer object for vosk model"
         from vosk import Model
-        model_path = os.path.join(BASE_MODELS_DIR,"STT","vosk-model-en-us-0.22-lgraph")
-        # if not os.path.exists(model_path):
-        #     download_link
-        #     download_file("https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip")
+        import zipfile
+        model_path = os.path.join(STT_MODELS_DIR,"vosk-model-en-us-0.22-lgraph")
+        if not os.path.exists(model_path):
+            temp_dir = os.path.join(BASE_CACHE_DIR,"zips")
+            os.makedirs(temp_dir,exist_ok=True)
+            name = os.path.basename(model_path)
+            zip_path = os.path.join(temp_dir,name)+".zip"
+            download_link = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip"
+            download_file((zip_path,download_link))
+            print(f"extracting zip file: {zip_path}")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(STT_MODELS_DIR)
+            print(f"finished extracting zip file")
+
         model = Model(model_path=model_path,lang="en")
         recognizer.vosk_model = model
         return {
@@ -207,8 +218,8 @@ def load_stt_models(method="vosk",recognizer=None):
         }
     elif method=="speecht5":
         from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
-        processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
-        generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+        processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(STT_MODELS_DIR,stt_checkpoint))
+        generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(STT_MODELS_DIR,stt_checkpoint))
         
         return {
             "processor": processor,

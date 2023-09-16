@@ -10,7 +10,7 @@ from lib.infer_pack.text.cleaners import english_cleaners
 from webui import MENU_ITEMS
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
-from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
+from tts_cli import STT_MODELS_DIR, stt_checkpoint, load_stt_models
 
 from webui.components import file_uploader_form
 
@@ -114,7 +114,7 @@ if __name__=="__main__":
 
         with st.expander("Chat Models"):
             col1, col2 = st.columns(2)
-            stt_path = os.path.join(TTS_MODELS_DIR,stt_checkpoint)
+            stt_path = os.path.join(STT_MODELS_DIR,stt_checkpoint)
             is_downloaded = os.path.exists(stt_path)
             col1.checkbox(os.path.basename(stt_path),value=is_downloaded,disabled=True)
             if col2.button("Download",disabled=is_downloaded,key=stt_path):

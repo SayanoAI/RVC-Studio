@@ -38,8 +38,7 @@ LLM_MODELS = [
     "https://huggingface.co/TheBloke/MythoMax-L2-Kimiko-v2-13B-GGUF/resolve/main/mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf"
 ]
 STT_MODELS = [
-    "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip",
-    "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"
+    "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip"
 ]
 
 def download_file(params: Tuple[str, str]):
