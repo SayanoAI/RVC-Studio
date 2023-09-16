@@ -194,6 +194,7 @@ def render_assistant_template_form(state):
     ROLE_OPTIONS = ["CHARACTER", "USER"]
     state.assistant_template.background = st.text_area("Background", value=state.assistant_template.background, max_chars=900)
     state.assistant_template.personality = st.text_area("Personality", value=state.assistant_template.personality, max_chars=900)
+    st.write("Example Dialogue")
     state.assistant_template.examples = st.data_editor(state.assistant_template.examples,
                                                         column_order=("role","content"),
                                                         column_config={
@@ -225,10 +226,8 @@ if __name__=="__main__":
         col1, col2, col3 = st.columns(3)
         if col1.button("Refresh Files"):
             state = refresh_data(state)
-        if col2.button("Unload Models",disabled=state.LLM is None):
-            del state.LLM, state.models
-            state.LLM = None
-            state.models = None
+        if col2.button("Unload Models",disabled=state.character is None):
+            del state.character
             gc_collect()
         if col3.button("Clear Chat",type="primary",disabled=state.character is None or len(state.character.messages)==0):
             del state.character.messages

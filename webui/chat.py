@@ -92,11 +92,11 @@ def load_model_data(model_file):
 # Define a Character class
 class Character:
     # Initialize the character with a name and a voice
-    def __init__(self, voice_file, model_file, memory = 100, user=os.getlogin()):
+    def __init__(self, voice_file, model_file, memory = 100, user=os.getlogin(),stt_method="speecht5"):
         self.voice_file = voice_file
         self.model_file = model_file
         self.voice_model = None
-        self.sst_model = None
+        self.sst_models = None
         self.loaded = False
         self.sample_rate = 16000 # same rate as hubert model
         self.memory = memory
@@ -105,6 +105,7 @@ class Character:
         self.user = user
         self.is_recording = False
         self.context = ""
+        self.stt_method = stt_method
 
         #load data
         self.character_data = load_character_data(voice_file)
@@ -119,7 +120,6 @@ class Character:
     def load(self,verbose=False):
         assert not self.loaded, "Model is already loaded"
         self.voice_model = get_vc(self.character_data["voice"],config=config,device=config.device)
-        self.stt_model = load_stt_models() #speech recognition
         if len(self.messages)==0 and self.character_data["assistant_template"]["greeting"] and self.user:
             greeting_message = { #add greeting message
                 "role": self.character_data["assistant_template"]["name"],
@@ -136,22 +136,13 @@ class Character:
                   verbose=verbose
                   )
         self.loaded=True
-        # self.message_thread.start()
 
     def unload(self):
-        del self.LLM, self.voice_model, self.stt_model
+        del self.LLM, self.voice_model, self.stt_models
         gc_collect()
         self.loaded=False
         self.is_recording = False
         self.stop_listening()
-        # self.message_thread.join(1.)
-
-    # Define a method to convert audio numpy data to text using speecht5_asr
-    def audio_to_text(self, input_audio):
-        # Send the audio data to speecht5_asr as a prompt
-        prompt = transcribe_speech(input_audio,self.stt_model)
-        # Return the response text
-        return prompt
 
     # Define a method to generate text using llamacpp model
     def generate_text(self, input_text):
@@ -213,10 +204,10 @@ class Character:
         import speech_recognition as sr
 
         # Create a speech recognizer instance
+        self.stt_models = load_stt_models(self.stt_method) #speech recognition
         r = sr.Recognizer()
         r.energy_threshold = 420
         r.adjust_for_ambient_noise = True
-        r.vosk_model = self.stt_model
         self.is_recording = True
 
         # Create a microphone instance
@@ -229,10 +220,9 @@ class Character:
                     self.stop_listening()
                     return
                 sd.wait() # wait for audio to stop playing
-                input_data = recognizer.recognize_vosk(audio) #use vosk if google is broken
+                # input_data = recognizer.recognize_vosk(audio) #use vosk if google is broken
                 # input_data = recognizer.recognize_google(audio)
-                input_data = json.loads(input_data)
-                prompt = input_data["text"] if "text" in input_data else None
+                prompt = transcribe_speech(audio,stt_models=self.stt_models,stt_method=self.stt_method)
                 if prompt is not None and type(prompt) is str:
                     print(f"{self.name} heard: {prompt}")
                     # st.chat_message(self.user).write(prompt)

@@ -1,12 +1,13 @@
 import hashlib
+import json
 import numpy as np
 import torch
 import os
 
 from lib.infer_pack.text.cleaners import english_cleaners
 
-from webui.audio import MAX_INT16, load_input_audio, remix_audio
-from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR
+from webui.audio import MAX_INT16, bytes_to_audio, load_input_audio, remix_audio
+from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR, download_file
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -190,32 +191,53 @@ def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
         return __silero__(text)
     else: return None
 
-def load_stt_models(_type="vosk"):
-    if _type=="vosk":
+def load_stt_models(method="vosk",recognizer=None):
+    if method=="vosk":
+        assert recognizer is not None, "Must provide recognizer object for vosk model"
         from vosk import Model
-        return Model(os.path.join(BASE_MODELS_DIR,"STT","vosk-model-en-us-0.22-lgraph"),lang="en")
-    from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
-    processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
-    generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+        model_path = os.path.join(BASE_MODELS_DIR,"STT","vosk-model-en-us-0.22-lgraph")
+        # if not os.path.exists(model_path):
+        #     download_link
+        #     download_file("https://alphacephei.com/vosk/models/vosk-model-en-us-0.22-lgraph.zip")
+        model = Model(model_path=model_path,lang="en")
+        recognizer.vosk_model = model
+        return {
+            "recognizer": recognizer,
+            "model": model
+        }
+    elif method=="speecht5":
+        from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
+        processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+        generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
+        
+        return {
+            "processor": processor,
+            "generator": generator
+        }
     
-    return {
-        "processor": processor,
-        "generator": generator
-    }
-    
-def transcribe_speech(input_audio,stt_models=None):
+def transcribe_speech(audio,stt_models=None,stt_method="vosk"):
     if stt_models is None:
-        stt_models = load_stt_models()
+        stt_models = load_stt_models(stt_method)
 
-    processor = stt_models["processor"]
-    model = stt_models["generator"]
+    if stt_method=="vosk":
+        recognizer = stt_models["recognizer"]
+        model = stt_models["model"]
+        recognizer
+        input_data = recognizer.recognize_vosk(audio)
+        input_data = json.loads(input_data)
+        transcription = input_data["text"] if "text" in input_data else None
+        return transcription
+    elif stt_method=="speecht5":
+        processor = stt_models["processor"]
+        model = stt_models["generator"]
+        input_audio = bytes_to_audio(audio.get_wav_data())
+        inputs = processor(audio=input_audio[0].T, sampling_rate=input_audio[1], return_tensors="pt")
+        
+        audio_len = int(len(input_audio[0])*6.25//input_audio[1])+1 #average 2.5 words/s spoken at 2.5 token/word
 
-    inputs = processor(audio=input_audio[0].T, sampling_rate=input_audio[1], return_tensors="pt")
-    
-    audio_len = int(len(input_audio[0])*6.25//input_audio[1])+1 #average 2.5 words/s spoken at 2.5 token/word
+        predicted_ids = model.generate(**inputs, max_length=min(150,audio_len))
 
-    predicted_ids = model.generate(**inputs, max_length=min(150,audio_len))
+        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
 
-    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-
-    return transcription[0]
+        return transcription[0]
+    return None

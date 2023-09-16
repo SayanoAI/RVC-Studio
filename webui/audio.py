@@ -68,7 +68,8 @@ def audio_to_bytes(audio,sr,format='WAV'):
     return bytes_io.read()
 
 def bytes_to_audio(data):
-    bytes_io = io.BytesIO(data)
+    if type(data)==io.BytesIO: bytes_io=data
+    else: bytes_io = io.BytesIO(bytes(data))
     audio = sf.read(bytes_io)
     return audio
 

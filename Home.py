@@ -6,8 +6,8 @@ import platform
 import sys
 from pytube import YouTube
 import streamlit as st
+from lib.infer_pack.text.cleaners import english_cleaners
 from webui import MENU_ITEMS
-from webui.audio import bytes_to_audio
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
@@ -15,7 +15,7 @@ from tts_cli import TTS_MODELS_DIR, stt_checkpoint, load_stt_models
 from webui.components import file_uploader_form
 
 
-from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file, save_file_generator
+from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file
 
 CWD = os.getcwd()
 if CWD not in sys.path:
@@ -145,6 +145,6 @@ if __name__=="__main__":
             st.audio(data, format='audio/mpeg')
             st.subheader("Download Audio File")
             if st.button("Download Song"):
-                params = (os.path.join(SONG_DIR,fname),data.read())
+                params = (english_cleaners(os.path.join(SONG_DIR,fname)).replace(" ","_"),data.read())
                 save_file(params)
                 st.toast(f"File saved to ${params[0]}")
