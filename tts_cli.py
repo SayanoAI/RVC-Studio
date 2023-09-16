@@ -6,7 +6,7 @@ import os
 from lib.infer_pack.text.cleaners import english_cleaners
 
 from webui.audio import MAX_INT16, load_input_audio, remix_audio
-from webui.downloader import BASE_CACHE_DIR
+from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR
 
 CWD = os.getcwd()
 speecht5_checkpoint = "microsoft/speecht5_tts"
@@ -17,8 +17,8 @@ bark_voice_presets="v2/en_speaker_0"
 tacotron2_checkpoint = "speechbrain/tts-tacotron2-ljspeech"
 hifigan_checkpoint = "speechbrain/tts-hifigan-ljspeech"
 EMBEDDING_CHECKPOINT = "speechbrain/spkrec-xvect-voxceleb"
-os.makedirs(os.path.join(CWD,"models","tts","embeddings"),exist_ok=True)
-TTS_MODELS_DIR = os.path.join(CWD,"models","tts")
+os.makedirs(os.path.join(CWD,"models","TTS","embeddings"),exist_ok=True)
+TTS_MODELS_DIR = os.path.join(CWD,"models","TTS")
 DEFAULT_SPEAKER = os.path.join(TTS_MODELS_DIR,"embeddings","Sayano.npy")
 
 def __speecht5__(text, speaker_embedding=None, device="cpu"):
@@ -112,6 +112,21 @@ def __edge__(text, speaker="en-US-JennyNeural"):
         print(e)
         return None
 
+def __silero__(text, speaker="lj_16khz"):
+    from silero import silero_tts
+    
+    model, symbols, sample_rate, _, apply_tts = silero_tts(
+        repo_or_dir='snakers4/silero-models',
+        language="en",
+        speaker=speaker)
+
+    audio = apply_tts(texts=[text],
+                      model=model,
+                      symbols=symbols,
+                        sample_rate=sample_rate,
+                        device="cpu")
+    return audio[0].cpu().numpy(), 16000
+    
 def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
     from lib.infer_pack.models import SynthesizerTrn
     from lib.infer_pack.text.symbols import symbols
@@ -171,9 +186,14 @@ def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
         return __edge__(text)
     elif method=="vits":
         return __vits__(text)
+    elif method=="silero":
+        return __silero__(text)
     else: return None
 
-def load_stt_models():
+def load_stt_models(_type="vosk"):
+    if _type=="vosk":
+        from vosk import Model
+        return Model(os.path.join(BASE_MODELS_DIR,"STT","vosk-model-en-us-0.22-lgraph"),lang="en")
     from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
     processor = SpeechT5Processor.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))
     generator = SpeechT5ForSpeechToText.from_pretrained(stt_checkpoint,cache_dir=os.path.join(TTS_MODELS_DIR,stt_checkpoint))

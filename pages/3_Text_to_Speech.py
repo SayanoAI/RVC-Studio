@@ -3,7 +3,7 @@ import os
 import sys
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, TTS_MODELS, config, i18n
 from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
@@ -82,8 +82,6 @@ def get_filename(audio_name,model_name):
 def one_click_speech(state):
     state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
     state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
-
-TTS_MODELS = ["speecht5","bark","tacotron2","edge","vits"]
 
 if __name__=="__main__":
     with SessionStateContext("tts",initial_state=init_inference_state()) as state:

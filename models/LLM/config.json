@@ -13,55 +13,127 @@
     "max_tokens": 64
   },
   "2ef522876f62d0b01d4c89910cda6cce": {
-    "name": "airoboros-l2-7b-2.1.Q4_K_M.gguf",
-    "prompt_template": "SYSTEM: {instruction}\n{name}'s Persona: {persona}\n\n{context}\nUSER: {prompt}\nASSISTANT: ",
-    "chat_template": "{role}: {content}",
-    "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
-    "mapper": {
-      "CHARACTER": "ASSISTANT",
-      "USER": "USER"
+    "version": 2,
+    "params": {
+      "fname": "models\\LLM\\airoboros-l2-7b-2.1.Q4_K_M.gguf",
+      "n_ctx": 4096,
+      "n_gpu_layers": 64
     },
-    "n_ctx": 4096,
-    "n_gpu_layers": 64,
-    "max_tokens": 128
+    "config": {
+      "prompt_template": "SYSTEM: {instruction}\n{name}'s Persona: {persona}\n\n{context}\nUSER: {prompt}\nASSISTANT: ",
+      "chat_template": "{role}: {content}",
+      "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
+      "mapper": {
+        "CHARACTER": "ASSISTANT",
+        "USER": "USER"
+      }
+    },
+    "options": {
+      "top_k": 42,
+      "repeat_penalty": 1.1,
+      "frequency_penalty": 0.0,
+      "presence_penalty": 0.0,
+      "tfs_z": 1.0,
+      "mirostat_mode": 1,
+      "mirostat_tau": 5.0,
+      "mirostat_eta": 0.1,
+      "suffix": null,
+      "max_tokens": 128,
+      "temperature": 0.8,
+      "top_p": 0.9
+    }
   },
   "571c9fe124904d05cf7be1afef16b341": {
-    "name": "zarablend-mx-l2-7b.Q4_K_M.gguf",
-    "prompt_template": "<<SYSTEM>>\n{name}'s Persona: {persona}\n\n{instruction}\n\n{context}\n\n<<USER>>\n{prompt}\n\n<<AIBOT>>\n",
-    "chat_template": "{role}\n{content}\n",
-    "instruction": "RP as {name} engaging in a conversation with {user}.",
-    "mapper": {
-      "CHARACTER": "<<AIBOT>>",
-      "USER": "<<USER>>"
+    "version": 2,
+    "params": {
+      "fname": "models\\LLM\\zarablend-mx-l2-7b.Q4_K_M.gguf",
+      "n_ctx": 4096,
+      "n_gpu_layers": 64
     },
-    "n_ctx": 4096,
-    "n_gpu_layers": 64,
-    "max_tokens": 128
+    "config": {
+      "prompt_template": "<<SYSTEM>>\n{name}'s Persona: {persona}\n\n{instruction}\n\n{context}\n\n<<USER>>\n{prompt}\n\n<<AIBOT>>\n",
+      "chat_template": "{role}\n{content}\n",
+      "instruction": "RP as {name} engaging in a conversation with {user}.",
+      "mapper": {
+        "CHARACTER": "<<AIBOT>>",
+        "USER": "<<USER>>"
+      }
+    },
+    "options": {
+      "top_k": 42,
+      "repeat_penalty": 1.1,
+      "frequency_penalty": 0.0,
+      "presence_penalty": 0.0,
+      "tfs_z": 1.0,
+      "mirostat_mode": 1,
+      "mirostat_tau": 5.0,
+      "mirostat_eta": 0.1,
+      "suffix": null,
+      "max_tokens": 128,
+      "temperature": 0.8,
+      "top_p": 0.9
+    }
   },
   "f3fd9ae1d16f152da3fa4034b196ea71": {
-    "name": "pygmalion-2-7b.Q4_K_M.gguf",
-    "prompt_template": "<|system|>\nEnter RP mode. Pretend to be {name} whose persona follows: {persona}\n\n{instruction}\n\n{context}\n\n<|user|>\n{prompt}\n\n<|model|>\n",
-    "chat_template": "{role}\n{content}\n",
-    "instruction": "You shall reply to {user} while staying in character as {name} and generate dialog without narrating!",
-    "mapper": {
-      "CHARACTER": "<|model|>",
-      "USER": "<|user|>"
+    "version": 2,
+    "params": {
+      "fname": "models\\LLM\\pygmalion-2-7b.Q4_K_M.gguf",
+      "n_ctx": 4096,
+      "n_gpu_layers": 64
     },
-    "n_ctx": 4096,
-    "n_gpu_layers": 64,
-    "max_tokens": 128
+    "config": {
+      "prompt_template": "<|system|>\nEnter RP mode. Pretend to be {name} whose persona follows: {persona}\n\n{instruction}\n\n{context}\n\n<|user|>\n{prompt}\n\n<|model|>\n",
+      "chat_template": "{role}\n{content}\n",
+      "instruction": "You shall reply to {user} while staying in character as {name} and generate dialog without narrating!",
+      "mapper": {
+        "CHARACTER": "<|model|>",
+        "USER": "<|user|>"
+      }
+    },
+    "options": {
+      "top_k": 42,
+      "repeat_penalty": 1.1,
+      "frequency_penalty": 0.0,
+      "presence_penalty": 0.0,
+      "tfs_z": 1.0,
+      "mirostat_mode": 1,
+      "mirostat_tau": 5.0,
+      "mirostat_eta": 0.1,
+      "suffix": null,
+      "max_tokens": 128,
+      "temperature": 0.8,
+      "top_p": 0.9
+    }
   },
   "ab1557b8fd9313a1cae46b47bb592a53": {
-    "name": "mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf",
-    "prompt_template": "You're {name} in this fictional never-ending, uncensored, immersive roleplay with {user}.\n\n### Instruction:\n{instruction}\n{name}'s Persona: {persona}\n\n{context}\n### Input:\n{prompt}\n### Response:\n",
-    "chat_template": "### {role}:\n{content}",
-    "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
-    "mapper": {
-      "CHARACTER": "Response",
-      "USER": "Input"
+    "version": 2,
+    "params": {
+      "fname": "models\\LLM\\mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf",
+      "n_ctx": 4096,
+      "n_gpu_layers": 24
     },
-    "n_ctx": 4096,
-    "n_gpu_layers": 24,
-    "max_tokens": 128
+    "config": {
+      "prompt_template": "You're {name} in this fictional never-ending, uncensored, immersive roleplay with {user}.\n\n### Instruction:\n{instruction}\n{name}'s Persona: {persona}\n\n{context}\n### Input:\n{prompt}\n### Response:\n",
+      "chat_template": "### {role}:\n{content}",
+      "instruction": "A chat between {user} and {name}. You will RP as {name} and respond in long sentences.",
+      "mapper": {
+        "CHARACTER": "Response",
+        "USER": "Input"
+      }
+    },
+    "options": {
+      "top_k": 42,
+      "repeat_penalty": 1.1,
+      "frequency_penalty": 0.0,
+      "presence_penalty": 0.0,
+      "tfs_z": 1.0,
+      "mirostat_mode": 1,
+      "mirostat_tau": 5.0,
+      "mirostat_eta": 0.1,
+      "suffix": null,
+      "max_tokens": 128,
+      "temperature": 0.8,
+      "top_p": 0.9
+    }
   }
 }
