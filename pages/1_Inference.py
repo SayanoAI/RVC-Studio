@@ -21,8 +21,14 @@ if CWD not in sys.path:
     sys.path.append(CWD)
     
 def split_vocals(model_paths,**args):
-    vocals,instrumental,input_audio=split_audio(model_paths,**args)
-    return vocals, instrumental, input_audio
+    with st.status("splitting vocals... ") as status:
+        try:
+            vocals,instrumental,input_audio=split_audio(model_paths,**args)
+            return vocals, instrumental, input_audio
+        except Exception as e:
+            status.error(e)
+            status.update(state="error")
+            return None, None, None
 
 def load_model(_state):
     if _state.rvc_models is None: _state.rvc_models = get_vc(_state.model_name,config=config,device=_state.device)        
@@ -30,10 +36,15 @@ def load_model(_state):
 
 
 def convert_vocals(_state,input_audio,**kwargs):
-    print(f"converting vocals... {_state.model_name} - {kwargs}")
-    models=load_model(_state)
-    _state.convert_params = SimpleNamespace(**kwargs)
-    return vc_single(input_audio=input_audio,**models,**kwargs)
+    with st.status(f"converting vocals... {_state.model_name} - {kwargs}") as status:
+        try:
+            models=load_model(_state)
+            _state.convert_params = SimpleNamespace(**kwargs)
+            return vc_single(input_audio=input_audio,**models,**kwargs)
+        except Exception as e:
+            status.error(e)
+            status.update(state="error")
+            return None
 
 def get_rvc_models():
     fnames = get_filenames(root="./models",folder="RVC",exts=["pth","pt"])
@@ -90,11 +101,13 @@ def one_click_convert(state):
         state,
         state.input_vocals,
         **vars(state.convert_params))
-    state.output_vocals = changed_vocals
-    mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_audio[1])
-    state.output_audio_name = get_filename(
-        state.input_audio_name,state.model_name)
-    state.output_audio = mixed_audio
+    
+    if changed_vocals:
+        state.output_vocals = changed_vocals
+        mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_audio[1])
+        state.output_audio_name = get_filename(
+            state.input_audio_name,state.model_name)
+        state.output_audio = mixed_audio
     return state
 
 def download_song(output_audio,output_audio_name,ext="mp3"):

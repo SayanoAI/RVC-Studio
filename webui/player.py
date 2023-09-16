@@ -85,9 +85,9 @@ class PlaylistPlayer:
         
         if shuffle: self.shuffle()
 
-        self.thread1 = threading.Thread(target=asyncio.run,args=(self.play_song(),),name="play_song")
+        self.thread1 = threading.Thread(target=asyncio.run,args=(self.play_song(),),name="play_song",daemon=True)
         self.thread1.start()
-        self.thread2 = threading.Thread(target=asyncio.run,args=(self.process_song(),),name="process_song") # process for converting songs
+        self.thread2 = threading.Thread(target=asyncio.run,args=(self.process_song(),),name="process_song",daemon=True) # process for converting songs
         self.thread2.start()
 
     def __repr__(self):
@@ -187,9 +187,9 @@ class PlaylistPlayer:
 
     def shuffle(self):
         # shuffle the playlist order
-        not_played = self.playlist[self.index+1:]
+        not_played = self.playlist[self.index:]
         random.shuffle(not_played)
-        self.playlist = self.playlist[:self.index+1] + not_played
+        self.playlist = self.playlist[:self.index] + not_played
         self.shuffled =True
 
     def set_volume(self, volume):

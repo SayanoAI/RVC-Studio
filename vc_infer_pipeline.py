@@ -10,9 +10,11 @@ from tqdm import tqdm
 from pitch_extraction import FeatureExtractor
 
 from webui.audio import load_input_audio, remix_audio
+from webui import config
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
+CWD = os.getcwd()
+if CWD not in sys.path:
+    sys.path.append(CWD)
 
 from webui.utils import gc_collect, get_filenames
 
@@ -250,18 +252,18 @@ class VC(FeatureExtractor):
         t2 = ttime()
         times[1] += t2 - t1
 
-        with tqdm(total=len(opt_ts), desc="Processing", unit="window") as pbar:
-            for i, t in enumerate(opt_ts):
-                t = t // self.window * self.window
-                start = s
-                end = t + self.t_pad2 + self.window
-                audio_slice = audio_pad[start:end]
-                pitch_slice = pitch[:, start // self.window:end // self.window] if if_f0 else None
-                pitchf_slice = pitchf[:, start // self.window:end // self.window] if if_f0 else None
-                audio_opt.append(self.vc(model, net_g, sid, audio_slice, pitch_slice, pitchf_slice, times, index, big_npy, index_rate, version, protect)[self.t_pad_tgt : -self.t_pad_tgt])
-                s = t
-                pbar.update(1)
-                pbar.refresh()
+        # with tqdm(total=len(opt_ts), desc="Processing", unit="window") as pbar:
+        for i, t in enumerate(opt_ts):
+            t = t // self.window * self.window
+            start = s
+            end = t + self.t_pad2 + self.window
+            audio_slice = audio_pad[start:end]
+            pitch_slice = pitch[:, start // self.window:end // self.window] if if_f0 else None
+            pitchf_slice = pitchf[:, start // self.window:end // self.window] if if_f0 else None
+            audio_opt.append(self.vc(model, net_g, sid, audio_slice, pitch_slice, pitchf_slice, times, index, big_npy, index_rate, version, protect)[self.t_pad_tgt : -self.t_pad_tgt])
+            s = t
+                # pbar.update(1)
+                # pbar.refresh()
 
         audio_slice = audio_pad[t:]
         pitch_slice = pitch[:, t // self.window:] if if_f0 and t is not None else pitch
@@ -361,12 +363,13 @@ def vc_single(
     protect=0.33,
     crepe_hop_length=160,
     f0_autotune=False,
-    is_onnx=False,    
+    is_onnx=False,
+    config=config,
     **kwargs #prevents function from breaking
 ):
     print(f"vc_single unused args: {kwargs}")
     if hubert_model == None:
-        hubert_model = load_hubert()
+        hubert_model = load_hubert(config)
 
     if not (cpt and net_g and vc and hubert_model):
         return None

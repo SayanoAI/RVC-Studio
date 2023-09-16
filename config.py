@@ -58,9 +58,10 @@ class Config:
             action="store_true",
             help="torch_dml",
         )
-        cmd_opts = parser.parse_args()
+        cmd_opts, unknown = parser.parse_known_args() # allows import to jupyter notebook
+        print(f"unknown args: {unknown}")
 
-        cmd_opts.port = cmd_opts.port if 0 <= cmd_opts.port <= 65535 else 7865
+        # cmd_opts.port = cmd_opts.port if 0 <= cmd_opts.port <= 65535 else 7865
 
         return (
             cmd_opts.pycmd,
