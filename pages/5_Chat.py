@@ -279,13 +279,16 @@ if __name__=="__main__":
             for i,msg in enumerate(state.character.messages):
                 with st.chat_message(msg["role"]):
                     st.write(msg["content"])
+                    col1, col2, col3 = st.columns(3)
                     if msg.get("audio"):
-                        col1, col2 = st.columns(2)
                         if col1.button("Play",key="Play"+str(msg)): sd.play(*msg["audio"])
                         if col2.button("Download",key="Download"+str(msg)):
                             save_input_audio(os.path.join(OUTPUT_DIR,"chat",msg['role'],
                                                         f"{i}_{hashlib.md5(msg['content'].encode('utf-8')).hexdigest()}.wav"),
                                                         msg["audio"])
+                    if col3.button("Delete",key="Delete"+str(msg)):
+                        st.toast(f"Deleted message: {state.character.messages.pop(i)}")
+                        st.experimental_rerun()
 
             # container = st.container()
             if state.character.is_recording:

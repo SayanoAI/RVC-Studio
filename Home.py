@@ -119,7 +119,7 @@ if __name__=="__main__":
             col1.checkbox(os.path.basename(stt_path),value=is_downloaded,disabled=True)
             if col2.button("Download",disabled=is_downloaded,key=stt_path):
                 with st.spinner(f"Downloading {stt_checkpoint} to {stt_path}"):
-                    models = load_stt_models() #hacks the from_pretrained downloader
+                    models = load_stt_models("speecht5") #hacks the from_pretrained downloader
                     del models
                     st.experimental_rerun()
             generator = [(os.path.join(BASE_MODELS_DIR,"LLM",os.path.basename(link)),link) for link in LLM_MODELS]
