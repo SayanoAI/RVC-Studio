@@ -12,6 +12,11 @@ if %errorlevel% == 0 (
 )
 
 CALL conda activate %ENV_NAME%
-CALL pip install -r requirements.txt
-CALL streamlit run Home.py
+
+if %errorlevel% == 0 (
+    CALL pip install -r requirements.txt
+    CALL streamlit run Home.py
+) else (
+    echo Failed to activate environment...
+)
 PAUSE
