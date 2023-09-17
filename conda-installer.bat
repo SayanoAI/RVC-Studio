@@ -1,4 +1,9 @@
 @echo off
+set LOGFILE=%~n0.log
+call :LOG > %LOGFILE%
+exit /B
+:LOG
+
 REM This script will check if conda is already installed, and if not, download and install Miniconda, a mini version of Anaconda that includes only conda and its dependencies, and add it to the user path
 REM You can change the installation directory as needed
 set INSTALL_DIR="C:\Users\%USERNAME%\Miniconda3"
@@ -40,3 +45,4 @@ if %errorlevel% == 0 (
 ) else (
     echo Something went wrong. Please check the installation log or submit a ticket at: https://github.com/SayanoAI/RVC-Studio/issues
 )
+pause

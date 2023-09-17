@@ -12,3 +12,4 @@ __pycache__
 *.env
 !/logs/mute
 .cache
+*.log
