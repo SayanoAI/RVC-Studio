@@ -206,7 +206,7 @@ class Character:
         # Create a speech recognizer instance
         self.stt_models = load_stt_models(self.stt_method) #speech recognition
         r = sr.Recognizer()
-        r.energy_threshold = 420
+        r.energy_threshold = 4000
         r.adjust_for_ambient_noise = True
         self.is_recording = True
 
@@ -220,8 +220,6 @@ class Character:
                     self.stop_listening()
                     return
                 sd.wait() # wait for audio to stop playing
-                # input_data = recognizer.recognize_vosk(audio) #use vosk if google is broken
-                # input_data = recognizer.recognize_google(audio)
                 prompt = transcribe_speech(audio,stt_models=self.stt_models,stt_method=self.stt_method)
                 if prompt is not None and type(prompt) is str:
                     print(f"{self.name} heard: {prompt}")

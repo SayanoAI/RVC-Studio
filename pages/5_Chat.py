@@ -281,12 +281,13 @@ if __name__=="__main__":
                     st.write(msg["content"])
                     col1, col2, col3 = st.columns(3)
                     if msg.get("audio"):
-                        if col1.button("Play",key="Play"+str(msg)): sd.play(*msg["audio"])
-                        if col2.button("Download",key="Download"+str(msg)):
-                            save_input_audio(os.path.join(OUTPUT_DIR,"chat",msg['role'],
-                                                        f"{i}_{hashlib.md5(msg['content'].encode('utf-8')).hexdigest()}.wav"),
-                                                        msg["audio"])
-                    if col3.button("Delete",key="Delete"+str(msg)):
+                        if col1.button("Play",key=f"Play{i}"): sd.play(*msg["audio"])
+                        if col2.button("Download",key=f"Download{i}"):
+                            fname=os.path.join(OUTPUT_DIR,"chat",msg['role'],
+                                                        f"{i}_{hashlib.md5(msg['content'].encode('utf-8')).hexdigest()}.wav")
+                            if save_input_audio(fname,msg["audio"]):
+                                st.toast(f"successfully saved to: {fname}")
+                    if col3.button("Delete",key=f"Delete{i}"):
                         st.toast(f"Deleted message: {state.character.messages.pop(i)}")
                         st.experimental_rerun()
 
