@@ -1,6 +1,6 @@
 @echo off
 REM This script will check if conda is already installed, and if not, download and install Miniconda, a mini version of Anaconda that includes only conda and its dependencies, and add it to the user path
-REM You can change the installation directory, python version, and architecture as needed
+REM You can change the installation directory as needed
 set INSTALL_DIR="C:\Users\%USERNAME%\Miniconda3"
 
 REM Check if conda is already installed
@@ -16,6 +16,11 @@ REM Download the Miniconda installer from the official website
 IF EXIST %~dp0\.cache\Miniconda3.exe (
 	echo installer exists, skipping download
 ) else (
+    rem If the folder does not exist, create it
+    if not exist %~dp0\.cache (
+        echo .cache folder does not exist. Creating it now.
+        mkdir %~dp0\.cache
+    )
 	echo Downloading Miniconda installer...
 	bitsadmin /transfer "MinicondaDownload" /priority high https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe %~dp0\.cache\Miniconda3.exe
 )
