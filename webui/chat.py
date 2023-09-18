@@ -67,14 +67,6 @@ def load_character_data(fname):
         loaded_state = json.load(f)
     return loaded_state
 
-def load_model(model_file,n_ctx,n_gpu_layers,**kwargs):
-    model = Llama(model_file,
-                  n_ctx=n_ctx,
-                  n_gpu_layers=n_gpu_layers,
-                  verbose=False
-                  )
-    return model
-
 def load_model_data(model_file):
     fname = os.path.join(BASE_MODELS_DIR,"LLM","config.json")
     key = get_hash(model_file)
@@ -92,7 +84,7 @@ def load_model_data(model_file):
 # Define a Character class
 class Character:
     # Initialize the character with a name and a voice
-    def __init__(self, voice_file, model_file, memory = 100, user=os.getlogin(),stt_method="speecht5"):
+    def __init__(self, voice_file, model_file, memory = 100, user=os.getlogin(),stt_method="speecht5",device=None):
         self.voice_file = voice_file
         self.model_file = model_file
         self.voice_model = None
@@ -106,6 +98,7 @@ class Character:
         self.is_recording = False
         self.context = ""
         self.stt_method = stt_method
+        self.device=device
 
         #load data
         self.character_data = load_character_data(voice_file)
@@ -119,23 +112,33 @@ class Character:
 
     def load(self,verbose=False):
         assert not self.loaded, "Model is already loaded"
-        self.voice_model = get_vc(self.character_data["voice"],config=config,device=config.device)
-        if len(self.messages)==0 and self.character_data["assistant_template"]["greeting"] and self.user:
-            greeting_message = { #add greeting message
-                "role": self.character_data["assistant_template"]["name"],
-                "content": self.character_data["assistant_template"]["greeting"].format(
-                    name=self.character_data["assistant_template"]["name"], user=self.user)}
-            output_audio = self.text_to_speech(greeting_message["content"])
-            if (output_audio):
-                sd.play(*output_audio)
-                greeting_message["audio"] = output_audio
-            self.messages.append(greeting_message)
-        self.LLM = Llama(self.model_file,
-                  n_ctx=self.model_data["params"]["n_ctx"],
-                  n_gpu_layers=self.model_data["params"]["n_gpu_layers"],
-                  verbose=verbose
-                  )
-        self.loaded=True
+
+        try:
+            # load LLM first
+            self.LLM = Llama(self.model_file,
+                    n_ctx=self.model_data["params"]["n_ctx"],
+                    n_gpu_layers=self.model_data["params"]["n_gpu_layers"],
+                    verbose=verbose
+                    )
+            self.LLM.create_completion(self.build_context(""),max_tokens=1) #preload
+
+            # load voice model
+            self.voice_model = get_vc(self.character_data["voice"],config=config,device=self.device)
+            if len(self.messages)==0 and self.character_data["assistant_template"]["greeting"] and self.user:
+                greeting_message = { #add greeting message
+                    "role": self.character_data["assistant_template"]["name"],
+                    "content": self.character_data["assistant_template"]["greeting"].format(
+                        name=self.character_data["assistant_template"]["name"], user=self.user)}
+                output_audio = self.text_to_speech(greeting_message["content"])
+                if (output_audio):
+                    sd.play(*output_audio)
+                    greeting_message["audio"] = output_audio
+                self.messages.append(greeting_message)
+            
+            self.loaded=True
+        except Exception as e:
+            print(e)
+            self.loaded=False
 
     def unload(self):
         del self.LLM, self.voice_model, self.stt_models
@@ -163,7 +166,7 @@ class Character:
             response = completion_chunk['choices'][0]['text']
             yield response
 
-    def build_context(self,prompt):
+    def build_context(self,prompt: str):
         model_config = self.model_data["config"]
         assistant_template = self.character_data["assistant_template"]
         chat_mapper = {

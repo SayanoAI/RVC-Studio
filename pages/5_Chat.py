@@ -66,11 +66,6 @@ def refresh_data(state):
     state.characters = get_character_list()
     return state
 
-def text_to_speech(text,models=None,speaker="Sayano",method="edge",device="gpu",**tts_options):
-    tts_audio = generate_speech(text,speaker=speaker,method=method, device=device)
-    input_audio = vc_single(input_audio=tts_audio,**models,**tts_options)
-    return input_audio
-
 def save_character(state):
     with open(os.path.join(CWD,"models","RVC",".characters",f"{state.assistant_template.name}.json"),"w") as f:
         loaded_state = {
@@ -258,7 +253,8 @@ if __name__=="__main__":
             state.character = Character(
                 voice_file=state.selected_character,
                 model_file=state.selected_llm,
-                user=state.user
+                user=state.user,
+                device=state.device
             )
             state.character.load()
             st.experimental_rerun()

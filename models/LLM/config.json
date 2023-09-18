@@ -109,7 +109,7 @@
     "version": 2,
     "params": {
       "fname": "models\\LLM\\mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf",
-      "n_ctx": 4096,
+      "n_ctx": 2048,
       "n_gpu_layers": 24
     },
     "config": {

@@ -30,7 +30,6 @@
   "tts_options": {
     "f0_up_key": 3,
     "f0_method": [
-      "rmvpe",
       "rmvpe+"
     ],
     "f0_autotune": false,
