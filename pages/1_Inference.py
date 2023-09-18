@@ -6,7 +6,7 @@ from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
-from webui.downloader import SONG_DIR
+from webui.downloader import OUTPUT_DIR, SONG_DIR
 
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
@@ -111,9 +111,11 @@ def one_click_convert(state):
     return state
 
 def download_song(output_audio,output_audio_name,ext="mp3"):
-    output_dir = os.sep.join([os.getcwd(),"output"])
+    audio_path = output_audio_name.split(".")
+    
+    output_dir = os.path.join(OUTPUT_DIR,"inference",audio_path[0])
     os.makedirs(output_dir,exist_ok=True)
-    output_file = os.sep.join([output_dir,f"{output_audio_name}.{ext}"])
+    output_file = os.path.join(output_dir,f"{audio_path[1]}.{ext}")
     if save_input_audio(output_file,output_audio,to_int16=True):
         return f"successfully saved to {output_file}"
     else: "failed to save"
@@ -262,4 +264,4 @@ if __name__=="__main__":
                 col2.write("Converted Song")
                 col2.audio(state.output_audio[0],sample_rate=state.output_audio[1])
                 if col2.button(i18n("inference.download.button")):
-                    st.toast(download_song(state.output_audio,state.output_audio_name))
+                    st.toast(download_song(state.output_audio,state.output_audio_name,ext="flac"))

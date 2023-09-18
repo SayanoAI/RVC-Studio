@@ -140,7 +140,7 @@ if __name__=="__main__":
             title, data = state.downloaded_audio
             st.subheader("Title")
             st.write(title)
-            fname = Path(title).with_suffix(".mp3").name
+            fname = Path(title).with_suffix(".flac").name
             st.subheader("Listen to Audio")
             st.audio(data, format='audio/mpeg')
             st.subheader("Download Audio File")
