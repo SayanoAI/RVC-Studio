@@ -87,7 +87,7 @@ def load_model_data(model_file):
 # Define a Character class
 class Character:
     # Initialize the character with a name and a voice
-    def __init__(self, voice_file, model_file, memory = 100, user=os.getlogin(),stt_method="speecht5",device=None):
+    def __init__(self, voice_file, model_file, memory = 100, user="",stt_method="speecht5",device=None):
         self.voice_file = voice_file
         self.model_file = model_file
         self.voice_model = None
