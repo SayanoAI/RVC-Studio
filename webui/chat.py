@@ -91,7 +91,7 @@ class Character:
         self.voice_file = voice_file
         self.model_file = model_file
         self.voice_model = None
-        self.sst_models = None
+        self.stt_models = None
         self.loaded = False
         self.sample_rate = 16000 # same rate as hubert model
         self.memory = memory
@@ -102,6 +102,7 @@ class Character:
         self.context = ""
         self.stt_method = stt_method
         self.device=device
+        self.autoplay = False
 
         #load data
         self.character_data = load_character_data(voice_file)
@@ -150,6 +151,15 @@ class Character:
         self.is_recording = False
         self.stop_listening()
         print("models unloaded")
+
+    def toggle_autoplay(self):
+        self.autoplay = not self.autoplay
+        self.is_recording = False
+
+    def clear_chat(self):
+        del self.messages
+        self.messages = []
+        gc_collect()
 
     @property
     def save_dir(self):
@@ -238,12 +248,17 @@ class Character:
             self.user: model_config["mapper"]["USER"],
             assistant_template["name"]: model_config["mapper"]["CHARACTER"]
         }
+        # clear chat history
+        if len(self.messages)>self.memory:
+            self.messages = self.messages[-self.memory:] #forget the past
+            gc_collect()
+
         # Concatenate chat history and system template
         examples = [
             model_config["chat_template"].format(role=model_config["mapper"][ex["role"]],content=ex["content"])
                 for ex in assistant_template["examples"] if ex["role"] and ex["content"]]+[
             model_config["chat_template"].format(role=chat_mapper[ex["role"]],content=ex["content"])
-                for ex in self.messages[-self.memory:]]
+                for ex in self.messages]
             
         instruction = model_config["instruction"].format(name=assistant_template["name"],user=self.user)
         persona = f"{assistant_template['background']} {assistant_template['personality']}"
@@ -315,5 +330,6 @@ class Character:
             except Exception as e:
                 print(e)
         # Start listening to the microphone in the background and call the callback function when speech is detected
+        self.autoplay = False
         self.stop_listening = r.listen_in_background(m, callback)
         print("listening to mic...")

@@ -282,10 +282,7 @@ if __name__=="__main__":
                 st.toast(state.character.load_history(state.history_file))
 
             if col3.button("Clear Chat",type="primary",disabled=state.character is None or len(state.character.messages)==0):
-                del state.character.messages
-                state.character.messages = []
-                gc_collect()
-                st.experimental_rerun()
+                state.character.clear_chat()
 
             # display chat messages
             for i,msg in enumerate(state.character.messages):
@@ -314,24 +311,30 @@ if __name__=="__main__":
             elif st.button("Voice Chat (WIP)",type="secondary" ):
                 state.character.speak_and_listen(st)
                 st.experimental_rerun()
+            elif st.button("Toggle Autoplay",type="primary" if state.character.autoplay else "secondary" ):
+                state.character.toggle_autoplay()
 
-            if prompt:=st.chat_input(disabled=chat_disabled):
+            if prompt:=st.chat_input(disabled=chat_disabled or state.character.autoplay) or state.character.autoplay:
                 state.character.is_recording=False
-                st.chat_message(state.character.user).write(prompt)
+                if not state.character.autoplay:
+                    st.chat_message(state.character.user).write(prompt)
                 full_response = ""
                 with st.chat_message(state.character.name):
                     message_placeholder = st.empty()
-                    for response in state.character.generate_text(prompt):
+                    for response in state.character.generate_text("ok, go on" if state.character.autoplay else prompt):
                         full_response += response
                         message_placeholder.markdown(full_response)
                 audio = state.character.text_to_speech(full_response)
                 if audio: sd.play(*audio)
-                state.character.messages.append({"role": state.character.user, "content": prompt}) #add user prompt to history
+                if not state.character.autoplay:
+                    state.character.messages.append({"role": state.character.user, "content": prompt}) #add user prompt to history
                 state.character.messages.append({
                     "role": state.character.name,
                     "content": full_response,
                     "audio": audio
                     })
+                if state.character.autoplay:
+                    st.experimental_rerun()
 
             
             
