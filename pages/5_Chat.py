@@ -52,7 +52,7 @@ def init_state():
         tts_options=initial_voice_conversion_params(),
         llm_options=init_llm_options(),
         messages = [],
-        user = os.getlogin(),
+        user = "",
         device=get_optimal_torch_device(),
         LLM=None,
         tts_method=None,
@@ -245,7 +245,7 @@ if __name__=="__main__":
                 index=get_index(DEVICE_OPTIONS,state.device))
             
             
-            if c2.button("Start Chatting",disabled=not (state.selected_character and state.selected_llm),type="primary"):
+            if c2.button("Start Chatting",disabled=not (state.selected_character and state.selected_llm and state.user),type="primary"):
                 del state.character
                 gc_collect()
                 state.character = Character(
