@@ -96,10 +96,8 @@ class Character:
         self.sample_rate = 16000 # same rate as hubert model
         self.memory = memory
         self.messages = []
-        # self.message_thread = Thread(target=self.process_chat,name="message queue",daemon=True)
         self.user = user
         self.is_recording = False
-        self.context = ""
         self.stt_method = stt_method
         self.device=device
         self.autoplay = False
@@ -108,6 +106,10 @@ class Character:
         self.character_data = load_character_data(voice_file)
         self.model_data = load_model_data(self.model_file)
         self.name = self.character_data["assistant_template"]["name"]
+
+        # build context
+        self.context_size = 0
+        self.context = self.build_context("")
 
     def __del__(self):
         self.unload()
@@ -124,7 +126,8 @@ class Character:
                     n_gpu_layers=self.model_data["params"]["n_gpu_layers"],
                     verbose=verbose
                     )
-            self.LLM.create_completion(self.build_context(""),max_tokens=1) #preload
+            self.context_size = len(self.LLM.tokenize(self.context))
+            self.LLM.create_completion(self.context,max_tokens=1) #preload
 
             # load voice model
             self.voice_model = get_vc(self.character_data["voice"],config=config,device=self.device)
@@ -248,7 +251,7 @@ class Character:
             self.user: model_config["mapper"]["USER"],
             assistant_template["name"]: model_config["mapper"]["CHARACTER"]
         }
-        # clear chat history
+        # clear chat history if memory maxed
         if len(self.messages)>self.memory:
             self.messages = self.messages[-self.memory:] #forget the past
             gc_collect()

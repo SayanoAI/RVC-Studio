@@ -9,7 +9,7 @@ from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
 from webui.audio import save_input_audio
-from webui.components import initial_voice_conversion_params, voice_conversion_form
+from webui.components import file_uploader_form, initial_voice_conversion_params, voice_conversion_form
 
 import sounddevice as sd
 from lib.model_utils import get_hash
@@ -271,8 +271,9 @@ if __name__=="__main__":
         if not chat_disabled:
 
             # save/load chat history
-            state.history_file = st.selectbox("Select a history",options=[""]+get_filenames(
-                root=os.path.join(OUTPUT_DIR,"chat",state.character.name),name_filters=["json"]))
+            save_dir = os.path.join(OUTPUT_DIR,"chat",state.character.name)
+            file_uploader_form(save_dir,types=["zip"])
+            state.history_file = st.selectbox("Select a history",options=[""]+get_filenames(root=save_dir,name_filters=["json"]))
             col1,col2, col3 = st.columns(3)
 
             if col1.button("Save Chat",disabled=not state.character):

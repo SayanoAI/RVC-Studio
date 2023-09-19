@@ -21,7 +21,7 @@ def file_uploader_form(save_dir, title="Upload your files", types=None, params_m
                 with ProgressBarContext(file_list,save_file,"saving files...") as pb:
                     pb.run()
                     del file_list
-                    st.experimental_rerun()
+                    st.toast("Successfully saved files!")
 
 def active_subprocess_list():
     with st.expander(i18n("process.pids")):
