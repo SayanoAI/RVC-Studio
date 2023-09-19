@@ -48,9 +48,9 @@ def get_index(arr,value): return arr.index(value) if value in arr else 0
 def gc_collect():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-    import streamlit as st
-    st.cache_resource.clear()
-    st.cache_data.clear()
+    # import streamlit as st
+    # st.cache_resource.clear()
+    # st.cache_data.clear()
     gc.collect()
 
 def lazyload(name):
