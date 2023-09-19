@@ -1,10 +1,13 @@
+from datetime import datetime
+import hashlib
 import json
 import os
 from types import SimpleNamespace
 from llama_cpp import Llama
 from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
-from webui.downloader import BASE_MODELS_DIR
+from webui.audio import load_input_audio, save_input_audio
+from webui.downloader import BASE_MODELS_DIR, OUTPUT_DIR
 import sounddevice as sd
 
 from webui.utils import gc_collect
@@ -146,6 +149,69 @@ class Character:
         self.loaded=False
         self.is_recording = False
         self.stop_listening()
+        print("models unloaded")
+
+    @property
+    def save_dir(self):
+        history_dir = os.path.join(OUTPUT_DIR,"chat",self.name)
+        num = len(os.listdir(history_dir)) if os.path.exists(history_dir) else 0
+        save_dir = os.path.join(history_dir,f"{datetime.now().strftime('%Y-%m-%d')}_chat{num}")
+        return save_dir
+
+    def save_history(self):
+        save_dir = self.save_dir
+        os.makedirs(save_dir,exist_ok=True)
+        messages = []
+
+        try:
+            for i,msg in enumerate(self.messages):
+                if msg["role"]==self.name: role = "CHARACTER"
+                elif msg["role"]==self.user: role = "USER"
+                else: role = msg["role"]
+                content = msg['content'].replace(self.user,"USER").replace(self.name,"CHARACTER")
+                message = {
+                    "role": role,
+                    "content": content
+                }
+                if "audio" in msg:
+                    fname=os.path.join(save_dir,f"{i}_{hashlib.md5(content.encode('utf-8')).hexdigest()}.wav")
+                    save_input_audio(fname,msg["audio"])
+                    message["audio"]=os.path.relpath(fname,save_dir)
+                messages.append(message)
+            text = json.dumps({"messages":messages},indent=2)
+            with open(os.path.join(save_dir,"messages.json"),"w") as f:
+                f.write(text)
+            return f"Chat successfully saved in {save_dir}"
+        except Exception as e:
+            return f"Chat failed to save: {e}"
+
+    def load_history(self,history_file):
+
+        messages = []
+        save_dir = os.path.dirname(history_file)
+
+        try:
+            with open(os.path.join(history_file),"r") as f:
+                data = json.load(f)
+                saved_messages = data["messages"]
+
+            for msg in saved_messages:
+                if msg["role"]=="CHARACTER": role = self.name
+                elif msg["role"]=="USER": role = self.user
+                else: role = msg["role"]
+                content = msg['content'].replace("USER",self.user).replace("CHARACTER",self.name)
+                message = {
+                    "role": role,
+                    "content": content
+                }
+                if "audio" in msg:
+                    fname=os.path.join(save_dir,msg["audio"])
+                    message["audio"] = load_input_audio(fname)
+                messages.append(message)
+            self.messages = messages
+            return f"Chat successfully loaded from {save_dir}!"
+        except Exception as e:
+            return f"Chat failed to load: {e}"
 
     # Define a method to generate text using llamacpp model
     def generate_text(self, input_text):
@@ -158,8 +224,7 @@ class Character:
             self.context,stream=True,stop=[
                 "*","\n",
                 model_config["mapper"]["USER"],
-                model_config["mapper"]["CHARACTER"],
-                self.character_data["assistant_template"]["name"]
+                model_config["mapper"]["CHARACTER"]
                 ],**self.model_data["options"])
         
         for completion_chunk in generator:

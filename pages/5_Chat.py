@@ -218,46 +218,44 @@ def render_character_form(state):
 if __name__=="__main__":
     with SessionStateContext("chat",init_state()) as state:
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         if col1.button("Refresh Files"):
             state = refresh_data(state)
         if col2.button("Unload Models",disabled=state.character is None):
+            state.character.unload()
             del state.character
             gc_collect()
-        if col3.button("Clear Chat",type="primary",disabled=state.character is None or len(state.character.messages)==0):
-            del state.character.messages
-            state.character.messages = []
-            gc_collect()
-            st.experimental_rerun()
 
         state.user = col1.text_input("Your Name", value=state.user)
         state.selected_character = col2.selectbox("Your Character",
                                               options=state.characters,
                                               index=get_index(state.characters,state.selected_character),
                                               format_func=lambda x: os.path.basename(x))
-        state.selected_llm = col3.selectbox("Choose a language model",
+        state.selected_llm = col2.selectbox("Choose a language model",
                                 options=state.model_list,
                                 index=get_index(state.model_list,state.selected_llm),
                                 format_func=lambda x: os.path.basename(x))
 
-        state.device = col1.radio(
-            i18n("inference.device"),
-            disabled=not config.has_gpu,
-            options=DEVICE_OPTIONS,horizontal=True,
-            index=get_index(DEVICE_OPTIONS,state.device))
-        
-        
-        if col2.button("Start Chatting",disabled=not (state.selected_character and state.selected_llm),type="primary"):
-            del state.character
-            gc_collect()
-            state.character = Character(
-                voice_file=state.selected_character,
-                model_file=state.selected_llm,
-                user=state.user,
-                device=state.device
-            )
-            state.character.load()
-            st.experimental_rerun()
+        with col1:
+            c1, c2 = st.columns(2)
+            state.device = c1.radio(
+                i18n("inference.device"),
+                disabled=not config.has_gpu,
+                options=DEVICE_OPTIONS,horizontal=True,
+                index=get_index(DEVICE_OPTIONS,state.device))
+            
+            
+            if c2.button("Start Chatting",disabled=not (state.selected_character and state.selected_llm),type="primary"):
+                del state.character
+                gc_collect()
+                state.character = Character(
+                    voice_file=state.selected_character,
+                    model_file=state.selected_llm,
+                    user=state.user,
+                    device=state.device
+                )
+                state.character.load()
+                st.experimental_rerun()
 
         chat_disabled = state.character is None or not state.character.loaded
         if chat_disabled: st.subheader("Select your character and language model above to get started!")
@@ -272,6 +270,24 @@ if __name__=="__main__":
         
         if not chat_disabled:
 
+            # save/load chat history
+            state.history_file = st.selectbox("Select a history",options=[""]+get_filenames(
+                root=os.path.join(OUTPUT_DIR,"chat",state.character.name),name_filters=["json"]))
+            col1,col2, col3 = st.columns(3)
+
+            if col1.button("Save Chat",disabled=not state.character):
+                st.toast(state.character.save_history())
+
+            if col2.button("Load Chat",disabled=not state.history_file):
+                st.toast(state.character.load_history(state.history_file))
+
+            if col3.button("Clear Chat",type="primary",disabled=state.character is None or len(state.character.messages)==0):
+                del state.character.messages
+                state.character.messages = []
+                gc_collect()
+                st.experimental_rerun()
+
+            # display chat messages
             for i,msg in enumerate(state.character.messages):
                 with st.chat_message(msg["role"]):
                     st.write(msg["content"])
