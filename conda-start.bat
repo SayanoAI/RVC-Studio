@@ -1,4 +1,5 @@
 @echo off
+
 REM This script will check if a conda environment is available and create it if not
 set ENV_NAME="RVC-Studio"
 
@@ -11,9 +12,11 @@ if %errorlevel% == 0 (
     CALL conda create -n %ENV_NAME% python=3.8.17 -y
 )
 
+rem Activate environment
 CALL conda activate %ENV_NAME%
 
 if %errorlevel% == 0 (
+    rem install packages
     CALL pip install -r requirements.txt
     CALL streamlit run Home.py
 ) else (
