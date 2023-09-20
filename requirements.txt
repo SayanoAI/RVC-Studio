@@ -72,3 +72,4 @@ audio-recorder-streamlit
 pyaudio==0.2.13
 SpeechRecognition
 vosk
+sumy==0.11.0

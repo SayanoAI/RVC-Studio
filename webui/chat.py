@@ -4,11 +4,13 @@ import json
 import os
 from types import SimpleNamespace
 from llama_cpp import Llama
+import numpy as np
 from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from webui.audio import load_input_audio, save_input_audio
 from webui.downloader import BASE_MODELS_DIR, OUTPUT_DIR
 import sounddevice as sd
+from transformers import pipeline
 
 from webui.utils import gc_collect
 from . import config
@@ -87,7 +89,7 @@ def load_model_data(model_file):
 # Define a Character class
 class Character:
     # Initialize the character with a name and a voice
-    def __init__(self, voice_file, model_file, memory = 100, user="",stt_method="speecht5",device=None):
+    def __init__(self, voice_file, model_file, memory = 0, user="",stt_method="speecht5",device=None):
         self.voice_file = voice_file
         self.model_file = model_file
         self.voice_model = None
@@ -108,8 +110,13 @@ class Character:
         self.name = self.character_data["assistant_template"]["name"]
 
         # build context
+        self.context_summary = ""
         self.context_size = 0
+        self.context_index = 0
+        self.memory = memory if memory else int(np.log(self.model_data["params"]["n_ctx"])*2.5)+1 # memory is log(context_window)*2.5 words/token
+        self.max_memory = int(np.sqrt(self.model_data["params"]["n_ctx"]))+1
         self.context = self.build_context("")
+        
 
     def __del__(self):
         self.unload()
@@ -126,8 +133,10 @@ class Character:
                     n_gpu_layers=self.model_data["params"]["n_gpu_layers"],
                     verbose=verbose
                     )
-            self.context_size = len(self.LLM.tokenize(self.context))
+            self.context_size = len(self.LLM.tokenize(self.context.encode("utf-8")))
+            self.free_tokens = self.model_data["params"]["n_ctx"] - self.context_size
             self.LLM.create_completion(self.context,max_tokens=1) #preload
+            # self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn",framework="pt",device=self.device)
 
             # load voice model
             self.voice_model = get_vc(self.character_data["voice"],config=config,device=self.device)
@@ -222,6 +231,10 @@ class Character:
                     message["audio"] = load_input_audio(fname)
                 messages.append(message)
             self.messages = messages
+            # summarize messages after load
+            self.context_index = 0
+            self.context = self.build_context("")
+            
             return f"Chat successfully loaded from {save_dir}!"
         except Exception as e:
             return f"Chat failed to load: {e}"
@@ -251,17 +264,24 @@ class Character:
             self.user: model_config["mapper"]["USER"],
             assistant_template["name"]: model_config["mapper"]["CHARACTER"]
         }
+
         # clear chat history if memory maxed
-        if len(self.messages)>self.memory:
-            self.messages = self.messages[-self.memory:] #forget the past
-            gc_collect()
+        if len(self.messages[self.context_index:])>self.max_memory:
+            self.context_index+=self.max_memory
+            self.context_summary = self.summarize_context()
+        # summarize memory
+        elif self.loaded and len(self.LLM.tokenize(self.context.encode("utf-8")))+self.context_size>self.model_data["params"]["n_ctx"]:
+            self.context_index+=self.memory
+            self.context_summary = self.summarize_context() #summarizes the past
+        
 
         # Concatenate chat history and system template
         examples = [
             model_config["chat_template"].format(role=model_config["mapper"][ex["role"]],content=ex["content"])
-                for ex in assistant_template["examples"] if ex["role"] and ex["content"]]+[
+                for ex in assistant_template["examples"] if ex["role"] and ex["content"]]+[self.context_summary]+[
             model_config["chat_template"].format(role=chat_mapper[ex["role"]],content=ex["content"])
-                for ex in self.messages]
+                for ex in self.messages[self.context_index:]
+            ] 
             
         instruction = model_config["instruction"].format(name=assistant_template["name"],user=self.user)
         persona = f"{assistant_template['background']} {assistant_template['personality']}"
@@ -277,6 +297,37 @@ class Character:
             )
 
         return chat_history_with_template
+    
+    def summarize_context(self):
+        model_config = self.model_data["config"]
+        assistant_template = self.character_data["assistant_template"]
+        chat_mapper = {
+            self.user: model_config["mapper"]["USER"],
+            assistant_template["name"]: model_config["mapper"]["CHARACTER"]
+        }
+        history = "\n".join([self.context_summary] + [
+            "{role}: {content}".format(role=chat_mapper[ex["role"]],content=ex["content"])
+            for ex in self.messages[-self.memory:]
+        ])
+        num = int(np.sqrt(self.memory))+1
+        # prompt = model_config["prompt_template"].format(
+        #     instruction=f"Summarize the following dialog in {num} sentences.",
+        #     context=history,
+        #     persona="",
+        #     name=assistant_template["name"],
+        #     user=self.user,
+        #     prompt=f"Summarize the previous dialog in {num} sentences."
+        # )
+
+        from webui.sumy_summarizer import get_summary
+        # completion = self.LLM.create_completion(prompt,stream=False,max_tokens=self.context_size,mirostat_mode=1,top_k=num)
+        # completion = self.summarizer(history, max_length=self.context_size, min_length=self.max_memory, do_sample=False)
+        completion = get_summary(history,num_sentences=num)
+        print(completion)
+        return completion
+        # return completion["summary_text"]
+        # return completion['choices'][0]['text']
+        
 
     # Define a method to convert text to speech
     def text_to_speech(self, text):

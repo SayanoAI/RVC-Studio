@@ -302,6 +302,8 @@ if __name__=="__main__":
                         st.experimental_rerun()
 
             # container = st.container()
+            if st.button("Summarize Context"):
+                st.write(state.character.summarize_context())
             if state.character.is_recording:
                 if st.button("Stop Voice Chat",type="primary"):
                     state.character.is_recording=False
