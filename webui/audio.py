@@ -70,8 +70,11 @@ def audio_to_bytes(audio,sr,format='WAV'):
 def bytes_to_audio(data):
     if type(data)==io.BytesIO: bytes_io=data
     else: bytes_io = io.BytesIO(bytes(data))
-    audio = sf.read(bytes_io)
-    return audio
+    audio, sr = sf.read(bytes_io)
+    if audio.ndim>1:
+        if audio.shape[-1]<audio.shape[0]: # is channel-last format
+            audio = audio.T # transpose to channels-first
+    return audio, sr
 
 def pad_audio(*audios,axis=0):
     maxlen = max(len(a) for a in audios if a is not None)
