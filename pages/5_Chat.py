@@ -9,7 +9,7 @@ from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
 from webui.audio import save_input_audio
-from webui.components import initial_voice_conversion_params, voice_conversion_form
+from webui.components import file_uploader_form, initial_voice_conversion_params, voice_conversion_form
 
 import sounddevice as sd
 from lib.model_utils import get_hash
@@ -271,8 +271,9 @@ if __name__=="__main__":
         if not chat_disabled:
 
             # save/load chat history
-            state.history_file = st.selectbox("Select a history",options=[""]+get_filenames(
-                root=os.path.join(OUTPUT_DIR,"chat",state.character.name),name_filters=["json"]))
+            save_dir = os.path.join(OUTPUT_DIR,"chat",state.character.name)
+            file_uploader_form(save_dir,types=["zip"])
+            state.history_file = st.selectbox("Select a history",options=[""]+get_filenames(root=save_dir,name_filters=["json"]))
             col1,col2, col3 = st.columns(3)
 
             if col1.button("Save Chat",disabled=not state.character):
@@ -282,10 +283,7 @@ if __name__=="__main__":
                 st.toast(state.character.load_history(state.history_file))
 
             if col3.button("Clear Chat",type="primary",disabled=state.character is None or len(state.character.messages)==0):
-                del state.character.messages
-                state.character.messages = []
-                gc_collect()
-                st.experimental_rerun()
+                state.character.clear_chat()
 
             # display chat messages
             for i,msg in enumerate(state.character.messages):
@@ -304,6 +302,8 @@ if __name__=="__main__":
                         st.experimental_rerun()
 
             # container = st.container()
+            if st.button("Summarize Context"):
+                st.write(state.character.summarize_context())
             if state.character.is_recording:
                 if st.button("Stop Voice Chat",type="primary"):
                     state.character.is_recording=False
@@ -314,24 +314,30 @@ if __name__=="__main__":
             elif st.button("Voice Chat (WIP)",type="secondary" ):
                 state.character.speak_and_listen(st)
                 st.experimental_rerun()
+            elif st.button("Toggle Autoplay",type="primary" if state.character.autoplay else "secondary" ):
+                state.character.toggle_autoplay()
 
-            if prompt:=st.chat_input(disabled=chat_disabled):
+            if prompt:=st.chat_input(disabled=chat_disabled or state.character.autoplay) or state.character.autoplay:
                 state.character.is_recording=False
-                st.chat_message(state.character.user).write(prompt)
+                if not state.character.autoplay:
+                    st.chat_message(state.character.user).write(prompt)
                 full_response = ""
                 with st.chat_message(state.character.name):
                     message_placeholder = st.empty()
-                    for response in state.character.generate_text(prompt):
+                    for response in state.character.generate_text("ok, go on" if state.character.autoplay else prompt):
                         full_response += response
                         message_placeholder.markdown(full_response)
                 audio = state.character.text_to_speech(full_response)
                 if audio: sd.play(*audio)
-                state.character.messages.append({"role": state.character.user, "content": prompt}) #add user prompt to history
+                if not state.character.autoplay:
+                    state.character.messages.append({"role": state.character.user, "content": prompt}) #add user prompt to history
                 state.character.messages.append({
                     "role": state.character.name,
                     "content": full_response,
                     "audio": audio
                     })
+                if state.character.autoplay:
+                    st.experimental_rerun()
 
             
             

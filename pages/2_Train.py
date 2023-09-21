@@ -297,11 +297,11 @@ if __name__=="__main__":
         with st.form(i18n("training.train_model.form")):  #def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
             st.subheader(i18n("training.train_model.title"))
             st.write(i18n("training.train_model.text"))
-            state.gpus=st.multiselect(i18n("training.gpus"),options=np.arange(torch.cuda.device_count(),dtype=str))
+            state.gpus=st.multiselect(i18n("training.gpus"),options=[str(i) for i in range(torch.cuda.device_count())])
             col1,col2,col3=st.columns(3)
             state.batch_size=col1.slider(i18n("training.batch_size"),min_value=1,max_value=100,step=1,value=state.batch_size)
             state.total_epoch=col2.slider(i18n("training.total_epoch"),min_value=0,max_value=1000,step=10,value=state.total_epoch)
-            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=5,value=state.save_epoch)
+            state.save_epoch=col3.slider(i18n("training.save_epoch"),min_value=0,max_value=100,step=1,value=state.save_epoch)
             state.pretrained_G=st.selectbox(i18n("training.pretrained_G"),options=PRETRAINED_G)
             state.pretrained_D=st.selectbox(i18n("training.pretrained_D"),options=PRETRAINED_D)
             state.if_save_latest=st.checkbox(i18n("training.if_save_latest"),value=state.if_save_latest)

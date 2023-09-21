@@ -41,6 +41,10 @@ echo Checking if conda is in the user path...
 where conda >nul 2>nul
 if %errorlevel% == 0 (
     echo Conda is successfully installed and added to the user path.
+
+    rem install c compilers
+    CALL conda install -c conda-forge c-compiler -y
+    
     CALL conda-start.bat
 ) else (
     echo Something went wrong. Please check the installation log or submit a ticket at: https://github.com/SayanoAI/RVC-Studio/issues

@@ -11,7 +11,7 @@ from webui.downloader import OUTPUT_DIR, SONG_DIR
 from types import SimpleNamespace
 from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
-from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, save_input_audio
+from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
 
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 from uvr5_cli import split_audio
@@ -215,16 +215,18 @@ if __name__=="__main__":
             state = render_voice_conversion_form(state)
 
         col1, col2 = st.columns(2)
-        uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type="wav")
+        uploaded_vocals = col1.file_uploader("Upload your own voice file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
         if uploaded_vocals is not None:
-            state.input_vocals = bytes_to_audio(
+            input_audio = bytes_to_audio(
                 uploaded_vocals.getvalue())
+            state.input_vocals = remix_audio(input_audio,norm=True,to_int16=True,to_mono=True)
             state.input_audio_name = uploaded_vocals.name
             del uploaded_vocals
-        uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type="wav")
+        uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
         if uploaded_instrumentals is not None:
-            state.input_instrumental = bytes_to_audio(
+            input_audio = bytes_to_audio(
                 uploaded_instrumentals.getvalue())
+            state.input_instrumental = remix_audio(input_audio,norm=True,to_int16=True,to_mono=True)
             state.input_audio_name = uploaded_instrumentals.name
             del uploaded_instrumentals
 
