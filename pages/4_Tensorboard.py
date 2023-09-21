@@ -68,7 +68,9 @@ def start_tensorboard(logdir, host="localhost"):
 
 if __name__=="__main__":
     with SessionStateContext("tensorboard") as state:
-        st_tensorboard(url="http://localhost:6006")
+        state.url = st.text_input("Tensorboard URL", value = state.url if state.url else "http://localhost:6006")
+        if state.url:
+            st_tensorboard(url="http://localhost:6006")
         placeholder = st.container()
         tensorboard_is_active = any(["tensorboard" in p.name() for p in psutil.Process(os.getpid()).children(recursive=True)])
         state.logdir=st.text_input("Path to Logs",value=state.logdir if state.logdir else os.path.join(CWD,"logs"))
