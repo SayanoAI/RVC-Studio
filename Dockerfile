@@ -7,7 +7,7 @@ EXPOSE 6006
 
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.cache apt update && apt install -y -qq ffmpeg aria2 espeak libportaudio2
+RUN --mount=type=cache,target=/root/.cache apt-get update && apt-get install -y -qq ffmpeg espeak libportaudio2
 
 COPY ./requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
