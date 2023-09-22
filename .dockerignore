@@ -15,11 +15,13 @@ docker-compose.yml
 *.bin
 *.onnx
 *.log
+*.ipynb
 
 models
 songs
 datasets
 dist
+output
 .cache
 .gitignore
 .venv
