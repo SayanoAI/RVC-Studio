@@ -57,7 +57,8 @@ Feel free to use larger versions of these models if your computer can handle it.
 
 ## Dockerize
 Run `docker compose up --build` in the main project folder.
-**Known issue:** Tensorboard doesn't work inside a docker container. Feel free to submit a PR if you know a solution.
+
+~~**Known issue:** Tensorboard doesn't work inside a docker container. Feel free to submit a PR if you know a solution.~~ fixed in commit 8b720936b4dab347cba0e4a791330fb533bfdf1d 
 
 ## FAQs
 * Trouble with ffmpeg/espeak? [Read this](/dist/README.md)

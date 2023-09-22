@@ -11,7 +11,6 @@ import datetime
 
 hps = utils.get_hparams()
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.gpus.replace("-", ",")
-n_gpus = len(hps.gpus.split("-"))
 from random import shuffle, randint
 
 import torch
@@ -105,7 +104,7 @@ class EpochRecorder:
 
 
 def main():
-    n_gpus = torch.cuda.device_count()
+    n_gpus = len(hps.gpus.split("-")) if hps.gpus else torch.cuda.device_count()
 
     if not torch.cuda.is_available() and torch.backends.mps.is_available():
         n_gpus = 1
@@ -117,7 +116,8 @@ def main():
     os.environ["MASTER_PORT"] = str(randint(20000, 55555))
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128,garbage_collection_threshold:0.8"
     children = []
-    for i in range(n_gpus):
+    gpu_list = hps.gpus.split("-") if hps.gpus else range(n_gpus)
+    for i in gpu_list:
         subproc = mp.Process(
             target=run,
             args=(
@@ -129,7 +129,7 @@ def main():
         children.append(subproc)
         subproc.start()
 
-    for i in range(n_gpus):
+    for i in range(len(gpu_list)):
         children[i].join()
 
 
@@ -147,7 +147,7 @@ def run(rank, n_gpus, hps):
     )
     torch.manual_seed(hps.train.seed)
     if torch.cuda.is_available():
-        torch.cuda.set_device(rank)
+        torch.cuda.set_device(f"cuda:{rank}")
 
     if hps.if_f0 == 1:
         train_dataset = TextAudioLoaderMultiNSFsid(hps.data.training_files, hps.data)

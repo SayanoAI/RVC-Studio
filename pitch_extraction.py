@@ -232,7 +232,7 @@ class FeatureExtractor:
         p_len,
         f0_up_key,
         f0_method,
-        merge_type,
+        merge_type="median",
         filter_radius=3,
         crepe_hop_length=160,
         f0_autotune=False,
