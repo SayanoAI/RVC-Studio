@@ -175,19 +175,7 @@ class FeatureInput(FeatureExtractor):
     def compute_f0(self,x):
         p_len = x.shape[0] // self.hop
         
-        return self.get_f0(x,p_len,0,self.f0_method,self.hop)
-
-        # f0_mel = 1127 * np.log(1 + f0 / 700)
-        # f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - self.f0_mel_min) * (
-        #     self.f0_bin - 2
-        # ) / (self.f0_mel_max - self.f0_mel_min) + 1
-
-        # # use 0 or 1
-        # f0_mel[f0_mel <= 1] = 1
-        # f0_mel[f0_mel > self.f0_bin - 1] = self.f0_bin - 1
-        # f0_coarse = np.clip(np.rint(f0_mel).astype(int),a_min=1,a_max=255)
-
-        # return f0_coarse, f0
+        return self.get_f0(x,p_len,0,self.f0_method,crepe_hop_length=self.hop)
     
     def go(self, paths):
         if len(paths) == 0:
@@ -230,53 +218,59 @@ class FeatureInput(FeatureExtractor):
                     self.printt("f0fail-%s-%s-%s" % (idx, inp_path, traceback.format_exc()))
 
 def preprocess_trainset(inp_root, sr, n_p, exp_dir):
-    pp = Preprocess(sr, exp_dir)
-    pp.println("start preprocess")
-    pp.println(sys.argv)
-    pp.pipeline_mp_inp_dir(inp_root, n_p)
-    pp.println("end preprocess")
-    del pp
-    gc_collect()
+    try:
+        pp = Preprocess(sr, exp_dir)
+        pp.println("start preprocess")
+        pp.println(sys.argv)
+        pp.pipeline_mp_inp_dir(inp_root, n_p)
+        pp.println("end preprocess")
+        del pp
+        gc_collect()
+        return "Successfully preprocessed data"
+    except Exception as e:
+        return f"Failed to preprocess data: {e}"
 
 def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
-    
-    featureInput = FeatureInput(f0_method=f0method,exp_dir=exp_dir,device=device,if_f0=if_f0)
-    paths = []
-    inp_root = "%s/1_16k_wavs" % (exp_dir)
-    opt_root1 = "%s/2a_f0" % (exp_dir)
-    opt_root2 = "%s/2b-f0nsf" % (exp_dir)
-    opt_root3 = "%s/3_feature256" % exp_dir if version == "v1" else "%s/3_feature768" % exp_dir
+    try:
+        featureInput = FeatureInput(f0_method=f0method,exp_dir=exp_dir,device=device,if_f0=if_f0)
+        paths = []
+        inp_root = "%s/1_16k_wavs" % (exp_dir)
+        opt_root1 = "%s/2a_f0" % (exp_dir)
+        opt_root2 = "%s/2b-f0nsf" % (exp_dir)
+        opt_root3 = "%s/3_feature256" % exp_dir if version == "v1" else "%s/3_feature768" % exp_dir
 
-    os.makedirs(opt_root1, exist_ok=True)
-    os.makedirs(opt_root2, exist_ok=True)
-    os.makedirs(opt_root3, exist_ok=True)
+        os.makedirs(opt_root1, exist_ok=True)
+        os.makedirs(opt_root2, exist_ok=True)
+        os.makedirs(opt_root3, exist_ok=True)
 
-    for name in sorted(list(os.listdir(inp_root))):
-        inp_path = "%s/%s" % (inp_root, name)
-        if "spec" in inp_path:
-            continue
-        opt_path1 = "%s/%s" % (opt_root1, name)
-        opt_path2 = "%s/%s" % (opt_root2, name)
-        opt_path3 = "%s/%s" % (opt_root3, name.split(".")[0]) #remove extension
-        paths.append([inp_path, opt_path1, opt_path2, opt_path3])
+        for name in sorted(list(os.listdir(inp_root))):
+            inp_path = "%s/%s" % (inp_root, name)
+            if "spec" in inp_path:
+                continue
+            opt_path1 = "%s/%s" % (opt_root1, name)
+            opt_path2 = "%s/%s" % (opt_root2, name)
+            opt_path3 = "%s/%s" % (opt_root3, name.split(".")[0]) #remove extension
+            paths.append([inp_path, opt_path1, opt_path2, opt_path3])
 
-    ps = []
-    for i in range(n_p):
-        if device=="cuda":
-            featureInput.go(paths[i::n_p])
-        else:
-            p = multiprocessing.Process(
-                target=featureInput.go,
-                args=[paths[i::n_p]],
-            )
-            ps.append(p)
-            p.start()
-
-    if device != "cuda":
+        ps = []
         for i in range(n_p):
-            try:
-                ps[i].join()
-            except:
-                featureInput.printt("f0_all_fail-%s" % (traceback.format_exc()))
+            if device=="cuda":
+                featureInput.go(paths[i::n_p])
+            else:
+                p = multiprocessing.Process(
+                    target=featureInput.go,
+                    args=[paths[i::n_p]],
+                )
+                ps.append(p)
+                p.start()
 
-    return ps
+        if device != "cuda":
+            for i in range(n_p):
+                try:
+                    ps[i].join()
+                except:
+                    featureInput.printt("f0_all_fail-%s" % (traceback.format_exc()))
+
+        return "Successfully extracted features"
+    except Exception as e:
+        return f"Failed to extract features: {e}"
