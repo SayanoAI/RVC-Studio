@@ -115,25 +115,26 @@ def main():
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = str(randint(20000, 55555))
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128,garbage_collection_threshold:0.8"
-    children = []
-    gpu_list = hps.gpus.split("-") if hps.gpus else range(n_gpus)
-    for i in gpu_list:
+    children = {}
+    gpu_devices = hps.gpus.split("-") if hps.gpus else range(n_gpus)
+    for i, device in enumerate(gpu_devices):
         subproc = mp.Process(
             target=run,
             args=(
                 i,
                 n_gpus,
                 hps,
+                device
             ),
         )
-        children.append(subproc)
+        children[i]=subproc
         subproc.start()
 
-    for i in range(len(gpu_list)):
+    for i in gpu_devices:
         children[i].join()
 
 
-def run(rank, n_gpus, hps):
+def run(rank, n_gpus, hps, device):
     global global_step, least_loss
     if rank == 0:
         logger = utils.get_logger(hps.model_dir)
@@ -147,7 +148,7 @@ def run(rank, n_gpus, hps):
     )
     torch.manual_seed(hps.train.seed)
     if torch.cuda.is_available():
-        torch.cuda.set_device(f"cuda:{rank}")
+        torch.cuda.set_device(f"cuda:{device}")
 
     if hps.if_f0 == 1:
         train_dataset = TextAudioLoaderMultiNSFsid(hps.data.training_files, hps.data)

@@ -128,9 +128,9 @@ def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save
             "-v", version
         ])
         
-        p = subprocess.Popen(cmd, shell=True, cwd=CWD, stderr=subprocess.PIPE)
+        subprocess.Popen(cmd, shell=True, cwd=CWD, stderr=subprocess.PIPE)
 
-        return f"Successfully started training. View your process under Active Processes: {p}"
+        return f"Successfully started training with {cmd}. View your process under Active Processes."
     except Exception as e:
         return f"Failed to initiate training: {e}"
 
