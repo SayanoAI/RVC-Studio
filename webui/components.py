@@ -1,3 +1,4 @@
+import json
 import os
 from types import SimpleNamespace
 from typing import Tuple
@@ -40,26 +41,46 @@ def active_subprocess_list():
             except Exception as e:
                 print(e)
 
-def initial_vocal_separation_params():
-    return SimpleNamespace(
-        preprocess_models=[],
-        agg=10,
-        merge_type="median",
-        model_paths=[],
-        use_cache=True,
-        uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"]),
-        uvr5_preprocess_models=get_filenames(root="./models",name_filters=["echo","reverb","noise"]),
-    )
+def initial_vocal_separation_params(folder=None):
+    if folder:
+        config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
+        os.makedirs(os.path.dirname(config_file),exist_ok=True)
+        if os.path.isfile(config_file):
+            with open(config_file,"r") as f:
+                data = json.load(f)
+                return SimpleNamespace(**data)
+    else:
+        return SimpleNamespace(
+            preprocess_models=[],
+            postprocess_models=[],
+            agg=10,
+            merge_type="median",
+            model_paths=[],
+            use_cache=True,
+        )
+def save_vocal_separation_params(folder,data):
+    config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
+    os.makedirs(os.path.dirname(config_file),exist_ok=True)
+    with open(config_file,"w") as f:
+        return f.write(json.dumps(data,indent=2))
+        
 def vocal_separation_form(state):
+    uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"])
+    uvr5_denoise_models=get_filenames(root="./models",name_filters=["echo","reverb","noise"])
+    
     state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),
-            options=state.uvr5_preprocess_models,
-            default=[name for name in state.preprocess_models if name in state.uvr5_preprocess_models])
+            options=uvr5_denoise_models,
+            default=[name for name in state.preprocess_models if name in uvr5_denoise_models])
     state.model_paths = st.multiselect(
         i18n("inference.model_paths"),
-        options=state.uvr5_models,
+        options=uvr5_models,
         format_func=lambda item: os.path.basename(item),
-        default=[name for name in state.model_paths if name in state.uvr5_models])
+        default=[name for name in state.model_paths if name in uvr5_models])
+    state.postprocess_models = st.multiselect(
+            i18n("inference.postprocess_model"),
+            options=uvr5_denoise_models,
+            default=[name for name in state.postprocess_models if name in uvr5_denoise_models])
     col1, col2, col3 = st.columns(3)
     
     state.merge_type = col2.radio(
@@ -70,7 +91,14 @@ def vocal_separation_form(state):
     state.use_cache = col3.checkbox(i18n("inference.use_cache"),value=state.use_cache)
     return state
 
-def initial_voice_conversion_params():
+def initial_voice_conversion_params(folder=None):
+    if folder:
+        config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
+        os.makedirs(os.path.dirname(config_file),exist_ok=True)
+        if os.path.isfile(config_file):
+            with open(config_file,"r") as f:
+                data = json.load(f)
+                return SimpleNamespace(**data)
     return SimpleNamespace(
         f0_up_key=0,
         f0_method=["rmvpe"],
@@ -82,6 +110,11 @@ def initial_voice_conversion_params():
         rms_mix_rate=.2,
         protect=0.2,
         )
+def save_voice_conversion_params(folder,data):
+    config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
+    os.makedirs(os.path.dirname(config_file),exist_ok=True)
+    with open(config_file,"w") as f:
+        return f.write(json.dumps(data,indent=2))
 def voice_conversion_form(state):
     state.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,value=state.f0_up_key,step=1)
     state.f0_method = st.multiselect(i18n("inference.f0_method"),

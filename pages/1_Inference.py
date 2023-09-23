@@ -5,7 +5,7 @@ import streamlit as st
 from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
+from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
 from webui.downloader import OUTPUT_DIR, SONG_DIR
 
 from types import SimpleNamespace
@@ -19,7 +19,7 @@ from uvr5_cli import split_audio
 CWD = os.getcwd()
 if CWD not in sys.path:
     sys.path.append(CWD)
-    
+
 def split_vocals(model_paths,**args):
     with st.status("splitting vocals... ") as status:
         try:
@@ -66,8 +66,8 @@ def init_inference_state():
         output_audio_name=None,
         output_vocals=None,
 
-        uvr5_params=initial_vocal_separation_params(),
-        convert_params=initial_voice_conversion_params()
+        uvr5_params=initial_vocal_separation_params("inference"),
+        convert_params=initial_voice_conversion_params("inference")
     )
     return vars(state)
 
@@ -126,6 +126,7 @@ def render_vocal_separation_form(state):
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.uvr5_params = SimpleNamespace(**vars(uvr5_params))
+            save_vocal_separation_params("inference",vars(uvr5_params))
             st.experimental_rerun()
         elif uvr5_params.model_paths is None: st.write(i18n("inference.model_paths"))
     return state
@@ -136,6 +137,7 @@ def render_voice_conversion_form(state):
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.convert_params = SimpleNamespace(**vars(convert_params))
+            save_voice_conversion_params("inference",vars(convert_params))
             st.experimental_rerun()
     return state
 

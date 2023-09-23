@@ -45,11 +45,8 @@ class Separator:
         instrumental_path = os.path.join(music_dir,".instrumental")
         vocals_file = os.path.join(vocals_path,song_name)
         instrumental_file = os.path.join(instrumental_path,song_name)
-        os.makedirs(vocals_path,exist_ok=True)
-        os.makedirs(instrumental_path,exist_ok=True)
-        # input_audio = load_input_audio(audio_path,mono=True)
 
-        if os.path.exists(instrumental_file) and os.path.exists(vocals_file):
+        if os.path.isfile(instrumental_file) and os.path.isfile(vocals_file):
             vocals = load_input_audio(vocals_file,mono=True)
             instrumental = load_input_audio(instrumental_file,mono=True)
             input_audio = load_input_audio(audio_path,mono=True)
@@ -61,6 +58,8 @@ class Separator:
         input_audio = return_dict["input_audio"]
 
         if self.use_cache:
+            os.makedirs(vocals_path,exist_ok=True)
+            os.makedirs(instrumental_path,exist_ok=True)
             save_input_audio(vocals_file,vocals,to_int16=True)
             save_input_audio(instrumental_file,instrumental,to_int16=True)
 
@@ -88,30 +87,30 @@ def __run_inference_worker(arg):
 
     return vocals, instrumental, input_audio
     
-def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean",**kwargs):
+def split_audio(model_paths,audio_path,preprocess_models=[],postprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean",**kwargs):
     print(f"unused kwargs={kwargs}")
     merge_func = np.nanmedian if merge_type=="median" else np.nanmean
     num_threads = max(get_optimal_threads(-1),1)
     song_name = os.path.basename(audio_path).split(".")[0]
     cache_dir = CACHED_SONGS_DIR
 
+    # preprocess input song to split reverb
     if len(preprocess_models):
         output_name = get_filename(*[os.path.basename(name).split(".")[0] for name in preprocess_models],agg=agg) + ".mp3"
-        preprocessed_file = os.path.join(cache_dir,song_name,output_name)
+        preprocessed_file = os.path.join(cache_dir,song_name,"preprocessing",output_name)
         
         # read from cache
         if os.path.isfile(preprocessed_file): input_audio = load_input_audio(preprocessed_file,mono=True)
         else: # preprocess audio
             for i,preprocess_model in enumerate(preprocess_models):
                 output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
-                intermediary_file = os.path.join(cache_dir,song_name,output_name)
+                intermediary_file = os.path.join(cache_dir,song_name,"preprocessing",output_name)
                 if os.path.isfile(intermediary_file):
                     if i==len(preprocess_model)-1: #last model
                         input_audio = load_input_audio(intermediary_file, mono=True)
                 else:
-                    args = (preprocess_model,audio_path,agg,device,use_cache,CACHED_SONGS_DIR if i==0 else None,num_threads)
+                    args = (preprocess_model,audio_path,agg,device,False,CACHED_SONGS_DIR if i==0 else None,num_threads)
                     _, instrumental, input_audio = __run_inference_worker(args)
-                    output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + ".mp3"
                     save_input_audio(intermediary_file,instrumental,to_int16=True)
                 audio_path = intermediary_file
 
@@ -122,6 +121,7 @@ def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10
         input_audio = load_input_audio(audio_path,mono=True)
         cache_dir = CACHED_SONGS_DIR
         
+    # apply vocal separation
     wav_instrument = []
     wav_vocals = []
 
@@ -130,11 +130,28 @@ def split_audio(model_paths,audio_path,preprocess_models=[],device="cuda",agg=10
         vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])
         wav_instrument.append(instrumental[0])
-
     wav_instrument = merge_func(pad_audio(*wav_instrument),axis=0)
     wav_vocals = merge_func(pad_audio(*wav_vocals),axis=0)
-    instrumental = remix_audio((wav_instrument,instrumental[1]),norm=True,to_int16=True,to_mono=True)
-    vocals = remix_audio((wav_vocals,vocals[1]),norm=True,to_int16=True,to_mono=True)
+
+    # postprocess vocals to reduce reverb
+    if len(postprocess_models):
+        vocals_name = get_filename("vocals",*[os.path.basename(name).split(".")[0] for name in model_paths],agg=agg) + ".mp3"
+        vocals_file = os.path.join(cache_dir,"postprocessing",vocals_name)
+        if not os.path.isfile(vocals_file): save_input_audio(vocals_file,(wav_vocals,vocals[-1]),to_int16=True)
+        print("postprocessing...")        
+        for i,postprocess_model in enumerate(postprocess_models):
+            output_name = get_filename(i,os.path.basename(postprocess_model).split(".")[0],agg=agg) + ".mp3"
+            intermediary_file = os.path.join(cache_dir,"postprocessing",output_name)
+            if not os.path.isfile(intermediary_file):
+                args = (postprocess_model,vocals_file,agg,device,False,None,num_threads)
+                _, processed_audio, _ = __run_inference_worker(args)
+                output_name = get_filename(i,os.path.basename(postprocess_model).split(".")[0],agg=agg) + ".mp3"
+                save_input_audio(intermediary_file,processed_audio,to_int16=True)
+                wav_vocals, _ = processed_audio
+            vocals_file = intermediary_file
+
+    instrumental = remix_audio((wav_instrument,instrumental[-1]),norm=True,to_int16=True,to_mono=True)
+    vocals = remix_audio((wav_vocals,vocals[-1]),norm=True,to_int16=True,to_mono=True)
 
     return vocals, instrumental, input_audio
 
