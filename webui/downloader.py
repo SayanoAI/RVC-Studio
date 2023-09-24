@@ -58,10 +58,14 @@ def download_link_generator(download_link: str,model_list: List[str]):
 
 def save_file(params: Tuple[str, any]):
     (data_path, datum) = params
-    if "zip" in os.path.splitext(data_path)[-1]: save_zipped_files(params) # unzip
-    else: 
-        with open(data_path,"wb") as f:
-            f.write(datum)
+    if "zip" in os.path.splitext(data_path)[-1]: return save_zipped_files(params) # unzip
+    else:
+        try:
+            with open(data_path,"wb") as f:
+                f.write(datum)
+            return f"Successfully saved file to: {data_path}"
+        except Exception as e:
+            return f"Failed to save file: {e}"
 
 def save_file_generator(save_dir: str, data: List[IO]):
     for datum in data:
@@ -71,18 +75,22 @@ def save_file_generator(save_dir: str, data: List[IO]):
 def save_zipped_files(params: Tuple[str, any]):
     (data_path, datum) = params
 
-    print(f"saving zip file: {data_path}")
-    temp_dir = os.path.join(BASE_CACHE_DIR,"zips")
-    os.makedirs(temp_dir,exist_ok=True)
-    name = os.path.basename(data_path)
-    zip_path = os.path.join(temp_dir,name)
+    try:
+        print(f"saving zip file: {data_path}")
+        temp_dir = os.path.join(BASE_CACHE_DIR,"zips")
+        os.makedirs(temp_dir,exist_ok=True)
+        name = os.path.basename(data_path)
+        zip_path = os.path.join(temp_dir,name)
 
-    with open(zip_path,"wb") as f:
-        f.write(datum)
+        with open(zip_path,"wb") as f:
+            f.write(datum)
 
-    print(f"extracting zip file: {zip_path}")
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(os.path.dirname(data_path))
-    print(f"finished extracting zip file")
-    
-    os.remove(zip_path) # cleanup
+        print(f"extracting zip file: {zip_path}")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(data_path))
+        print(f"finished extracting zip file")
+        
+        os.remove(zip_path) # cleanup
+        return f"Successfully saved files to: {data_path}"
+    except Exception as e:
+        return f"Failed to save files: {e}"

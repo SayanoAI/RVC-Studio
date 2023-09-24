@@ -7,8 +7,11 @@ import sys
 from pytube import YouTube
 import streamlit as st
 from lib.infer_pack.text.cleaners import english_cleaners
-from webui import MENU_ITEMS
+from webui import MENU_ITEMS, i18n
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
+
+from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, save_input_audio
+from webui.utils import get_index
 
 from tts_cli import STT_MODELS_DIR, stt_checkpoint, load_stt_models
 
@@ -23,7 +26,6 @@ if CWD not in sys.path:
 
 from webui.contexts import ProgressBarContext, SessionStateContext
 
-@st.cache_data(show_spinner=False)
 def download_audio_to_buffer(url):
     buffer = BytesIO()
     youtube_video = YouTube(url)
@@ -140,11 +142,17 @@ if __name__=="__main__":
             title, data = state.downloaded_audio
             st.subheader("Title")
             st.write(title)
-            fname = Path(title).with_suffix(".flac").name
+            state.format = st.radio(
+                i18n("inference.format"),
+                options=SUPPORTED_AUDIO,horizontal=True,
+                index=get_index(SUPPORTED_AUDIO,state.format))
+            fname = Path(title).with_suffix(f".{state.format}").name
             st.subheader("Listen to Audio")
             st.audio(data, format='audio/mpeg')
             st.subheader("Download Audio File")
+            
             if st.button("Download Song"):
+                data.seek(0)
                 params = (english_cleaners(os.path.join(SONG_DIR,fname)).replace(" ","_"),data.read())
-                save_file(params)
-                st.toast(f"File saved to ${params[0]}")
+                # input_audio = bytes_to_audio(data)
+                st.toast(save_file(params))

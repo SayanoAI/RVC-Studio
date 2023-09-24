@@ -54,7 +54,7 @@ transformers==4.32.1
 num2words
 sentencepiece
 speechbrain==0.5.15
-# accelerate==0.22.0
+accelerate==0.22.0 # required by device_map
 edge-tts==6.1.8
 # silero # omegaconf>=2.1.0 not compatible with fairseq
 

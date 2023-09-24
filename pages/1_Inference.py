@@ -54,6 +54,7 @@ def init_inference_state():
     state = SimpleNamespace(
         rvc_models=None,
         device=get_optimal_torch_device(),
+        format="mp3",
         models=get_rvc_models(),
         model_name=None,
         
@@ -94,6 +95,7 @@ def one_click_convert(state):
     state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
         audio_path=state.input_audio_name,
         device=state.device,
+        format=state.format,
         **vars(state.uvr5_params),
         )
     
@@ -180,11 +182,16 @@ if __name__=="__main__":
                 state = clear_data(state)
                 st.experimental_rerun()
             
-        state.device = st.radio(
+        col1, col2 = st.columns(2)
+        state.device = col1.radio(
             i18n("inference.device"),
             disabled=not config.has_gpu,
             options=DEVICE_OPTIONS,horizontal=True,
             index=get_index(DEVICE_OPTIONS,state.device))
+        state.format = col2.radio(
+            i18n("inference.format"),
+            options=SUPPORTED_AUDIO,horizontal=True,
+            index=get_index(SUPPORTED_AUDIO,state.format))
 
         st.subheader(i18n("inference.split_vocals"))
         with st.expander(i18n("inference.split_vocals.expander"),expanded=not (state.input_audio_name and len(state.uvr5_params.model_paths))):
@@ -194,6 +201,7 @@ if __name__=="__main__":
             state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
                 audio_path=state.input_audio_name,
                 device=state.device,
+                format=state.format,
                 **vars(state.uvr5_params),
                 )
                 

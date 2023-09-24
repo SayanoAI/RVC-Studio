@@ -37,7 +37,7 @@ This project provides a comprehensive platform for training RVC models and gener
 
 Or run it in [Google Colab](https://colab.research.google.com/github/SayanoAI/RVC-Studio/blob/master/RVC_Studio.ipynb)
 
-## Instructions for inference
+## Instructions for Inference page
 1. Download all the required models on the webui page or here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
 2. Put your favourite songs in the ./songs folder
 3. Press "Refresh Data" button
@@ -46,14 +46,18 @@ Or run it in [Google Colab](https://colab.research.google.com/github/SayanoAI/RV
 6. Choose a vocal extraction model (preprocessing model is optional)
 7. Click "Save Options" and "1-Click VC" to get started
 
-## Instructions for chat
-Download one of the following LLM:
+## Instructions for Chat page
+1. Download one of the following LLM (or use the homepage downloader):
 * [airoboros-7B](https://huggingface.co/TheBloke/Airoboros-L2-7B-2.1-GGUF/blob/main/airoboros-l2-7b-2.1.Q4_K_M.gguf)
 * [pygmalion-7B](https://huggingface.co/TheBloke/Pygmalion-2-7B-GGUF/blob/main/pygmalion-2-7b.Q4_K_M.gguf)
 * [zarablend-7B](https://huggingface.co/TheBloke/Zarablend-MX-L2-7B-GGUF/blob/main/zarablend-mx-l2-7b.Q4_K_M.gguf)
 * [Mythomax-L2-Kimiko-13B](https://huggingface.co/TheBloke/MythoMax-L2-Kimiko-v2-13B-GGUF/resolve/main/mythomax-l2-kimiko-v2-13b.Q4_K_M.gguf)
+2. Write your name (this is what the LLM will call you)
+3. Select Your Character or create one in the form below
+4. Select a language model, you will have to set up the configuration yourself in the form below if you use your own models
+5. Click "Start Chatting" to chat with your model
 
-Feel free to use larger versions of these models if your computer can handle it. (you will have to build your own config)
+**Feel free to use larger versions of these models if your computer can handle it. (you will have to build your own config)**
 
 ## Dockerize
 Run `docker compose up --build` in the main project folder.

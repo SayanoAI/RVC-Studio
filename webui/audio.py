@@ -1,12 +1,13 @@
 
 import io
 import os
+from typing import Union
 import numpy as np
 import librosa
 import soundfile as sf
 
 MAX_INT16 = 32768
-SUPPORTED_AUDIO = ["wav","mp3","flac","ogg"]
+SUPPORTED_AUDIO = ["mp3","flac","wav"] # ogg breaks soundfile
 AUTOTUNE_NOTES = np.array([
     65.41, 69.30, 73.42, 77.78, 82.41, 87.31,
     92.50, 98.00, 103.83, 110.00, 116.54, 123.47,
@@ -58,19 +59,21 @@ def save_input_audio(fname,input_audio,sr=None,to_int16=False):
         audio=audio.astype("int16")
     try:        
         sf.write(fname, audio, sr if sr else input_audio[1])
-        return True
-    except:
-        return False
+        return f"File saved to ${fname}"
+    except Exception as e:
+        return f"failed to save audio: {e}"
     
 def audio_to_bytes(audio,sr,format='WAV'):
     bytes_io = io.BytesIO()
     sf.write(bytes_io, audio, sr, format=format)
     return bytes_io.read()
 
-def bytes_to_audio(data):
-    if type(data)==io.BytesIO: bytes_io=data
-    else: bytes_io = io.BytesIO(bytes(data))
-    audio, sr = sf.read(bytes_io)
+def bytes_to_audio(data: Union[io.BytesIO,bytes],**kwargs):
+    if type(data)==bytes: bytes_io=io.BytesIO(data)
+    else: bytes_io = data
+
+    # audio,sr = librosa.load(bytes_io)
+    audio, sr = sf.read(bytes_io,**kwargs)
     if audio.ndim>1:
         if audio.shape[-1]<audio.shape[0]: # is channel-last format
             audio = audio.T # transpose to channels-first
