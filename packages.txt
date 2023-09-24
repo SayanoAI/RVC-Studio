@@ -1,0 +1,3 @@
+ffmpeg
+espeak
+libportaudio2
