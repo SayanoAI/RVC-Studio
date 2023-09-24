@@ -49,15 +49,15 @@ def initial_vocal_separation_params(folder=None):
             with open(config_file,"r") as f:
                 data = json.load(f)
                 return SimpleNamespace(**data)
-    else:
-        return SimpleNamespace(
-            preprocess_models=[],
-            postprocess_models=[],
-            agg=10,
-            merge_type="median",
-            model_paths=[],
-            use_cache=True,
-        )
+
+    return SimpleNamespace(
+        preprocess_models=[],
+        postprocess_models=[],
+        agg=10,
+        merge_type="median",
+        model_paths=[],
+        use_cache=True,
+    )
 def save_vocal_separation_params(folder,data):
     config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
@@ -99,6 +99,7 @@ def initial_voice_conversion_params(folder=None):
             with open(config_file,"r") as f:
                 data = json.load(f)
                 return SimpleNamespace(**data)
+            
     return SimpleNamespace(
         f0_up_key=0,
         f0_method=["rmvpe"],
