@@ -4,8 +4,17 @@ EXPOSE 8501
 EXPOSE 6006
 
 WORKDIR /app
-
-RUN --mount=type=cache,target=/root/.cache apt-get update && apt-get install -y -qq ffmpeg espeak libportaudio2
+ 
+RUN --mount=type=cache,target=/root/.cache apt-get update && \
+    apt-get install -y -qq \
+    ffmpeg \
+    espeak \
+    libportaudio2 \
+    build-essential \
+    cmake \
+    python3-dev \
+    portaudio19-dev \
+    python3-pyaudio
 
 COPY ./requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
