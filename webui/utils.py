@@ -43,7 +43,14 @@ def get_filenames(root=".",folder="**",exts=["*"],name_filters=[""]):
         fnames.extend(glob.glob(os.path.join(root,folder,f"*.{ext}"),recursive=True))
     return sorted([ele for ele in fnames if any([nf.lower() in ele.lower() for nf in name_filters])])
 
-def get_index(arr,value): return arr.index(value) if value in arr else 0
+def get_index(arr,value):
+    if arr is not None:
+        if value in arr: return arr.index(value)
+        elif value is not None:
+            for i,item in enumerate(arr):
+                k1, k2 = str(item), str(value)
+                if (k1 in k2) or (k2 in k1): return i
+    return 0
 
 def gc_collect():
     if torch.cuda.is_available():

@@ -92,7 +92,6 @@ def __edge__(text, speaker="en-US-JennyNeural"):
     tempfile = os.path.join(temp_dir,f"{hashlib.md5(text.encode('utf-8')).hexdigest()}.wav")
 
     async def fetch_audio():
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         communicate = edge_tts.Communicate(text, speaker)
 
         try:
@@ -103,7 +102,7 @@ def __edge__(text, speaker="en-US-JennyNeural"):
         except Exception as e:
             print(e)
     
-    thread = Thread(target=asyncio.run, args=(fetch_audio(),),name="edge-tts")
+    thread = Thread(target=asyncio.run, args=(fetch_audio(),),name="edge-tts",daemon=True)
     thread.start()
     thread.join()
     
