@@ -7,10 +7,10 @@ import sys
 from pytube import YouTube
 import streamlit as st
 from lib.infer_pack.text.cleaners import english_cleaners
-from webui import MENU_ITEMS, i18n
+from webui import MENU_ITEMS, get_cwd, i18n
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
-from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, save_input_audio
+from webui.audio import SUPPORTED_AUDIO
 from webui.utils import get_index
 
 from tts_cli import STT_MODELS_DIR, stt_checkpoint, load_stt_models
@@ -20,9 +20,7 @@ from webui.components import file_uploader_form
 
 from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, download_file, save_file
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+CWD = get_cwd()
 
 from webui.contexts import ProgressBarContext, SessionStateContext
 

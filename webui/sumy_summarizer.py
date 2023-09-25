@@ -8,7 +8,6 @@ LANGUAGE = "english"
 stemmer = Stemmer(LANGUAGE)
 summarizer = Summarizer(stemmer)
 summarizer.stop_words = get_stop_words(LANGUAGE)
-# nltk.download('punkt',download_dir="./models")
 print(f"loaded {__name__}")
 
 def get_summary(text: str, num_sentences: int=3):

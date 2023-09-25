@@ -10,7 +10,7 @@ from tts_cli import generate_speech, load_stt_models, transcribe_speech
 from webui.audio import load_input_audio, save_input_audio
 from webui.downloader import BASE_MODELS_DIR, OUTPUT_DIR
 import sounddevice as sd
-from transformers import pipeline
+from webui.sumy_summarizer import get_summary
 
 from webui.utils import gc_collect
 from . import config
@@ -318,8 +318,6 @@ class Character:
         #     user=self.user,
         #     prompt=f"Summarize the previous dialog in {num} sentences."
         # )
-
-        from webui.sumy_summarizer import get_summary
         # completion = self.LLM.create_completion(prompt,stream=False,max_tokens=self.context_size,mirostat_mode=1,top_k=num)
         # completion = self.summarizer(history, max_length=self.context_size, min_length=self.max_memory, do_sample=False)
         completion = get_summary(history,num_sentences=num)

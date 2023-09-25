@@ -5,11 +5,13 @@ import torch
 import os
 
 from lib.infer_pack.text.cleaners import english_cleaners
+from webui import get_cwd
 
 from webui.audio import MAX_INT16, bytes_to_audio, load_input_audio, remix_audio
-from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR, download_file
+from webui.downloader import BASE_CACHE_DIR, download_file
 
-CWD = os.getcwd()
+CWD = get_cwd()
+    
 speecht5_checkpoint = "microsoft/speecht5_tts"
 speecht5_vocoder_checkpoint = "microsoft/speecht5_hifigan"
 stt_checkpoint = "microsoft/speecht5_asr"
@@ -128,14 +130,14 @@ def __silero__(text, speaker="lj_16khz"):
                         device="cpu")
     return audio[0].cpu().numpy(), 16000
     
-def __vits__(text,speaker="./models/VITS/pretrained_ljs.pth"):
+def __vits__(text,speaker=os.path.join(CWD,"models","VITS","pretrained_ljs.pth")):
     from lib.infer_pack.models import SynthesizerTrn
     from lib.infer_pack.text.symbols import symbols
     from lib.infer_pack.text import text_to_sequence
     from lib.infer_pack.commons import intersperse
     from lib.train import utils
 
-    hps = utils.get_hparams_from_file("./models/VITS/configs/ljs_base.json")
+    hps = utils.get_hparams_from_file(os.path.join(CWD,"models","VITS","configs","ljs_base.json"))
     def get_text(text, hps):
         text_norm = text_to_sequence(text, hps.data.text_cleaners)
         if hps.data.add_blank:

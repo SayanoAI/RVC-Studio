@@ -2,7 +2,7 @@ import os
 import sys
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, config, get_cwd, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
@@ -16,9 +16,7 @@ from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audi
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 from uvr5_cli import split_audio
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+CWD = get_cwd()
 
 def split_vocals(model_paths,**args):
     with st.status("splitting vocals... ") as status:
@@ -34,7 +32,6 @@ def load_model(_state):
     if _state.rvc_models is None: _state.rvc_models = get_vc(_state.model_name,config=config,device=_state.device)        
     return _state.rvc_models
 
-
 def convert_vocals(_state,input_audio,**kwargs):
     with st.status(f"converting vocals... {_state.model_name} - {kwargs}") as status:
         try:
@@ -47,7 +44,7 @@ def convert_vocals(_state,input_audio,**kwargs):
             return None
 
 def get_rvc_models():
-    fnames = get_filenames(root="./models",folder="RVC",exts=["pth","pt"])
+    fnames = get_filenames(root=os.path.join(CWD,"models"),folder="RVC",exts=["pth","pt"])
     return fnames
 
 def init_inference_state():
@@ -73,8 +70,8 @@ def init_inference_state():
     return vars(state)
 
 def refresh_data(state):
-    state.uvr5_params.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
-    state.uvr5_params.uvr5_preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise","karaoke"])
+    # state.uvr5_params.uvr5_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
+    # state.uvr5_params.uvr5_preprocess_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_rvc_models()
     state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()

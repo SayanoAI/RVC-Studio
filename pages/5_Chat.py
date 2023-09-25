@@ -3,7 +3,7 @@ import json
 import os
 import sys
 import streamlit as st
-from webui import MENU_ITEMS, TTS_MODELS, config, i18n, DEVICE_OPTIONS
+from webui import MENU_ITEMS, TTS_MODELS, config, get_cwd, i18n, DEVICE_OPTIONS
 from webui.chat import init_assistant_template, init_llm_options, init_model_config, init_model_params, Character
 from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
@@ -13,8 +13,6 @@ from webui.components import file_uploader_form, initial_voice_conversion_params
 
 import sounddevice as sd
 from lib.model_utils import get_hash
-from tts_cli import generate_speech
-from vc_infer_pipeline import vc_single
 
 from webui.contexts import SessionStateContext
 
@@ -23,20 +21,18 @@ from types import SimpleNamespace
 
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+CWD = get_cwd()
 
 def get_model_list():
-    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="LLM",exts=["bin","gguf"])]
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root=os.path.join(CWD,"models"),folder="LLM",exts=["bin","gguf"])]
     return models_list
 
 def get_voice_list():
-    models_list = [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC",exts=["pth"])]
+    models_list = [os.path.relpath(path,CWD) for path in get_filenames(root=os.path.join(CWD,"models"),folder="RVC",exts=["pth"])]
     return models_list
 
 def get_character_list():
-    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root="./models",folder="RVC/.characters",exts=["json"])]
+    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".characters",exts=["json"])]
     return models_list
 
 def init_state():

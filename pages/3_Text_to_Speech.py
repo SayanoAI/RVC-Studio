@@ -3,7 +3,7 @@ import os
 import sys
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, TTS_MODELS, config, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, TTS_MODELS, config, get_cwd, i18n
 from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
@@ -17,55 +17,30 @@ from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
 from webui.audio import save_input_audio
 
-from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
+from webui.utils import gc_collect, get_index, get_optimal_torch_device, get_rvc_models
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+CWD = get_cwd()
 
-@st.cache_resource(show_spinner=False)
-def load_model(_state,model_name):
-
-    index_file = get_filenames(root="./models/RVC",folder=".index",exts=["index"],name_filters=[os.path.basename(model_name).split(".")[0]])
-    file_index = index_file[0] if len(index_file) else ""
-    if _state.file_index==file_index and _state.vc and _state.cpt and _state.net_g and _state.hubert_model:
-        return {
-            "vc": _state.vc,
-            "cpt": _state.cpt,
-            "net_g": _state.net_g,
-            "file_index": index_file[0] if len(index_file) else "",
-            "hubert_model": _state.hubert_model
-        }
-    else:
-        _state = clear_data(_state)
-        data = get_vc(model_name,config=config,device=_state.device)
-        _state.vc = data["vc"]
-        _state.cpt = data["cpt"]
-        _state.net_g = data["net_g"]
-        _state.hubert_model = data["hubert_model"]
-        data["file_index"] = index_file[0] if len(index_file) else ""
-        return data
+def load_model(_state):
+    if _state.rvc_models is None: _state.rvc_models = get_vc(_state.model_name,config=config,device=_state.device)        
+    return _state.rvc_models
 
 def convert_vocals(_state,input_audio,**kwargs):
     print(f"converting vocals... {_state.model_name} - {kwargs}")
-    models=load_model(_state,_state.model_name)
+    models=load_model(_state)
     _state.tts_options = SimpleNamespace(**kwargs)
     return vc_single(input_audio=input_audio,**models,**kwargs)
 
-def get_models(folder="."):
-    fnames = get_filenames(root="./models",folder=folder,exts=["pth","pt"])
-    return fnames
-
 def init_inference_state():
     state = SimpleNamespace(
-        models=get_models(folder="RVC"),
+        models=get_rvc_models(),
         device=get_optimal_torch_device(),
         tts_options=initial_voice_conversion_params(),
     )
     return vars(state)
 
 def refresh_data(state):
-    state.models = get_models(folder="RVC")
+    state.models = get_rvc_models()
     gc_collect()
     return state
     

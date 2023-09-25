@@ -5,16 +5,14 @@ import scipy.signal as signal
 import os, traceback, faiss, librosa
 from scipy import signal
 
-from tqdm import tqdm
+# from tqdm import tqdm
 
 from pitch_extraction import FeatureExtractor
 
 from webui.audio import load_input_audio, remix_audio
-from webui import config
+from webui import config, get_cwd
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+CWD = get_cwd()
 
 from webui.utils import gc_collect, get_filenames
 
@@ -288,7 +286,6 @@ class VC(FeatureExtractor):
         return audio_opt
 
 def get_vc(model_path,config,device=None):
-    
     cpt = torch.load(model_path, map_location="cpu")
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  # n_spk
@@ -320,7 +317,7 @@ def get_vc(model_path,config,device=None):
     vc = VC(tgt_sr, config)
     hubert_model = load_hubert(config)
     model_name = os.path.basename(model_path).split(".")[0]
-    index_file = get_filenames(root="./models/RVC",folder=".index",exts=["index"],name_filters=[model_name])
+    index_file = get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".index",exts=["index"],name_filters=[model_name])
     return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model,"model_name": model_name,
             "file_index": index_file[0] if len(index_file) else ""}
 
@@ -328,7 +325,7 @@ def load_hubert(config):
     try:
         from fairseq import checkpoint_utils
         models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-            ["./models/hubert_base.pt"],
+            [os.path.join(CWD,"models","hubert_base.pt")],
             suffix="",
         )
         hubert_model = models[0]

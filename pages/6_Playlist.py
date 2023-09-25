@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, i18n, config
+from webui import DEVICE_OPTIONS, MENU_ITEMS, get_cwd, i18n, config
 from webui.downloader import SONG_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import active_subprocess_list, file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
-from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device, get_rvc_models
 
 
 from webui.player import PlaylistPlayer
@@ -17,19 +17,13 @@ from types import SimpleNamespace
 from webui.contexts import SessionStateContext
 from webui.audio import SUPPORTED_AUDIO
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
-
-def get_models(folder="."):
-    fnames = get_filenames(root="./models",folder=folder,exts=["pth","pt"])
-    return fnames
+CWD = get_cwd()
 
 def init_inference_state():
     state = SimpleNamespace(
         player=None,
         playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs"),
-        models=get_models(folder="RVC"),
+        models=get_rvc_models(),
         model_name=None,
         
         split_vocal_config=initial_vocal_separation_params(),
@@ -42,9 +36,9 @@ def init_inference_state():
     return vars(state)
 
 def refresh_data(state):
-    state.split_vocal_config.uvr5_models = get_filenames(root="./models",name_filters=["vocal","instrument"])
-    state.split_vocal_config.uvr5_preprocess_models = get_filenames(root="./models",name_filters=["echo","reverb","noise"])
-    state.models = get_models(folder="RVC")
+    # state.split_vocal_config.uvr5_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
+    # state.split_vocal_config.uvr5_preprocess_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise"])
+    state.models = get_rvc_models()
     state.playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
     return state

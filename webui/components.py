@@ -1,14 +1,17 @@
 import json
 import os
+import sys
 from types import SimpleNamespace
 from typing import Tuple
 import streamlit as st
 
-from webui import PITCH_EXTRACTION_OPTIONS, i18n
+from webui import PITCH_EXTRACTION_OPTIONS, get_cwd, i18n
 from webui.contexts import ProgressBarContext
 from webui.downloader import save_file, save_file_generator
 from webui.utils import gc_collect, get_filenames, get_index, get_subprocesses
 
+CWD = get_cwd()
+    
 def __default_mapper(x: Tuple[str,any]):
      return x
 
@@ -65,12 +68,13 @@ def save_vocal_separation_params(folder,data):
         return f.write(json.dumps(data,indent=2))
         
 def vocal_separation_form(state):
-    uvr5_models=get_filenames(root="./models",name_filters=["vocal","instrument"])
-    uvr5_denoise_models=get_filenames(root="./models",name_filters=["echo","reverb","noise"])
+    uvr5_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
+    uvr5_denoise_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise"])
     
     state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),
             options=uvr5_denoise_models,
+            format_func=lambda item: os.path.basename(item),
             default=[name for name in state.preprocess_models if name in uvr5_denoise_models])
     state.model_paths = st.multiselect(
         i18n("inference.model_paths"),
@@ -80,6 +84,7 @@ def vocal_separation_form(state):
     state.postprocess_models = st.multiselect(
             i18n("inference.postprocess_model"),
             options=uvr5_denoise_models,
+            format_func=lambda item: os.path.basename(item),
             default=[name for name in state.postprocess_models if name in uvr5_denoise_models])
     col1, col2, col3 = st.columns(3)
     

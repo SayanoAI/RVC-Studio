@@ -1,10 +1,10 @@
 from collections import OrderedDict
-import os, sys
+import os
 import traceback
 
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+from webui import get_cwd
+
+CWD = get_cwd()
 
 from lib.train import utils
 import datetime
@@ -53,7 +53,7 @@ from lib.train.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 global_step = 0
 least_loss = 40
 
-def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path="./models/RVC"):
+def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path=os.path.join(CWD,"models","RVC")):
     try:
         opt = OrderedDict()
         opt["weight"] = {}

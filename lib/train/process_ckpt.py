@@ -1,11 +1,8 @@
-import torch, traceback, os, sys
-
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
-
+import torch, traceback, os
 from collections import OrderedDict
-from webui import i18n
+from webui import get_cwd, i18n
+
+CWD = get_cwd()
 
 def show_info(path):
     try:

@@ -1,17 +1,18 @@
 import os
 import subprocess
-import sys
 from time import sleep
 import psutil
 import random
 import html
 import json
-from webui import MENU_ITEMS
+from webui import MENU_ITEMS, get_cwd
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
 from webui.components import active_subprocess_list
 from webui.contexts import ProgressBarContext, SessionStateContext
+
+CWD = get_cwd()
 
 ## Ported from streamlit_tensorboard with modifications
 def st_tensorboard(url="http://localhost:6006", width=None, height=800, scrolling=True):
@@ -56,10 +57,6 @@ def st_tensorboard(url="http://localhost:6006", width=None, height=800, scrollin
         shell = shell.replace(k, v)
 
     return st.components.v1.html(shell, width=width, height=height, scrolling=scrolling)
-
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
     
 def start_tensorboard(logdir, host="localhost"):
     cmd = f"tensorboard --logdir={logdir} --host={host}"
