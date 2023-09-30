@@ -1,7 +1,8 @@
 import json
 import os
+from pathlib import Path
 import sys
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 from typing import Tuple
 import streamlit as st
 
@@ -51,9 +52,9 @@ def initial_vocal_separation_params(folder=None):
         if os.path.isfile(config_file):
             with open(config_file,"r") as f:
                 data = json.load(f)
-                return SimpleNamespace(**data)
+                return ObjectNamespace(**data)
 
-    return SimpleNamespace(
+    return ObjectNamespace(
         preprocess_models=[],
         postprocess_models=[],
         agg=10,
@@ -103,9 +104,9 @@ def initial_voice_conversion_params(folder=None):
         if os.path.isfile(config_file):
             with open(config_file,"r") as f:
                 data = json.load(f)
-                return SimpleNamespace(**data)
+                return ObjectNamespace(**data)
             
-    return SimpleNamespace(
+    return ObjectNamespace(
         f0_up_key=0,
         f0_method=["rmvpe"],
         f0_autotune=False,
@@ -141,3 +142,49 @@ def voice_conversion_form(state):
     state.protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.protect)
     return state
 
+# This code is based on https://github.com/streamlit/demo-self-driving/blob/230245391f2dda0cb464008195a470751c01770b/streamlit_app.py#L48  # noqa: E501
+def file_downloader(params: Tuple[str, str], expected_size=None):
+    path, url = params
+    download_to = Path(path)
+    # Don't download the file twice.
+    # (If possible, verify the download using the file length.)
+    if download_to.exists():
+        if expected_size:
+            if download_to.stat().st_size >= expected_size:
+                return
+        else:
+            st.info(f"{url} is already downloaded.")
+            if not st.button("Download again?"):
+                return
+
+    download_to.parent.mkdir(parents=True, exist_ok=True)
+
+    # These are handles to two visual elements to animate.
+    weights_warning, progress_bar = None, None
+    try:
+        weights_warning = st.warning("Downloading %s..." % url)
+        progress_bar = st.progress(0)
+        with open(download_to, "wb") as output_file:
+            with urllib.request.urlopen(url) as response:
+                length = int(response.info()["Content-Length"])
+                counter = 0.0
+                MEGABYTES = 2.0 ** 20.0
+                while True:
+                    data = response.read(8192)
+                    if not data:
+                        break
+                    counter += len(data)
+                    output_file.write(data)
+
+                    # We perform animation by overwriting the elements.
+                    weights_warning.warning(
+                        "Downloading %s... (%6.2f/%6.2f MB)"
+                        % (url, counter / MEGABYTES, length / MEGABYTES)
+                    )
+                    progress_bar.progress(min(counter / length, 1.0))
+    # Finally, we remove these visual elements by calling .empty().
+    finally:
+        if weights_warning is not None:
+            weights_warning.empty()
+        if progress_bar is not None:
+            progress_bar.empty()

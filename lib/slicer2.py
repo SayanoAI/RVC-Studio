@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy import signal
 
 # This function is obtained from librosa.
 def get_rms(
@@ -60,6 +60,7 @@ class Slicer:
         self.min_length = round(sr * min_length / 1000 / self.hop_size)
         self.min_interval = round(min_interval / self.hop_size)
         self.max_sil_kept = round(sr * max_sil_kept / 1000 / self.hop_size)
+        self.bh, self.ah = signal.butter(N=5, Wn=48, btype="high", fs=sr)
 
     def _apply_slice(self, waveform, begin, end):
         if len(waveform.shape) > 1:
@@ -73,6 +74,9 @@ class Slicer:
 
     # @timeit
     def slice(self, waveform):
+        # zero phased digital filter cause pre-ringing noise...
+        waveform = signal.lfilter(self.bh, self.ah, waveform)
+
         if len(waveform.shape) > 1:
             samples = waveform.mean(axis=0)
         else:

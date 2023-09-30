@@ -2,12 +2,13 @@ from datetime import datetime
 import hashlib
 import json
 import os
-from types import SimpleNamespace
+import threading
+from webui.utils import ObjectNamespace
 from llama_cpp import Llama
 import numpy as np
 from lib.model_utils import get_hash
 from tts_cli import generate_speech, load_stt_models, transcribe_speech
-from webui.audio import load_input_audio, save_input_audio
+from webui.audio import bytes_to_audio, load_input_audio, save_input_audio
 from webui.downloader import BASE_MODELS_DIR, OUTPUT_DIR
 import sounddevice as sd
 from webui.sumy_summarizer import get_summary
@@ -18,11 +19,11 @@ from . import config
 from vc_infer_pipeline import get_vc, vc_single
 
 def init_model_params():
-    return SimpleNamespace(
+    return ObjectNamespace(
         fname=None,n_ctx=2048,n_gpu_layers=0
     )
 def init_model_config():
-    return SimpleNamespace(
+    return ObjectNamespace(
         # template placeholder
         prompt_template = "",
         # how dialogs appear
@@ -36,7 +37,7 @@ def init_model_config():
         }
     )
 def init_llm_options():
-    return SimpleNamespace(
+    return ObjectNamespace(
         top_k = 42,
         repeat_penalty = 1.1,
         frequency_penalty = 0.,
@@ -59,7 +60,7 @@ def init_model_data():
     }
 
 def init_assistant_template():
-    return SimpleNamespace(
+    return ObjectNamespace(
         background = "",
         personality = "",
         examples = [{"role": "", "content": ""}],
@@ -103,6 +104,9 @@ class Character:
         self.stt_method = stt_method
         self.device=device
         self.autoplay = False
+        self.recognizer = None
+        self.listener = None
+        self.lock = threading.Lock()
 
         #load data
         self.character_data = load_character_data(voice_file)
@@ -117,11 +121,13 @@ class Character:
         self.max_memory = int(np.sqrt(self.model_data["params"]["n_ctx"]))+1
         self.context = self.build_context("")
         
-
     def __del__(self):
         self.unload()
 
-    def stop_listening(self): pass # overwritten by speak_and_listen
+    def stop_listening(self):
+        if self.listener:
+            self.is_recording = False
+            self.listener.join(1)
 
     def load(self,verbose=False):
         assert not self.loaded, "Model is already loaded"
@@ -157,7 +163,7 @@ class Character:
             self.loaded=False
 
     def unload(self):
-        del self.LLM, self.voice_model, self.stt_models
+        del self.LLM, self.voice_model, self.stt_models, self.recognizer
         gc_collect()
         self.loaded=False
         self.is_recording = False
@@ -310,22 +316,10 @@ class Character:
             for ex in self.messages[-self.memory:]
         ])
         num = int(np.sqrt(self.memory))+1
-        # prompt = model_config["prompt_template"].format(
-        #     instruction=f"Summarize the following dialog in {num} sentences.",
-        #     context=history,
-        #     persona="",
-        #     name=assistant_template["name"],
-        #     user=self.user,
-        #     prompt=f"Summarize the previous dialog in {num} sentences."
-        # )
-        # completion = self.LLM.create_completion(prompt,stream=False,max_tokens=self.context_size,mirostat_mode=1,top_k=num)
-        # completion = self.summarizer(history, max_length=self.context_size, min_length=self.max_memory, do_sample=False)
+
         completion = get_summary(history,num_sentences=num)
         print(completion)
         return completion
-        # return completion["summary_text"]
-        # return completion['choices'][0]['text']
-        
 
     # Define a method to convert text to speech
     def text_to_speech(self, text):
@@ -334,54 +328,131 @@ class Character:
         return output_audio
 
     # Define a method to run the STT and TTS in the background and be non-blocking
-    def speak_and_listen(self, st=None):
+    def speak_and_listen(self):
         assert self.loaded, "Please load the models first"
         import speech_recognition as sr
-
+        
         # Create a speech recognizer instance
         self.stt_models = load_stt_models(self.stt_method) #speech recognition
-        r = sr.Recognizer()
-        r.energy_threshold = 4000
-        r.adjust_for_ambient_noise = True
+        self.recognizer = sr.Recognizer()
+        self.recognizer.energy_threshold = 2000
+        self.recognizer.pause_threshold = 2.
         self.is_recording = True
-
-        # Create a microphone instance
-        m = sr.Microphone(sample_rate=self.sample_rate)
         
-        # Define a callback function that will be called when speech is detected
-        def callback(recognizer, audio):
-            try:
-                if not self.is_recording:
-                    self.stop_listening()
-                    return
-                sd.wait() # wait for audio to stop playing
-                prompt = transcribe_speech(audio,stt_models=self.stt_models,stt_method=self.stt_method)
-                if prompt is not None and type(prompt) is str:
-                    print(f"{self.name} heard: {prompt}")
-                    # st.chat_message(self.user).write(prompt)
-                    full_response = ""
-                    # with st.chat_message(self.name):
-                    #     message_placeholder = st.empty()
-                    for response in self.generate_text(prompt):
-                        full_response += response
-                            # message_placeholder.markdown(full_response)
-                    audio = self.text_to_speech(full_response)
-                    if audio: sd.play(*audio)
-                    self.messages.append({"role": self.user, "content": prompt}) #add user prompt to history
-                    self.messages.append({
-                        "role": self.name,
-                        "content": full_response,
-                        "audio": audio
-                        })
-                    print(f"{self.name} said: {full_response}")
-                
-            except sr.UnknownValueError:
-                print("Google Speech Recognition could not understand audio")
-            except sr.RequestError as e:
-                print("Could not request results from Google Speech Recognition service; {0}".format(e))
-            except Exception as e:
-                print(e)
         # Start listening to the microphone in the background and call the callback function when speech is detected
         self.autoplay = False
-        self.stop_listening = r.listen_in_background(m, callback)
-        print("listening to mic...")
+        
+        # Create a microphone instance
+        # Start listening to mic
+        self.listener = threading.Thread(target=self.microphone_callback,daemon=True,name="listener")
+        self.listener.start()
+        # self.stop_listening = self.recognizer.listen_in_background(sr.Microphone(sample_rate=self.sample_rate), self.microphone_callback)
+        
+
+    # Define a callback function that will be called when speech is detected
+    def microphone_callback(self):
+        import speech_recognition as sr
+        with sr.Microphone(sample_rate=self.sample_rate) as source, self.lock:
+            self.recognizer.adjust_for_ambient_noise(source, duration=self.recognizer.pause_threshold)
+
+        while self.is_recording:
+            with sr.Microphone(sample_rate=self.sample_rate) as source, self.lock:
+                try:
+                    audio = self.recognizer.listen(source)
+
+                    if not self.is_recording:
+                        return self.stop_listening()
+                    
+                    print("listening to mic...")
+                    
+                    prompt, input_audio = transcribe_speech(audio,stt_models=self.stt_models,stt_method=self.stt_method,denoise=True)
+                    if prompt is not None and len(prompt)>1:
+                        print(f"{self.name} heard: {prompt}")
+                        full_response = ""
+                        for response in self.generate_text(prompt):
+                            full_response += response
+                        output_audio = self.text_to_speech(full_response)
+                        if output_audio: sd.play(*output_audio)
+                        self.messages.append({"role": self.user, "content": prompt, "audio": input_audio}) #add user prompt to history
+                        self.messages.append({
+                            "role": self.name,
+                            "content": full_response,
+                            "audio": output_audio
+                            })
+                        print(f"{self.name} said: {full_response}")
+                        sd.wait() # wait for audio to stop playing
+                except Exception as e:
+                    print(e)
+
+class Recorder:
+    # Initialize the character with a name and a voice
+    def __init__(self, stt_method="speecht5", device=None):
+        self.voice_model = None
+        self.stt_models = None
+        self.loaded = False
+        self.sample_rate = 16000 # same rate as hubert model
+        self.is_recording = False
+        self.stt_method = stt_method
+        self.device=device
+        self.autoplay = False
+        self.recognizer = None
+        self.listener = None
+        self.lock = threading.Lock()
+        self.text=None
+
+
+    def __del__(self):
+        self.stop_listening()
+        gc_collect()
+        print("models unloaded")
+
+    # Define a method to run the STT and TTS in the background and be non-blocking
+    def start_listening(self):
+        import speech_recognition as sr
+        
+        # Create a speech recognizer instance
+        self.stt_models = load_stt_models(self.stt_method) #speech recognition
+        self.recognizer = sr.Recognizer()
+        # self.recognizer.energy_threshold = 2000
+        self.recognizer.pause_threshold = 2.
+        self.is_recording = True
+        
+        # Start listening to the microphone in the background and call the callback function when speech is detected
+        self.autoplay = False
+        
+        # Create a microphone instance
+        # Start listening to mic
+        self.listener = threading.Thread(target=self.microphone_callback,daemon=True,name="listener")
+        self.listener.start()
+       
+    # Define a callback function that will be called when speech is detected
+    def microphone_callback(self):
+        import speech_recognition as sr
+        # with sr.Microphone(0,sample_rate=self.sample_rate) as source, self.lock:
+        #     self.recognizer.adjust_for_ambient_noise(source, duration=self.recognizer.pause_threshold)
+
+        while self.is_recording:
+            with sr.Microphone(sample_rate=self.sample_rate) as source, self.lock:
+                try:
+                    sd.wait()
+                    audio = self.recognizer.listen(source)
+
+                    if not self.is_recording:
+                        return self.stop_listening()
+                    
+                    print("listening to mic...")
+
+                    # if len(audio.frame_data)>self.sample_rate*2:
+                    input_audio = bytes_to_audio(audio.get_wav_data())
+                    self.text = transcribe_speech(input_audio,stt_models=self.stt_models,stt_method=self.stt_method,denoise=True)
+                    print(self.text)
+                except Exception as e:
+                    print(e)
+
+    def stop_listening(self):
+        if self.listener:
+            print("stopped listening to mic...")
+            self.is_recording = False
+            self.listener.join(1)
+            del self.listener, self.recognizer, self.stt_models
+            self.listener = self.recognizer = self.stt_models = None

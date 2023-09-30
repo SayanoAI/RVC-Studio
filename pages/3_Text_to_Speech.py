@@ -11,7 +11,7 @@ from webui.components import initial_voice_conversion_params, voice_conversion_f
 
 
 
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 from tts_cli import generate_speech
 from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
@@ -28,16 +28,15 @@ def load_model(_state):
 def convert_vocals(_state,input_audio,**kwargs):
     print(f"converting vocals... {_state.model_name} - {kwargs}")
     models=load_model(_state)
-    _state.tts_options = SimpleNamespace(**kwargs)
+    _state.tts_options = ObjectNamespace(**kwargs)
     return vc_single(input_audio=input_audio,**models,**kwargs)
 
 def init_inference_state():
-    state = SimpleNamespace(
+    return ObjectNamespace(
         models=get_rvc_models(),
         device=get_optimal_torch_device(),
         tts_options=initial_voice_conversion_params(),
     )
-    return vars(state)
 
 def refresh_data(state):
     state.models = get_rvc_models()
@@ -56,7 +55,7 @@ def get_filename(audio_name,model_name):
     
 def one_click_speech(state):
     state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
-    state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
+    state.converted_voice = convert_vocals(state,state.tts_audio,**(state.tts_options))
 
 if __name__=="__main__":
     with SessionStateContext("tts",initial_state=init_inference_state()) as state:
@@ -115,7 +114,7 @@ if __name__=="__main__":
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
 
                 if col2.button("Convert Speech"):
-                    state.converted_voice = convert_vocals(state,state.tts_audio,**vars(state.tts_options))
+                    state.converted_voice = convert_vocals(state,state.tts_audio,**(state.tts_options))
 
                 if state.converted_voice:
                     col2.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])

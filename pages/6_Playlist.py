@@ -13,14 +13,14 @@ from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_
 
 
 from webui.player import PlaylistPlayer
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 from webui.contexts import SessionStateContext
 from webui.audio import SUPPORTED_AUDIO
 
 CWD = get_cwd()
 
 def init_inference_state():
-    state = SimpleNamespace(
+    return ObjectNamespace(
         player=None,
         playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs"),
         models=get_rvc_models(),
@@ -33,7 +33,6 @@ def init_inference_state():
         volume=1.0,
         device=get_optimal_torch_device()
     )
-    return vars(state)
 
 def refresh_data(state):
     # state.split_vocal_config.uvr5_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
@@ -49,7 +48,7 @@ def render_vocal_separation_form(state):
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.split_vocal_config = split_vocal_config
-            update_player_args(split_audio_params=vars(state.split_vocal_config))
+            update_player_args(split_audio_params=(state.split_vocal_config))
     return state
 
 def render_vocal_conversion_form(state):
@@ -58,7 +57,7 @@ def render_vocal_conversion_form(state):
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.vocal_change_config = vocal_change_config
-            update_player_args(vc_single_params=vars(state.vocal_change_config))
+            update_player_args(vc_single_params=(state.vocal_change_config))
     return state
 
 def set_volume(state):
@@ -125,8 +124,8 @@ if __name__=="__main__":
                                                 model_name=state.model_name,
                                                 config=config,
                                                 device=state.device,
-                                                split_audio_params=vars(state.split_vocal_config),
-                                                vc_single_params=vars(state.vocal_change_config))
+                                                split_audio_params=(state.split_vocal_config),
+                                                vc_single_params=(state.vocal_change_config))
             else:
                 if state.player.paused:
                     state.player.resume()

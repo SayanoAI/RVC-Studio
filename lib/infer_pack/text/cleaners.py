@@ -43,18 +43,15 @@ _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in 
   ('ft', 'fort'),
 ]]
 
-
 def expand_abbreviations(text):
   for regex, replacement in _abbreviations:
     text = re.sub(regex, replacement, text)
   return text
 
-
 def expand_numbers(text):
   # return normalize_numbers(text)
   words = [num2words(word) if word.isdigit() else word for word in text.split()]
   return " ".join(words)
-
 
 def lowercase(text):
   return text.lower()
@@ -63,10 +60,11 @@ def lowercase(text):
 def collapse_whitespace(text):
   return re.sub(_whitespace_re, ' ', text)
 
-
 def convert_to_ascii(text):
   return unidecode(text)
 
+def strip_narratives(text):
+  return re.sub(r'([A-Za-z]+:|[*#]+.+?[*#]+)', '', text, flags=re.MULTILINE)
 
 def basic_cleaners(text):
   '''Basic pipeline that lowercases and collapses whitespace without transliteration.'''
@@ -84,12 +82,13 @@ def transliteration_cleaners(text):
   text = collapse_whitespace(text)
   return text
 
-def english_cleaners(text):
+def english_cleaners(text,dialog_only=False):
     text = transliteration_cleaners(text)
     text = lowercase(text)
     text = emoji_cleaner(text)
     text = expand_abbreviations(text)
     text = expand_numbers(text)
+    if dialog_only: text = strip_narratives(text)
     text = collapse_whitespace(text)
     return text
 

@@ -3,11 +3,11 @@ import json
 import numpy as np
 import torch
 import os
-
 from lib.infer_pack.text.cleaners import english_cleaners
+from lib.slicer2 import Slicer
 from webui import get_cwd
 
-from webui.audio import MAX_INT16, bytes_to_audio, load_input_audio, remix_audio
+from webui.audio import MAX_INT16, load_input_audio, remix_audio
 from webui.downloader import BASE_CACHE_DIR, download_file
 
 CWD = get_cwd()
@@ -135,7 +135,7 @@ def __vits__(text,speaker=os.path.join(CWD,"models","VITS","pretrained_ljs.pth")
     from lib.infer_pack.text.symbols import symbols
     from lib.infer_pack.text import text_to_sequence
     from lib.infer_pack.commons import intersperse
-    from lib.train import utils
+    from lib import utils
 
     hps = utils.get_hparams_from_file(os.path.join(CWD,"models","VITS","configs","ljs_base.json"))
     def get_text(text, hps):
@@ -160,9 +160,9 @@ def __vits__(text,speaker=os.path.join(CWD,"models","VITS","pretrained_ljs.pth")
         audio = net_g.infer(x_tst, x_tst_lengths, noise_scale=.678, noise_scale_w=0.6, length_scale=1.1)[0][0,0].data.cpu().float().numpy()
     return audio, hps.data.sampling_rate
 
-def generate_speech(text, speaker=None, method="speecht5",device="cpu"):
+def generate_speech(text, speaker=None, method="speecht5",device="cpu",dialog_only=False):
     
-    text = english_cleaners(text.strip()) #clean text
+    text = english_cleaners(text.strip(),dialog_only=dialog_only) #clean text
     if text and len(text) == 0:
         return (np.zeros(0).astype(np.int16),16000)
     
@@ -227,7 +227,8 @@ def load_stt_models(method="vosk",recognizer=None):
             "generator": generator
         }
     
-def transcribe_speech(audio,stt_models=None,stt_method="vosk"):
+def transcribe_speech(input_audio,stt_models=None,stt_method="vosk",denoise=False):
+
     if stt_models is None:
         stt_models = load_stt_models(stt_method)
 
@@ -242,14 +243,29 @@ def transcribe_speech(audio,stt_models=None,stt_method="vosk"):
     elif stt_method=="speecht5":
         processor = stt_models["processor"]
         model = stt_models["generator"]
-        input_audio = bytes_to_audio(audio.get_wav_data())
-        inputs = processor(audio=input_audio[0].T, sampling_rate=input_audio[1], return_tensors="pt")
-        
-        audio_len = int(len(input_audio[0])*6.25//input_audio[1])+1 #average 2.5 words/s spoken at 2.5 token/word
+        audio, sr = input_audio
+        slicer = Slicer(
+            sr=sr,
+            threshold=-42,
+            min_length=1500,
+            min_interval=400,
+            hop_size=15,
+            max_sil_kept=500
+        )
+        transcription = ""
 
-        predicted_ids = model.generate(**inputs, max_length=min(150,audio_len))
+        for slice in slicer.slice(audio):
+            # if denoise: audio = nr.red`uce_noise(audio,sr=sr)
+            inputs = processor(audio=slice.T, sampling_rate=sr, return_tensors="pt")
+            
+            audio_len = int(len(slice)*6.25//sr)+1 #average 2.5 words/s spoken at 2.5 token/word
 
-        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+            predicted_ids = model.generate(**inputs, max_length=min(150,audio_len))
+            print(predicted_ids)
 
-        return transcription[0]
+            result = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+
+            transcription += result[0]
+
+        return transcription
     return None

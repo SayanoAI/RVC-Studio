@@ -2,7 +2,7 @@ import hashlib
 import json
 from multiprocessing.pool import ThreadPool
 import os
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -276,13 +276,12 @@ class MDXNet:
         self.chunks = chunks
         self.sr = 44100
         
-        self.args = SimpleNamespace(**kwargs)
+        self.args = ObjectNamespace(**kwargs)
         self.denoise = denoise
         self.num_threads = num_threads
 
         self.device = device
 
-        # self.mp = SimpleNamespace(param={"sr": self.margin})
         self.is_mdx_ckpt = "ckpt" in model_path
 
         self.model = MDXModel(model_path, device=self.device,chunks=self.chunks,margin=self.sr)

@@ -8,7 +8,7 @@ st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
 from webui.downloader import OUTPUT_DIR, SONG_DIR
 
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
 from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
@@ -36,7 +36,7 @@ def convert_vocals(_state,input_audio,**kwargs):
     with st.status(f"converting vocals... {_state.model_name} - {kwargs}") as status:
         try:
             models=load_model(_state)
-            _state.convert_params = SimpleNamespace(**kwargs)
+            _state.convert_params = ObjectNamespace(**kwargs)
             return vc_single(input_audio=input_audio,**models,**kwargs)
         except Exception as e:
             status.error(e)
@@ -48,7 +48,7 @@ def get_rvc_models():
     return fnames
 
 def init_inference_state():
-    state = SimpleNamespace(
+    return ObjectNamespace(
         rvc_models=None,
         device=get_optimal_torch_device(),
         format="mp3",
@@ -67,11 +67,8 @@ def init_inference_state():
         uvr5_params=initial_vocal_separation_params("inference"),
         convert_params=initial_voice_conversion_params("inference")
     )
-    return vars(state)
 
 def refresh_data(state):
-    # state.uvr5_params.uvr5_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
-    # state.uvr5_params.uvr5_preprocess_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise","karaoke"])
     state.models = get_rvc_models()
     state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()
@@ -93,13 +90,13 @@ def one_click_convert(state):
         audio_path=state.input_audio_name,
         device=state.device,
         format=state.format,
-        **vars(state.uvr5_params),
+        **state.uvr5_params,
         )
     
     changed_vocals = convert_vocals(
         state,
         state.input_vocals,
-        **vars(state.convert_params))
+        **(state.convert_params))
     
     if changed_vocals:
         state.output_vocals = changed_vocals
@@ -124,7 +121,7 @@ def render_vocal_separation_form(state):
         uvr5_params = vocal_separation_form(state.uvr5_params)
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.uvr5_params = SimpleNamespace(**vars(uvr5_params))
+            state.uvr5_params = ObjectNamespace(**vars(uvr5_params))
             save_vocal_separation_params("inference",vars(uvr5_params))
             st.experimental_rerun()
         elif uvr5_params.model_paths is None: st.write(i18n("inference.model_paths"))
@@ -132,11 +129,10 @@ def render_vocal_separation_form(state):
 
 def render_voice_conversion_form(state):
     with st.form("inference.convert_vocals.expander"):
-        convert_params = voice_conversion_form(state.convert_params)
+        state.convert_params = voice_conversion_form(state.convert_params)
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.convert_params = SimpleNamespace(**vars(convert_params))
-            save_voice_conversion_params("inference",vars(convert_params))
+            save_voice_conversion_params("inference",state.convert_params)
             st.experimental_rerun()
     return state
 
@@ -199,7 +195,7 @@ if __name__=="__main__":
                 audio_path=state.input_audio_name,
                 device=state.device,
                 format=state.format,
-                **vars(state.uvr5_params),
+                **(state.uvr5_params),
                 )
                 
         with st.container():
@@ -242,7 +238,7 @@ if __name__=="__main__":
                 output_vocals = convert_vocals(
                     state,
                     state.input_vocals,
-                    **vars(state.convert_params)
+                    **(state.convert_params)
                     )
                         
                 if output_vocals is not None:

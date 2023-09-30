@@ -15,7 +15,7 @@ from webui.audio import load_input_audio, save_input_audio
 
 
 
-from types import SimpleNamespace
+from webui.utils import ObjectNamespace
 import subprocess
 import faiss
 import torch
@@ -232,7 +232,7 @@ def train_speaker_embedding(exp_dir: str, model_log_dir: str):
         return f"Failed to train speecht5 speaker embedding: {e}"
 
 def init_training_state():
-    state = SimpleNamespace(
+    return ObjectNamespace(
         exp_dir="",
         sr="40k",
         if_f0=True,
@@ -252,7 +252,6 @@ def init_training_state():
         version="v2",
         pids=[],
         device="cuda")
-    return vars(state)
 
 if __name__=="__main__":
     with SessionStateContext("training",init_training_state()) as state:

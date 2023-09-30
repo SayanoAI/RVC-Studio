@@ -1,7 +1,7 @@
 @echo off
 
 REM This script will check if a conda environment is available and create it if not
-set ENV_NAME="RVC-Studio"
+for /f %%i in ('cd') do set ENV_NAME=%%~nxi
 
 conda info --envs | findstr /i %ENV_NAME%
 if %errorlevel% == 0 (
