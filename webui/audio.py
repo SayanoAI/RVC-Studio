@@ -81,7 +81,7 @@ def bytes_to_audio(data: Union[io.BytesIO,bytes],**kwargs):
 
 def pad_audio(*audios,axis=0):
     maxlen = max(len(a) for a in audios if a is not None)
-    stack = librosa.util.stack([librosa.util.pad_center(a,maxlen) for a in audios if a is not None],axis=axis)
+    stack = librosa.util.stack([librosa.util.pad_center(data=a,size=maxlen) for a in audios if a is not None],axis=axis)
     return stack
 
 def merge_audio(audio1,audio2,sr=40000):

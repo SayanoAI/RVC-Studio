@@ -142,7 +142,7 @@ def run(rank, n_gpus, hps, device):
         # utils.check_git_hash(hps.model_dir)
         writer = SummaryWriter(log_dir=hps.model_dir)
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
-
+    print(f"line 145: {rank, n_gpus, device}")
     dist.init_process_group(
         backend="gloo", init_method="env://", world_size=n_gpus, rank=rank
     )
@@ -154,6 +154,7 @@ def run(rank, n_gpus, hps, device):
         train_dataset = TextAudioLoaderMultiNSFsid(hps.data.training_files, hps.data)
     else:
         train_dataset = TextAudioLoader(hps.data.training_files, hps.data)
+    print(f"line 157: {train_dataset}")
     train_sampler = DistributedBucketSampler(
         train_dataset,
         hps.train.batch_size * n_gpus,
@@ -163,6 +164,7 @@ def run(rank, n_gpus, hps, device):
         rank=rank,
         shuffle=True,
     )
+    print(f"line 167: {train_sampler}")
     # It is possible that dataloader's workers are out of shared memory. Please try to raise your shared memory limit.
     # num_workers=8 -> num_workers=4
     if hps.if_f0 == 1:
@@ -179,6 +181,7 @@ def run(rank, n_gpus, hps, device):
         persistent_workers=True,
         prefetch_factor=8,
     )
+    print(f"line 184: {train_loader}")
     if hps.if_f0 == 1:
         net_g = RVC_Model_f0(
             hps.data.filter_length // 2 + 1,

@@ -1,4 +1,6 @@
+from multiprocessing.pool import ThreadPool
 import sys, os, multiprocessing
+from threading import Thread
 from scipy import signal
 import numpy as np, os, traceback
 from lib.slicer2 import Slicer
@@ -232,45 +234,49 @@ def preprocess_trainset(inp_root, sr, n_p, exp_dir):
 
 def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
     try:
+        if type(f0method)!=list: f0method=[f0method] # make sure f0method is a list
         featureInput = FeatureInput(f0_method=f0method,exp_dir=exp_dir,device=device,if_f0=if_f0)
         paths = []
-        inp_root = "%s/1_16k_wavs" % (exp_dir)
-        opt_root1 = "%s/2a_f0" % (exp_dir)
-        opt_root2 = "%s/2b-f0nsf" % (exp_dir)
-        opt_root3 = "%s/3_feature256" % exp_dir if version == "v1" else "%s/3_feature768" % exp_dir
+        inp_root = os.path.join(exp_dir,"1_16k_wavs")
+        opt_root1 = os.path.join(exp_dir,"2a_f0")
+        opt_root2 = os.path.join(exp_dir,"2b-f0nsf")
+        opt_root3 = os.path.join(exp_dir,"3_feature256" if version == "v1" else "3_feature768")
 
         os.makedirs(opt_root1, exist_ok=True)
         os.makedirs(opt_root2, exist_ok=True)
         os.makedirs(opt_root3, exist_ok=True)
 
         for name in sorted(list(os.listdir(inp_root))):
-            inp_path = "%s/%s" % (inp_root, name)
+            inp_path = os.path.join(inp_root, name)
             if "spec" in inp_path:
                 continue
-            opt_path1 = "%s/%s" % (opt_root1, name)
-            opt_path2 = "%s/%s" % (opt_root2, name)
-            opt_path3 = "%s/%s" % (opt_root3, name.split(".")[0]) #remove extension
-            paths.append([inp_path, opt_path1, opt_path2, opt_path3])
+            for method in f0method:
+                opt_path1 = os.path.join(opt_root1, ",".join([str(method),name]))
+                opt_path2 = os.path.join(opt_root2, ",".join([str(method),name])) 
+                opt_path3 = os.path.join(opt_root3, ",".join([str(method),name]))
+                paths.append([inp_path, opt_path1, opt_path2, opt_path3])
 
         ps = []
+        n_p = max(n_p,1)
         for i in range(n_p):
             if device=="cuda":
                 featureInput.go(paths[i::n_p])
             else:
-                p = multiprocessing.Process(
-                    target=featureInput.go,
-                    args=[paths[i::n_p]],
-                )
+                # p = multiprocessing.Process(
+                #     target=featureInput.go,
+                #     args=[paths[i::n_p]],
+                # )
+                p = Thread(target=featureInput.go,args=(paths[i::n_p],),daemon=True)
                 ps.append(p)
                 p.start()
 
         if device != "cuda":
-            for i in range(n_p):
+            for p in ps:
                 try:
-                    ps[i].join()
+                    p.join()
                 except:
                     featureInput.printt("f0_all_fail-%s" % (traceback.format_exc()))
 
-        return "Successfully extracted features"
+        return f"Successfully extracted features using {f0method}"
     except Exception as e:
         return f"Failed to extract features: {e}"

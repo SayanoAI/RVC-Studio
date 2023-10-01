@@ -1,6 +1,7 @@
 import os
 from random import shuffle
 import sys
+from time import sleep
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
@@ -20,7 +21,7 @@ import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
-from webui.contexts import SessionStateContext
+from webui.contexts import ProgressBarContext, SessionStateContext
 
 from webui.utils import get_filenames, get_index
 
@@ -29,86 +30,105 @@ if CWD not in sys.path:
     sys.path.append(CWD)
 
 def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version):
-    model_log_dir = f"{CWD}/logs/{exp_dir}_{version}_{sr}"
+    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
     return preprocess_trainset(trainset_dir,SR_MAP[sr],n_threads,model_log_dir)
 
 def extract_features(exp_dir, n_threads, version, if_f0, f0method,device,sr):
-    model_log_dir = f"{CWD}/logs/{exp_dir}_{version}_{sr}"
+    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
     
     # if if_f0: #pitch extraction
-    n_p = n_threads if device=="cpu" else torch.cuda.device_count()
+    # n_p = n_threads if device=="cpu" else torch.cuda.device_count()
+    n_p = max(n_threads // (len(f0method) if type(f0method)==list else os.cpu_count()),1)
+
+    if type(f0method)==list:
+        return "\n".join([
+            extract_features_trainset(model_log_dir,n_p=n_p,f0method=[method],device=device,if_f0=if_f0,version=version)
+            for method in f0method
+        ])
     return extract_features_trainset(model_log_dir,n_p=n_p,f0method=f0method,device=device,if_f0=if_f0,version=version)
+
+def create_filelist(exp_dir,if_f0,spk_id,version,sr):
+    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
+
+    print(i18n("training.create_filelist"))
+    gt_wavs_dir = os.sep.join([model_log_dir,"0_gt_wavs"])
+    feature_dir = os.sep.join([model_log_dir,"3_feature256" if version == "v1" else "3_feature768"])
+    os.makedirs(gt_wavs_dir, exist_ok=True)
+    os.makedirs(feature_dir, exist_ok=True)
+    
+    # add training data 
+    if if_f0:
+        f0_dir =  os.sep.join([model_log_dir,"2a_f0"])
+        f0nsf_dir = os.sep.join([model_log_dir,"2b-f0nsf"])
+        names = (
+            set([os.path.splitext(name)[0] for name in os.listdir(feature_dir)])
+            & set([os.path.splitext(name)[0] for name in os.listdir(f0_dir)])
+            & set([os.path.splitext(name)[0] for name in os.listdir(f0nsf_dir)])
+        )
+    else:
+        names = set(
+            [os.path.splitext(name)[0] for name in os.listdir(feature_dir)]
+        )
+    opt = []
+    missing_data = []
+    for name in names:
+        name_parts = name.split(",")
+        gt_name = name if len(name_parts) == 1 else name_parts[-1]
+        gt_file = os.path.join(gt_wavs_dir,gt_name)
+        if not os.path.isfile(gt_file):
+            print(f"{gt_name} not found!")
+            missing_data.append(gt_name)
+            continue #skip data
+
+        if if_f0:
+            data = "|".join([
+                gt_file,
+                os.path.join(feature_dir,f"{name}.npy"),
+                os.path.join(f0_dir,f"{name}.npy"),
+                os.path.join(f0nsf_dir,f"{name}.npy"),
+                str(spk_id)
+            ])
+        else:
+            data = "|".join([
+                gt_file,
+                os.path.join(feature_dir,f"{name}.npy"),
+                str(spk_id)
+            ])
+        opt.append(data)
+
+    # add mute data 
+    fea_dim = 256 if version == "v1" else 768
+    if if_f0:
+        data = "|".join([
+            os.path.join(CWD,"logs","mute","0_gt_wavs",f"mute{sr}.wav"),
+            os.path.join(CWD,"logs","mute",f"3_feature{fea_dim}","mute.npy"),
+            os.path.join(CWD,"logs","mute","2a_f0","mute.wav.npy"),
+            os.path.join(CWD,"logs","mute","2b-f0nsf","mute.wav.npy"),
+            str(spk_id)
+        ])
+    else:
+        data = "|".join([
+            os.path.join(CWD,"logs","mute","0_gt_wavs",f"mute{sr}.wav"),
+            os.path.join(CWD,"logs","mute",f"3_feature{fea_dim}","mute.npy"),
+            str(spk_id)
+        ])
+    opt.append(data)
+
+    # shuffle(opt)
+    if len(opt)>=len(os.listdir(gt_wavs_dir)): # has gt data
+        with open(os.path.join(model_log_dir, "filelist.txt"), "w") as f:
+            f.write("\n".join(opt))
+        print("write filelist done")
+        return True
+    else:
+        raise Exception(f"missing ground truth data: {missing_data}")
 
 def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
     try:
         print(i18n("training.train_model"))
-        model_log_dir = f"{CWD}/logs/{exp_dir}_{version}_{sr}"
-        gt_wavs_dir = os.sep.join([model_log_dir,"0_gt_wavs"])
-        feature_dir = os.sep.join([model_log_dir,"3_feature256" if version == "v1" else "3_feature768"])
-        os.makedirs(gt_wavs_dir, exist_ok=True)
-        os.makedirs(feature_dir, exist_ok=True)
-        
-        if if_f0:
-            f0_dir =  os.sep.join([model_log_dir,"2a_f0"])
-            f0nsf_dir = os.sep.join([model_log_dir,"2b-f0nsf"])
-            names = (
-                set([name.split(".")[0] for name in os.listdir(gt_wavs_dir)])
-                & set([name.split(".")[0] for name in os.listdir(feature_dir)])
-                & set([name.split(".")[0] for name in os.listdir(f0_dir)])
-                & set([name.split(".")[0] for name in os.listdir(f0nsf_dir)])
-            )
-        else:
-            names = set([name.split(".")[0] for name in os.listdir(gt_wavs_dir)]) & set(
-                [name.split(".")[0] for name in os.listdir(feature_dir)]
-            )
-        opt = []
-        for name in names:
-            if if_f0:
-                opt.append(
-                    "%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"
-                    % (
-                        gt_wavs_dir.replace("\\", "\\\\"),
-                        name,
-                        feature_dir.replace("\\", "\\\\"),
-                        name,
-                        f0_dir.replace("\\", "\\\\"),
-                        name,
-                        f0nsf_dir.replace("\\", "\\\\"),
-                        name,
-                        spk_id,
-                    )
-                )
-            else:
-                opt.append(
-                    "%s/%s.wav|%s/%s.npy|%s"
-                    % (
-                        gt_wavs_dir.replace("\\", "\\\\"),
-                        name,
-                        feature_dir.replace("\\", "\\\\"),
-                        name,
-                        spk_id,
-                    )
-                )
-        fea_dim = 256 if version == "v1" else 768
-        if if_f0:
-            for _ in range(2):
-                opt.append(
-                    "%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature%s/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"
-                    % (CWD, sr, CWD, fea_dim, CWD, CWD, spk_id)
-                )
-        else:
-            for _ in range(2):
-                opt.append(
-                    "%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature%s/mute.npy|%s"
-                    % (CWD, sr, CWD, fea_dim, spk_id)
-                )
-        shuffle(opt)
-        with open("%s/filelist.txt" % model_log_dir, "w") as f:
-            f.write("\n".join(opt))
-        print("write filelist done")
-
+        create_filelist(exp_dir,if_f0,spk_id,version,sr)
         
         cmd = " ".join(str(i) for i in [
             config.python_cmd,
@@ -311,10 +331,13 @@ if __name__=="__main__":
             
             disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
             if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
-                st.toast(train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
+                with ProgressBarContext([1]*100,sleep,"Waiting for training process to spawn (you should hear your GPU fans spinning). Uncheck GPU cache if you have a large dataset.") as pb:
+                    st.toast(train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
                                             "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
                                             state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
                                             state.if_save_every_weights))
+                    pb.run()
+                    st.experimental_rerun()
 
         disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
         if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):

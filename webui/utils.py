@@ -89,4 +89,4 @@ def get_optimal_torch_device(index = 0) -> torch.device:
 
 def get_optimal_threads(offset=0):
     cores = multiprocessing.cpu_count() - offset
-    return max(np.floor(cores * (1-psutil.cpu_percent())),1)
+    return max(np.floor(cores * (1-psutil.cpu_percent())).astype("int16"),1)

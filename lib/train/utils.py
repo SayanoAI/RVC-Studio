@@ -395,7 +395,7 @@ def get_hparams(init=True):
     hparams.if_latest = args.if_latest
     hparams.save_every_weights = args.save_every_weights
     hparams.if_cache_data_in_gpu = args.if_cache_data_in_gpu
-    hparams.data.training_files = "%s/filelist.txt" % experiment_dir
+    hparams.data.training_files = os.path.join(experiment_dir,"filelist.txt")
     return hparams
 
 
