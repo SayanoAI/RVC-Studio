@@ -116,7 +116,7 @@ def create_filelist(exp_dir,if_f0,spk_id,version,sr):
         ])
     opt.append(data)
 
-    # shuffle(opt)
+    shuffle(opt)
     if len(opt)>=len(os.listdir(gt_wavs_dir)): # has gt data
         with open(os.path.join(model_log_dir, "filelist.txt"), "w") as f:
             f.write("\n".join(opt))
