@@ -29,7 +29,10 @@ def split_vocals(model_paths,**args):
             return None, None, None
 
 def load_model(_state):
-    if _state.rvc_models is None: _state.rvc_models = get_vc(_state.model_name,config=config,device=_state.device)        
+    if _state.rvc_models is None or _state.rvc_models["model_name"]!=_state.model_name:
+        del _state.rvc_models
+        _state.rvc_models = get_vc(_state.model_name,config=config,device=_state.device)
+        gc_collect()
     return _state.rvc_models
 
 def convert_vocals(_state,input_audio,**kwargs):
