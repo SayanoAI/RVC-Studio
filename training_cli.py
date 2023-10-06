@@ -146,9 +146,11 @@ def run(rank, n_gpus, hps, device):
     dist.init_process_group(
         backend="gloo", init_method="env://", world_size=n_gpus, rank=rank
     )
+    print(f"line 149: started dist.init_process_group")
     torch.manual_seed(hps.train.seed)
     if torch.cuda.is_available():
         torch.cuda.set_device(f"cuda:{device}")
+    print(f"line 153: cuda seed and device set")
 
     if hps.if_f0 == 1:
         train_dataset = TextAudioLoaderMultiNSFsid(hps.data.training_files, hps.data)
@@ -522,7 +524,7 @@ def train_and_evaluate(
                 logger.info(
                     f"loss_disc={loss_disc:.3f}, loss_gen={loss_gen:.3f}, loss_fm={loss_fm:.3f},loss_mel={loss_mel:.3f}, loss_kl={loss_kl:.3f}"
                 )
-                if loss_gen_all<least_loss:
+                if loss_gen_all<int(least_loss):
                     least_loss = loss_gen_all
                     
                     if hasattr(net_g, "module"):
@@ -539,7 +541,7 @@ def train_and_evaluate(
                                 ckpt,
                                 hps.sample_rate,
                                 hps.if_f0,
-                                f"{hps.name}_e{epoch}_loss{loss_gen_all:2.2f}",
+                                f"loss{loss_gen_all:2.0f}_{hps.name}_e{epoch}",
                                 epoch,
                                 hps.version,
                                 hps,
