@@ -217,7 +217,7 @@ if __name__=="__main__":
                 col2.audio(state.input_instrumental[0],sample_rate=state.input_instrumental[1])
         
         st.subheader(i18n("inference.convert_vocals"))
-        with st.expander(f"{i18n('inference.convert_vocals.expander')} - index={os.path.basename(state.rvc_models['file_index']) if state.rvc_models else 'None'}"):
+        with st.expander(f"{i18n('inference.convert_vocals.expander')} voice={state.rvc_models['model_name'] if state.rvc_models else 'None'}"):
             state = render_voice_conversion_form(state)
 
         col1, col2 = st.columns(2)

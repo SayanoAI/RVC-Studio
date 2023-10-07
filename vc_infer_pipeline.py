@@ -186,7 +186,11 @@ class VC(FeatureExtractor):
             version, protect, crepe_hop_length, f0_autotune, rmvpe_onnx, f0_file=None, f0_min=50, f0_max=1100):
         
         try:
-            if file_index == "":
+            if not type(file_index)==str: # loading file index to save time
+                print("Using preloaded file index.")
+                index = file_index
+                big_npy = index.reconstruct_n(0, index.ntotal)
+            elif file_index == "":
                 print("File index was empty.")
                 index = None
                 big_npy = None
@@ -317,9 +321,28 @@ def get_vc(model_path,config,device=None):
     vc = VC(tgt_sr, config)
     hubert_model = load_hubert(config)
     model_name = os.path.basename(model_path).split(".")[0]
-    index_file = get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".index",exts=["index"],name_filters=[model_name])
+    index_files = get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".index",exts=["index"],name_filters=[model_name])
+
+    try: #preload file_index
+        if len(index_files)==0:
+            print("File index was empty.")
+            file_index = None
+        else:
+            file_index = index_files.pop()
+            if os.path.exists(file_index):
+                sys.stdout.write(f"Attempting to load {file_index}....\n")
+                sys.stdout.flush()
+            else:
+                sys.stdout.write(f"Attempting to load {file_index}.... (despite it not existing)\n")
+                sys.stdout.flush()
+            file_index = faiss.read_index(file_index)
+            sys.stdout.write(f"loaded index: {file_index}\n")
+    except Exception as e:
+        print(f"Could not open Faiss index file for reading. {e}")
+        file_index = None
+
     return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model,"model_name": model_name,
-            "file_index": index_file[0] if len(index_file) else ""}
+            "file_index": file_index}
 
 def load_hubert(config):
     try:
@@ -413,12 +436,12 @@ def vc_single(
             f0_file=f0_file,
         )
         
-        index_info = (
-            "Using index:%s." % file_index
-            if os.path.exists(file_index)
-            else "Index not used."
-        )
-        print(index_info)
+        # index_info = (
+        #     "Using index:%s." % file_index
+        #     if os.path.exists(file_index)
+        #     else "Index not used."
+        # )
+        # print(index_info)
         
         return (audio_opt, resample_sr if resample_sr >= 16000 and tgt_sr != resample_sr else tgt_sr)
     except Exception as info:
