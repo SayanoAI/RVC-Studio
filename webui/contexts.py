@@ -7,11 +7,13 @@ from webui.utils import ObjectNamespace, gc_collect
 
 class SessionStateContext:
     def __init__(self, name: str, initial_state={}):
-        self.__data__: ObjectNamespace = st.session_state.get(name,ObjectNamespace(**initial_state))
+        self.__data__ = ObjectNamespace(**initial_state)
         self.__name__ = name
         self.__initial_state__ = ObjectNamespace() if initial_state is None else initial_state
     
     def __enter__(self):
+        if self.__name__ in st.session_state: return st.session_state[self.__name__]
+        st.session_state[self.__name__] = self.__data__
         return self.__data__
     
     def __exit__(self, *_):
