@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import scipy.signal as signal
 import os, traceback, faiss, librosa
 from scipy import signal
+from lib.model_utils import load_hubert
 
 # from tqdm import tqdm
 
@@ -342,26 +343,7 @@ def get_vc(model_path,config,device=None):
         file_index = None
 
     return {"vc": vc, "cpt": cpt, "net_g": net_g, "hubert_model": hubert_model,"model_name": model_name,
-            "file_index": file_index}
-
-def load_hubert(config):
-    try:
-        from fairseq import checkpoint_utils
-        models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-            [os.path.join(CWD,"models","hubert_base.pt")],
-            suffix="",
-        )
-        hubert_model = models[0]
-        hubert_model = hubert_model.to(config.device)
-        if config.is_half:
-            hubert_model = hubert_model.half()
-        else:
-            hubert_model = hubert_model.float()
-        hubert_model.eval()
-        return hubert_model
-    except Exception as e:
-        print(e)
-        return None
+            "file_index": file_index, "sr": cpt["config"][-1]}
 
 def vc_single(
         cpt=None,

@@ -3,12 +3,12 @@ import sys, os, multiprocessing
 from threading import Thread
 from scipy import signal
 import numpy as np, os, traceback
+from lib.model_utils import load_hubert
 from lib.slicer2 import Slicer
 import librosa, traceback
 from scipy.io import wavfile
 from lib.audio import load_audio
 from pitch_extraction import FeatureExtractor
-from vc_infer_pipeline import load_hubert
 from webui.audio import load_input_audio
 from webui.utils import gc_collect
 from webui import config
