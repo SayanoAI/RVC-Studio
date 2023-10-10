@@ -2,7 +2,6 @@ from collections import deque
 import logging
 import logging.handlers
 import threading
-import time
 import os
 from typing import List
 
@@ -18,6 +17,7 @@ from vc_infer_pipeline import get_vc, vc_single
 from webui import DEVICE_OPTIONS, get_cwd, i18n, config
 from webui.components import initial_voice_conversion_params, save_voice_conversion_params, voice_conversion_form
 from webui.contexts import SessionStateContext
+from webui.recorder import RecorderPlayback
 from webui.utils import ObjectNamespace, gc_collect, get_filenames, get_index, get_optimal_torch_device
 import pyaudio
 import webrtcvad
@@ -35,7 +35,7 @@ def render_rvc_options_form(state):
             index=get_index(state.voice_model_list,state.voice_model),
             format_func=lambda option: os.path.basename(option).split(".")[0]
             )
-    state.rvc_options = voice_conversion_form(state.rvc_options)
+    state.rvc_options = voice_conversion_form(state.rvc_options,use_hybrid=False)
     return state
 
 def load_model(_state):
@@ -92,16 +92,14 @@ def render_recorder_app(state):
         new_frames = []
 
         with frames_deque_lock:
-            if len(frames) == 0:
-                time.sleep(0.1)
-                status_indicator.write("No frame arrived.")
-            else:
-                rvc_frame = process_rvc_frames(frames)
-                if rvc_frame:
-                    frames_deque.append(rvc_frame)
+            # if len(frames) == 0:
+            #     time.sleep(0.1)
+            #     status_indicator.write("No frame arrived.")
+            # else:
+            rvc_frame = process_rvc_frames(frames)
+            if rvc_frame:
+                frames_deque.append(rvc_frame)
             
-
-        # Return empty frames to be silent.
             
             for frame in frames:
                 input_array = frame.to_ndarray()
@@ -172,11 +170,10 @@ def get_voice_list():
     return models_list
 
 @st.cache_data
-def get_output_sound_devices(_state):
+def get_sound_devices(_state, device_type: str):
     devices = [
-        i for i in range(_state.pyaudio.get_device_count())
-        if _state.pyaudio.get_device_info_by_index(i)["maxOutputChannels"]>0
-        and _state.pyaudio.get_device_info_by_index(i)["maxInputChannels"]==0
+        i for i in range(_state.recorder.p.get_device_count())
+        if _state.recorder.p.get_device_info_by_index(i)[device_type]>0
     ]
     return devices
 
@@ -186,37 +183,42 @@ def init_state():
         voice_model = "",
         voice_model_list = get_voice_list(),
         device=get_optimal_torch_device(),
-        rvc_models=None,
         sample_rate=16000,
-        input_device=None,
+        input_device_index=None,
         output_device_index=None,
-        pyaudio = pyaudio.PyAudio(),
-        vad = webrtcvad.Vad(2)
+        recorder = RecorderPlayback()
     )
 if __name__ == "__main__":
     with SessionStateContext("realtime-rvc",initial_state=init_state()) as state:
         st.header("Real Time RVC")
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns([1,2,2])
         state.device = col1.radio(
             i18n("inference.device"),
             disabled=not config.has_gpu,
             options=DEVICE_OPTIONS,horizontal=True,
             index=get_index(DEVICE_OPTIONS,state.device))
-        OUTPUT_DEVICES = get_output_sound_devices(state)
-        state.output_device_index = col2.selectbox("Output Device",
-            options=OUTPUT_DEVICES,
-            format_func=lambda i: f"{i}. "+state.pyaudio.get_device_info_by_index(i)["name"],
-            index=get_index(OUTPUT_DEVICES,state.pyaudio.get_default_output_device_info()["index"])
+        INPUT_DEVICES = get_sound_devices(state,"maxInputChannels")
+        state.input_device_index = col2.selectbox("Input Device",
+            options=INPUT_DEVICES,
+            format_func=lambda i: f"{i}. "+state.recorder.p.get_device_info_by_index(i)["name"],
+            index=get_index(INPUT_DEVICES,state.recorder.p.get_default_input_device_info()["index"])
         )
-        with st.expander(f"Voice Model: {state.rvc_models['model_name'] if state.rvc_models else None}", expanded=state.rvc_models is None):
+        OUTPUT_DEVICES = get_sound_devices(state,"maxOutputChannels")
+        state.output_device_index = col3.selectbox("Output Device",
+            options=OUTPUT_DEVICES,
+            format_func=lambda i: f"{i}. "+state.recorder.p.get_device_info_by_index(i)["name"],
+            index=get_index(OUTPUT_DEVICES,state.recorder.p.get_default_output_device_info()["index"])
+        )
+        with st.expander(f"Voice Model: {state.recorder}", expanded=state.rvc_models is None):
             with st.form("realtime-voice"):
                 state = render_rvc_options_form(state)
-                if st.form_submit_button("Save",use_container_width=True,type="primary"):
-                    del state.rvc_models
-                    gc_collect()
-                    state.rvc_models = load_model(state)
-                    state.sample_rate = state.rvc_models["cpt"]["config"][-1]
+                if st.form_submit_button("Start",use_container_width=True,type="primary"):
+                    state.recorder.start(state.voice_model,config=config,device=state.device,
+                                         input_device_index=state.input_device_index,
+                                         output_device_index=state.output_device_index,
+                                         **state.rvc_options)
                     save_voice_conversion_params("realtime-rvc",state.rvc_options)
 
         
-        if state.rvc_models: render_recorder_app(state)
+        if state.recorder.recording:
+            st.button("Stop", on_click=state.recorder.stop)

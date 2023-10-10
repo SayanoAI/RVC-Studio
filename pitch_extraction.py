@@ -278,12 +278,11 @@ class FeatureExtractor:
           'crepe_hop_length': crepe_hop_length, 'model': "full", 'onnx': rmvpe_onnx
         }
         print(f"get_f0 unused params: {kwargs}")
-
+        if len(f0_method)==1 and hasattr(f0_method,"pop"): f0_method = f0_method.pop()
         if type(f0_method) == list:
             # Perform hybrid median pitch estimation
             f0 = self.get_f0_hybrid_computation(f0_method,merge_type,**params)
         else:
-            print(f"f0_method={f0_method}")
             f0 = self.f0_method_dict[f0_method](**params)
 
         if f0_autotune:
