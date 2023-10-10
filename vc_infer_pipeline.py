@@ -149,66 +149,12 @@ class VC(FeatureExtractor):
         times[2] += t2 - t1
         return audio1
 
-    def process_t(self, t, s, window, audio_pad, pitch, pitchf, times, index, big_npy, index_rate, version, protect, t_pad_tgt, if_f0, sid, model, net_g):
-        t = t // window * window
-        if if_f0 == 1:
-            return self.vc(
-                model,
-                net_g,
-                sid,
-                audio_pad[s : t + t_pad_tgt + window],
-                pitch[:, s // window : (t + t_pad_tgt) // window],
-                pitchf[:, s // window : (t + t_pad_tgt) // window],
-                times,
-                index,
-                big_npy,
-                index_rate,
-                version,
-                protect,
-            )[t_pad_tgt : -t_pad_tgt]
-        else:
-            return self.vc(
-                model,
-                net_g,
-                sid,
-                audio_pad[s : t + t_pad_tgt + window],
-                None,
-                None,
-                times,
-                index,
-                big_npy,
-                index_rate,
-                version,
-                protect,
-            )[t_pad_tgt : -t_pad_tgt]
-
     def pipeline(self, model, net_g, sid, audio, times, f0_up_key, f0_method, merge_type,
             file_index, index_rate, if_f0, filter_radius, tgt_sr, resample_sr, rms_mix_rate,
             version, protect, crepe_hop_length, f0_autotune, rmvpe_onnx, f0_file=None, f0_min=50, f0_max=1100):
         
-        try:
-            if not type(file_index)==str: # loading file index to save time
-                print("Using preloaded file index.")
-                index = file_index
-                big_npy = index.reconstruct_n(0, index.ntotal)
-            elif file_index == "":
-                print("File index was empty.")
-                index = None
-                big_npy = None
-            else:
-                if os.path.exists(file_index):
-                    sys.stdout.write(f"Attempting to load {file_index}....\n")
-                    sys.stdout.flush()
-                else:
-                    sys.stdout.write(f"Attempting to load {file_index}.... (despite it not existing)\n")
-                    sys.stdout.flush()
-                index = faiss.read_index(file_index)
-                sys.stdout.write(f"loaded index: {index}\n")
-                big_npy = index.reconstruct_n(0, index.ntotal)
-        except Exception as e:
-            print(f"Could not open Faiss index file for reading. {e}")
-            index = None
-            big_npy = None
+        
+        index, big_npy = self.load_index(file_index)
 
         audio = signal.filtfilt(bh, ah, audio)
         audio_pad = np.pad(audio, (self.window // 2, self.window // 2), mode="reflect")
@@ -346,10 +292,10 @@ def get_vc(model_path,config,device=None):
             "file_index": file_index, "sr": cpt["config"][-1]}
 
 def vc_single(
-        cpt=None,
-        net_g=None,
-        vc=None,
-        hubert_model=None,
+    cpt=None,
+    net_g=None,
+    vc=None,
+    hubert_model=None,
     sid=0,
     input_audio=None,
     input_audio_path=None,
@@ -418,14 +364,7 @@ def vc_single(
             f0_file=f0_file,
         )
         
-        # index_info = (
-        #     "Using index:%s." % file_index
-        #     if os.path.exists(file_index)
-        #     else "Index not used."
-        # )
-        # print(index_info)
-        
         return (audio_opt, resample_sr if resample_sr >= 16000 and tgt_sr != resample_sr else tgt_sr)
-    except Exception as info:
-        print(info)
+    except Exception as error:
+        print(error)
         return None

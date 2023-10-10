@@ -1,7 +1,7 @@
 from functools import partial
 from multiprocessing.pool import ThreadPool
 import os
-import random
+import faiss
 import numpy as np
 from scipy import signal
 import torch, torchcrepe, pyworld
@@ -9,7 +9,7 @@ import torch, torchcrepe, pyworld
 from lib.rmvpe import RMVPE
 from webui.audio import autotune_f0, pad_audio
 from webui.downloader import BASE_MODELS_DIR
-from webui.utils import get_optimal_threads, get_optimal_torch_device
+from webui.utils import gc_collect, get_optimal_threads, get_optimal_torch_device
 
 class FeatureExtractor:
     def __init__(self, tgt_sr, config, onnx=False):
@@ -45,7 +45,35 @@ class FeatureExtractor:
             
         }
         
+    def __del__(self):
+        if hasattr(self,"model_rmvpe"):
+            del self.model_rmvpe
+            gc_collect()
 
+    def load_index(self, file_index):
+        try:
+            if not type(file_index)==str: # loading file index to save time
+                    print("Using preloaded file index.")
+                    index = file_index
+                    big_npy = index.reconstruct_n(0, index.ntotal)
+            elif file_index == "":
+                print("File index was empty.")
+                index = None
+                big_npy = None
+            else:
+                if os.path.isfile(file_index):
+                    print(f"Attempting to load {file_index}....")
+                else:
+                    print(f"{file_index} was not found...")
+                index = faiss.read_index(file_index)
+                print(f"loaded index: {index}")
+                big_npy = index.reconstruct_n(0, index.ntotal)
+        except Exception as e:
+            print(f"Could not open Faiss index file for reading. {e}")
+            index = None
+            big_npy = None
+        return index, big_npy
+    
     # Fork Feature: Compute f0 with the crepe method
     def get_f0_crepe_computation(
         self,
@@ -240,6 +268,7 @@ class FeatureExtractor:
         inp_f0=None,
         f0_min=50,
         f0_max=1100,
+        **kwargs
     ):
         time_step = self.window / self.sr * 1000
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
@@ -248,6 +277,7 @@ class FeatureExtractor:
           'f0_max': f0_max, 'time_step': time_step, 'filter_radius': filter_radius, 
           'crepe_hop_length': crepe_hop_length, 'model': "full", 'onnx': rmvpe_onnx
         }
+        print(f"get_f0 unused params: {kwargs}")
 
         if type(f0_method) == list:
             # Perform hybrid median pitch estimation
