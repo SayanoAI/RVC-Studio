@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-import urllib3
+import urllib.request
 from webui.utils import ObjectNamespace
 from typing import Tuple
 import streamlit as st
@@ -170,7 +170,7 @@ def file_downloader(params: Tuple[str, str], expected_size=None):
         weights_warning = st.warning("Downloading %s..." % url)
         progress_bar = st.progress(0)
         with open(download_to, "wb") as output_file:
-            with urllib3.request.urlopen(url) as response:
+            with urllib.request.urlopen(url) as response:
                 length = int(response.info()["Content-Length"])
                 counter = 0.0
                 MEGABYTES = 2.0 ** 20.0
