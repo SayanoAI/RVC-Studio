@@ -75,7 +75,7 @@ class RecorderPlayback:
     def record(self):
         print("started listening")
         self.io_stream = self.p.open(
-            format=self.input_format,
+            format=self.format,
             channels=self.channels,
             rate=self.tgt_sr,
             input=True,
