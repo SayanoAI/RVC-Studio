@@ -15,7 +15,8 @@ MENU_ITEMS = {
 
 DEVICE_OPTIONS = ["cpu","cuda"]
 PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe","mangio-crepe","rmvpe+","dio","harvest"]
-TTS_MODELS = ["edge","vits","speecht5","bark","tacotron2"]
+# TTS_MODELS = ["edge","vits","speecht5","bark","tacotron2"]
+TTS_MODELS = ["edge","speecht5"]
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
 SR_MAP = {"32k": 32000,"40k": 40000, "48k": 48000}
 
