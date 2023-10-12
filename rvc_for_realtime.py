@@ -1,7 +1,7 @@
 import os
-import traceback
+import librosa
 import logging
-from lib.model_utils import load_hubert
+from lib.model_utils import change_rms, load_hubert
 
 from pitch_extraction import FeatureExtractor
 from webui import get_cwd, config
@@ -70,7 +70,7 @@ class RVC(FeatureExtractor):
         self.hubert_model = hubert_model
         self.model_name = model_name
         self.index, self.big_npy = self.load_index(file_index)
-        self.sr = tgt_sr
+        self.tgt_sr = tgt_sr
         self.if_f0 = if_f0
         self.version = version
         super().__init__(tgt_sr, config, onnx) # initiate Feature Extraction
@@ -80,11 +80,13 @@ class RVC(FeatureExtractor):
         del self.cpt, self.net_g, self.hubert_model, self.index, self.big_npy
         gc_collect()
 
-    def process_input(self, x: np.ndarray, **kwargs) -> np.ndarray:
-        audio_pad = np.pad(x, (self.t_pad, self.t_pad), mode="reflect")
-        p_len = audio_pad.shape[0] // self.window
+    # def process_input(self, x: np.ndarray, **kwargs) -> np.ndarray:
+    def vc(self, x: np.ndarray, **kwargs) -> np.ndarray:
+        index_rate = kwargs.pop("index_rate",.5)
+        protect = kwargs.pop("protect",.5)
+        rms_mix_rate = kwargs.pop("rms_mix_rate",1.)
 
-        feats = torch.from_numpy(audio_pad)
+        feats = torch.from_numpy(x)
         feats = feats.view(1, -1)
         if config.is_half:
             feats = feats.half()
@@ -93,7 +95,9 @@ class RVC(FeatureExtractor):
         feats = feats.to(self.device)
 
         with torch.no_grad():
+            
             padding_mask = torch.BoolTensor(feats.shape).to(self.device).fill_(False)
+            print(f"audio={x.shape} feats={feats.shape} padding_mask={padding_mask.shape}")
             inputs = {
                 "source": feats,
                 "padding_mask": padding_mask,
@@ -103,67 +107,68 @@ class RVC(FeatureExtractor):
             feats = (
                 self.hubert_model.final_proj(logits[0]) if self.version == "v1" else logits[0]
             )
-            feats = F.pad(feats, (0, 0, 1, 0))
 
-        try:
-            index_rate = kwargs.get("index_rate",0)
-            if self.index and index_rate != 0:
-                leng_replace_head = int(self.sr * feats[0].shape[0])
-                npy = feats[0][-leng_replace_head:].cpu().numpy().astype("float32")
-                score, ix = self.index.search(npy, k=8)
-                weight = np.square(1 / score)
-                weight /= weight.sum(axis=1, keepdims=True)
-                npy = np.sum(self.big_npy[ix] * np.expand_dims(weight, axis=2), axis=1)
-                if config.is_half:
-                    npy = npy.astype("float16")
-                feats[0][-leng_replace_head:] = (
-                    torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate
-                    + (1 - index_rate) * feats[0][-leng_replace_head:]
-                )
-            else:
-                logger.warn("Index search FAILED or disabled")
-        except:
-            traceback.print_exc()
-            logger.warn("Index search FAILED")
+        if protect < 0.5 and self.if_f0:
+            feats0 = F.interpolate(feats.permute(0, 2, 1), scale_factor=2).permute(0, 2, 1)
+
+        if self.index is not None and self.big_npy is not None and index_rate != 0:
+            npy = feats[0].cpu().numpy()
+            if self.is_half:
+                npy = npy.astype("float16")
+
+            score, ix = self.index.search(npy, k=8)
+            weight = np.square(1 / score)
+            weight /= weight.sum(axis=1, keepdims=True)
+            npy = np.sum(self.big_npy[ix] * np.expand_dims(weight, axis=2), axis=1)
+
+            if self.is_half:
+                npy = npy.astype("float16")
+            feats = (
+                torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate
+                + (1 - index_rate) * feats
+            )
+
         feats = F.interpolate(feats.permute(0, 2, 1), scale_factor=2).permute(0, 2, 1)
 
         if self.if_f0 == 1:
-            pitch, pitchf = self.get_f0(audio_pad, p_len, **kwargs)
-            p_len = min(feats.shape[-1], 13000, pitch.shape[0])
-            pitch = pitch[:p_len].astype(np.int64 if self.device!="mps" else np.float32)
-            pitchf = pitchf[:p_len].astype(np.float32)
+            pitch, pitchf = self.get_f0(x, **kwargs)
+            p_len = min(feats.shape[1], pitch.shape[0])
+            pitch = pitch[:p_len]
+            pitchf = pitchf[:p_len]
             pitch = torch.from_numpy(pitch).to(self.device).unsqueeze(0)
             pitchf = torch.from_numpy(pitchf).to(self.device).unsqueeze(0)
+            if protect < 0.5:
+                pitchff = pitchf.clone()
+                pitchff[pitchf > 0] = 1
+                pitchff[pitchf < 1] = protect
+                pitchff = pitchff.unsqueeze(-1)
+                print(feats.shape,pitchff.shape,feats0.shape,p_len)
+                feats = feats * pitchff + feats0 * (1 - pitchff)
+                del pitchff
         else:
             pitch, pitchf = None, None
-            p_len = min(feats.shape[-1], 13000)
-        
-        return (feats, p_len, pitch, pitchf)
-
-    def process_output(
-        self,
-        feats: torch.Tensor,
-        p_len,
-        pitch,
-        pitchf,
-    ) -> np.ndarray:
+            p_len = feats.shape[1]
        
         p_len = torch.LongTensor([p_len]).to(self.device)
         sid = torch.LongTensor([self.sid]).to(self.device)
         with torch.no_grad():
+            if self.is_half: feats = feats.to(torch.half)
             if self.if_f0 == 1:
                 # print("process_output",feats,p_len,pitch,pitchf)
+                # print(12222222222,feats.dtype,pitch.dtype,pitchf.dtype,sid.dtype,self.is_half)
+                print("before vc",feats.shape,pitch.shape,pitchf.shape)
                 infered_audio = (
-                    self.net_g.infer(
-                        feats, p_len, pitch, pitchf, sid, self.sr
-                    )[0][0, 0]
-                    .data
-                    .float()
+                    self.net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0].data
                 )
+                print("after vc",infered_audio.shape)
             else:
                 infered_audio = (
-                    self.net_g.infer(feats, p_len, sid, self.sr)[0][0, 0]
-                    .data
-                    .float()
+                    self.net_g.infer(feats, p_len, sid)[0][0, 0].data
                 )
-        return infered_audio.cpu().numpy()
+
+            audio_opt = infered_audio.cpu().float().numpy()
+            if rms_mix_rate < 1.:
+                audio_opt = change_rms(x, self.sr, audio_opt, self.tgt_sr, rms_mix_rate)
+
+            del feats, p_len, sid, pitch, pitchf, infered_audio
+        return audio_opt

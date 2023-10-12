@@ -80,7 +80,6 @@ class FeatureExtractor:
         x,
         f0_min,
         f0_max,
-        p_len,
         *args,  # 512 before. Hop length changes the speed that the voice jumps to a different dramatic pitch. Lower hop lengths means more pitch accuracy but longer inference time.
         **kwargs,  # Either use crepe-tiny "tiny" or crepe "full". Default is full
     ):
@@ -108,7 +107,7 @@ class FeatureExtractor:
             device=torch_device,
             pad=True,
         )
-        p_len = p_len or x.shape[0] // hop_length
+        p_len = x.shape[0] // hop_length
         # Resize the pitch for final f0
         source = np.array(pitch.squeeze(0).cpu().float().numpy())
         source[source < 0.001] = np.nan
@@ -150,20 +149,21 @@ class FeatureExtractor:
         f0 = f0[0].cpu().numpy()
         return f0
 
-    def get_pm(self, x, p_len, *args, **kwargs):
+    def get_pm(self, x, *args, **kwargs):
         import parselmouth
+        p_len = x.shape[0] // 160 + 1
         f0 = parselmouth.Sound(x, self.sr).to_pitch_ac(
-            time_step=160 / 16000,
+            time_step=0.01,
             voicing_threshold=0.6,
             pitch_floor=kwargs.get('f0_min'),
             pitch_ceiling=kwargs.get('f0_max'),
         ).selected_array["frequency"]
         
-        return np.pad(
-            f0,
-            [[max(0, (p_len - len(f0) + 1) // 2), max(0, p_len - len(f0) - (p_len - len(f0) + 1) // 2)]],
-            mode="constant"
-        )
+        pad_size = (p_len - len(f0) + 1) // 2
+        if pad_size > 0 or p_len - len(f0) - pad_size > 0:
+            # print(pad_size, p_len - len(f0) - pad_size)
+            f0 = np.pad(f0, [[pad_size, p_len - len(f0) - pad_size]], mode="constant")
+        return f0
 
     def get_harvest(self, x, *args, **kwargs):
         f0_spectral = pyworld.harvest(
@@ -215,14 +215,13 @@ class FeatureExtractor:
         x,
         f0_min,
         f0_max,
-        p_len,
         filter_radius,
         crepe_hop_length,
         time_step,
         **kwargs
     ):
         # Get various f0 methods from input to use in the computation stack
-        params = {'x': x, 'p_len': p_len, 'f0_min': f0_min, 
+        params = {'x': x, 'f0_min': f0_min, 
           'f0_max': f0_max, 'time_step': time_step, 'filter_radius': filter_radius, 
           'crepe_hop_length': crepe_hop_length, 'model': "full"
         }
@@ -257,7 +256,6 @@ class FeatureExtractor:
     def get_f0(
         self,
         x,
-        p_len,
         f0_up_key,
         f0_method,
         merge_type="median",
@@ -273,7 +271,7 @@ class FeatureExtractor:
         time_step = self.window / self.sr * 1000
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
-        params = {'x': x, 'p_len': p_len, 'f0_up_key': f0_up_key, 'f0_min': f0_min, 
+        params = {'x': x, 'f0_up_key': f0_up_key, 'f0_min': f0_min, 
           'f0_max': f0_max, 'time_step': time_step, 'filter_radius': filter_radius, 
           'crepe_hop_length': crepe_hop_length, 'model': "full", 'onnx': rmvpe_onnx
         }

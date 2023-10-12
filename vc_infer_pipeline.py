@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import scipy.signal as signal
 import os, traceback, faiss, librosa
 from scipy import signal
-from lib.model_utils import load_hubert
+from lib.model_utils import load_hubert, change_rms
 
 # from tqdm import tqdm
 
@@ -23,26 +23,7 @@ from webui.utils import gc_collect, get_filenames
 
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
-def change_rms(data1, sr1, data2, sr2, rate):  # 1是输入音频，2是输出音频,rate是2的占比
-    # print(data1.max(),data2.max())
-    rms1 = librosa.feature.rms(
-        y=data1, frame_length=sr1 // 2 * 2, hop_length=sr1 // 2
-    )  # 每半秒一个点
-    rms2 = librosa.feature.rms(y=data2, frame_length=sr2 // 2 * 2, hop_length=sr2 // 2)
-    rms1 = torch.from_numpy(rms1)
-    rms1 = F.interpolate(
-        rms1.unsqueeze(0), size=data2.shape[0], mode="linear"
-    ).squeeze()
-    rms2 = torch.from_numpy(rms2)
-    rms2 = F.interpolate(
-        rms2.unsqueeze(0), size=data2.shape[0], mode="linear"
-    ).squeeze()
-    rms2 = torch.max(rms2, torch.zeros_like(rms2) + 1e-6)
-    data2 *= (
-        torch.pow(rms1, torch.tensor(1 - rate))
-        * torch.pow(rms2, torch.tensor(rate - 1))
-    ).numpy()
-    return data2
+
 
 
 class VC(FeatureExtractor):
@@ -78,17 +59,13 @@ class VC(FeatureExtractor):
             "padding_mask": padding_mask,
             "output_layer": 9 if version == "v1" else 12,
         }
-        t0 = ttime()
+        
         with torch.no_grad():
             logits = model.extract_features(**inputs)
             feats = model.final_proj(logits[0]) if version == "v1" else logits[0]
-        if protect < 0.5 and pitch != None and pitchf != None:
+        if protect < 0.5 and pitch is not None and pitchf is not None:
             feats0 = feats.clone()
-        if (
-            isinstance(index, type(None)) == False
-            and isinstance(big_npy, type(None)) == False
-            and index_rate != 0
-        ):
+        if index is not None and big_npy is not None and index_rate > 0:
             npy = feats[0].cpu().numpy()
             if self.is_half:
                 npy = npy.astype("float32")
@@ -113,24 +90,24 @@ class VC(FeatureExtractor):
             feats0 = F.interpolate(feats0.permute(0, 2, 1), scale_factor=2).permute(
                 0, 2, 1
             )
-        t1 = ttime()
-        p_len = audio0.shape[0] // self.window
-        if feats.shape[1] < p_len:
-            p_len = feats.shape[1]
-            if pitch != None and pitchf != None:
-                pitch = pitch[:, :p_len]
-                pitchf = pitchf[:, :p_len]
+        
+        p_len = min(audio0.shape[0] // self.window, feats.shape[1])
+        
+        if pitch is not None and pitchf is not None:
+            pitch = pitch[:, :p_len]
+            pitchf = pitchf[:, :p_len]
 
-        if protect < 0.5 and pitch != None and pitchf != None:
-            pitchff = pitchf.clone()
-            pitchff[pitchf > 0] = 1
-            pitchff[pitchf < 1] = protect
-            pitchff = pitchff.unsqueeze(-1)
-            feats = feats * pitchff + feats0 * (1 - pitchff)
-            feats = feats.to(feats0.dtype)
+            if protect < 0.5:
+                pitchff = pitchf.clone()
+                pitchff[pitchf > 0] = 1
+                pitchff[pitchf < 1] = protect
+                pitchff = pitchff.unsqueeze(-1)
+                feats = feats * pitchff + feats0 * (1 - pitchff)
+                feats = feats.to(feats0.dtype)
         p_len = torch.tensor([p_len], device=self.device).long()
         with torch.no_grad():
             if pitch != None and pitchf != None:
+                print("vc",feats.shape,pitch.shape,pitchf.shape)
                 audio1 = (
                     (net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0])
                     .data.cpu()
@@ -144,9 +121,7 @@ class VC(FeatureExtractor):
         del feats, p_len, padding_mask
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        t2 = ttime()
-        times[0] += t1 - t0
-        times[2] += t2 - t1
+
         return audio1
 
     def pipeline(self, model, net_g, sid, audio, times, f0_up_key, f0_method, merge_type,
@@ -175,7 +150,6 @@ class VC(FeatureExtractor):
         t = None
         t1 = ttime()
         audio_pad = np.pad(audio, (self.t_pad, self.t_pad), mode="reflect")
-        p_len = audio_pad.shape[0] // self.window
         inp_f0 = None
 
         if f0_file is not None:
@@ -190,9 +164,9 @@ class VC(FeatureExtractor):
 
         if if_f0:
             pitch, pitchf = self.get_f0(
-                audio_pad, p_len, f0_up_key, f0_method, merge_type,
+                audio_pad, f0_up_key, f0_method, merge_type,
                 filter_radius, crepe_hop_length, f0_autotune, rmvpe_onnx, inp_f0, f0_min, f0_max)
-            
+            p_len = min(pitch.shape[0], pitchf.shape[0])
             pitch = pitch[:p_len].astype(np.int64 if self.device != 'mps' else np.float32)
             pitchf = pitchf[:p_len].astype(np.float32)
             pitch = torch.from_numpy(pitch).to(self.device).unsqueeze(0)
@@ -220,7 +194,7 @@ class VC(FeatureExtractor):
         audio_opt.append(self.vc(model, net_g, sid, audio_slice, pitch_slice, pitchf_slice, times, index, big_npy, index_rate, version, protect)[self.t_pad_tgt : -self.t_pad_tgt])
         
         audio_opt = np.concatenate(audio_opt)
-        if rms_mix_rate != 1:
+        if rms_mix_rate < 1:
             audio_opt = change_rms(audio, 16000, audio_opt, tgt_sr, rms_mix_rate)
         if resample_sr >= 16000 and tgt_sr != resample_sr:
             audio_opt = librosa.resample(audio_opt, orig_sr=tgt_sr, target_sr=resample_sr)
