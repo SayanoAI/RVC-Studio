@@ -175,9 +175,7 @@ class FeatureInput(FeatureExtractor):
             return self.printt("==contains nan==")
 
     def compute_f0(self,x):
-        p_len = x.shape[0] // self.hop
-        
-        return self.get_f0(x,p_len,0,self.f0_method,crepe_hop_length=self.hop)
+        return self.get_f0(x,0,self.f0_method,crepe_hop_length=self.hop)
     
     def go(self, paths):
         if len(paths) == 0:
@@ -234,8 +232,7 @@ def preprocess_trainset(inp_root, sr, n_p, exp_dir):
 
 def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
     try:
-        if type(f0method)!=list: f0method=[f0method] # make sure f0method is a list
-        featureInput = FeatureInput(f0_method=f0method,exp_dir=exp_dir,device=device,if_f0=if_f0)
+        featureInput = FeatureInput(f0_method=f0method,exp_dir=exp_dir,device=device,version=version,if_f0=if_f0)
         paths = []
         inp_root = os.path.join(exp_dir,"1_16k_wavs")
         opt_root1 = os.path.join(exp_dir,"2a_f0")
@@ -250,11 +247,11 @@ def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
             inp_path = os.path.join(inp_root, name)
             if "spec" in inp_path:
                 continue
-            for method in f0method:
-                opt_path1 = os.path.join(opt_root1, ",".join([str(method),name]))
-                opt_path2 = os.path.join(opt_root2, ",".join([str(method),name])) 
-                opt_path3 = os.path.join(opt_root3, ",".join([str(method),name]))
-                paths.append([inp_path, opt_path1, opt_path2, opt_path3])
+            
+            opt_path1 = os.path.join(opt_root1, ",".join([str(f0method),name]))
+            opt_path2 = os.path.join(opt_root2, ",".join([str(f0method),name])) 
+            opt_path3 = os.path.join(opt_root3, ",".join([str(f0method),name]))
+            paths.append([inp_path, opt_path1, opt_path2, opt_path3])
 
         ps = []
         n_p = max(n_p,1)
@@ -262,10 +259,6 @@ def extract_features_trainset(exp_dir,n_p,f0method,device,version,if_f0):
             if device=="cuda":
                 featureInput.go(paths[i::n_p])
             else:
-                # p = multiprocessing.Process(
-                #     target=featureInput.go,
-                #     args=[paths[i::n_p]],
-                # )
                 p = Thread(target=featureInput.go,args=(paths[i::n_p],),daemon=True)
                 ps.append(p)
                 p.start()

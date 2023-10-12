@@ -242,7 +242,7 @@ class FeatureExtractor:
                 f0 = f0[1:]  # Get rid of first frame.
             return f0
 
-        with ThreadPool(get_optimal_threads()) as pool:
+        with ThreadPool(max(1,get_optimal_threads())) as pool:
             f0_computation_stack = pool.starmap(_get_f0,[(method,params) for method in methods_list])
 
         f0_computation_stack = pad_audio(*f0_computation_stack) # prevents uneven f0
@@ -275,8 +275,8 @@ class FeatureExtractor:
           'f0_max': f0_max, 'time_step': time_step, 'filter_radius': filter_radius, 
           'crepe_hop_length': crepe_hop_length, 'model': "full", 'onnx': rmvpe_onnx
         }
-        print(f"get_f0 unused params: {kwargs}")
-        if len(f0_method)==1 and hasattr(f0_method,"pop"): f0_method = f0_method.pop()
+        print(f"get_f0 {f0_method} unused params: {kwargs}")
+        if hasattr(f0_method,"pop") and len(f0_method)==1: f0_method = f0_method.pop()
         if type(f0_method) == list:
             # Perform hybrid median pitch estimation
             f0 = self.get_f0_hybrid_computation(f0_method,merge_type,**params)

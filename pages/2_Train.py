@@ -34,7 +34,7 @@ def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version):
     os.makedirs(model_log_dir, exist_ok=True)
     return preprocess_trainset(trainset_dir,SR_MAP[sr],n_threads,model_log_dir)
 
-def extract_features(exp_dir, n_threads, version, if_f0, f0method,device,sr):
+def extract_features(exp_dir, n_threads, version, if_f0, f0method,device, sr):
     model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
     
@@ -44,7 +44,7 @@ def extract_features(exp_dir, n_threads, version, if_f0, f0method,device,sr):
 
     if type(f0method)==list:
         return "\n".join([
-            extract_features_trainset(model_log_dir,n_p=n_p,f0method=[method],device=device,if_f0=if_f0,version=version)
+            extract_features_trainset(model_log_dir,n_p=n_p,f0method=method,device=device,if_f0=if_f0,version=version)
             for method in f0method
         ])
     return extract_features_trainset(model_log_dir,n_p=n_p,f0method=f0method,device=device,if_f0=if_f0,version=version)
@@ -284,9 +284,10 @@ if __name__=="__main__":
                                         index=get_index(N_THREADS_OPTIONS,state.n_threads))
 
             col1,col2,col3 = st.columns(3)
+            SR_OPTIONS = list(SR_MAP.keys())
             state.sr=col1.radio(i18n("training.sr"),
-                            options=["40k","48k"],
-                            index=get_index(["40k","48k"],state.sr),
+                            options=SR_OPTIONS,
+                            index=get_index(SR_OPTIONS,state.sr),
                             horizontal=True)
             state.version=col2.radio(i18n("training.version"),options=["v1","v2"],horizontal=True,index=get_index(["v1","v2"],state.version))
             state.device=col3.radio(i18n("training.device"),options=["cuda","cpu"],horizontal=True)
@@ -331,13 +332,15 @@ if __name__=="__main__":
             
             disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
             if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
-                with ProgressBarContext([1]*100,sleep,"Waiting for training process to spawn (you should hear your GPU fans spinning). Uncheck GPU cache if you have a large dataset.") as pb:
-                    st.toast(train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
-                                            "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
-                                            state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
-                                            state.if_save_every_weights))
-                    pb.run()
-                    st.experimental_rerun()
+                if not (state.pretrained_D and state.pretrained_G): st.toast("Please download the pretrained models!")
+                else: 
+                    with ProgressBarContext([1]*100,sleep,"Waiting for training process to spawn (you should hear your GPU fans spinning). Uncheck GPU cache if you have a large dataset.") as pb:
+                        st.toast(train_model(state.exp_dir, state.if_f0, state.spk_id, state.version,state.sr,
+                                                "-".join(state.gpus),state.batch_size,state.total_epoch,state.save_epoch,
+                                                state.pretrained_G,state.pretrained_D,state.if_save_latest,state.if_cache_gpu,
+                                                state.if_save_every_weights))
+                        pb.run()
+                        st.experimental_rerun()
 
         disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
         if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
