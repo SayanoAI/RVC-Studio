@@ -104,15 +104,19 @@ if __name__ == "__main__":
             format_func=lambda i: f"{i}. "+state.p.get_device_info_by_index(i)["name"],
             index=get_index(OUTPUT_DEVICES,state.output_device_index)
         )
-        with st.expander(f"Voice Model: {state.recorder}", expanded=state.rvc_models is None):
+        with st.expander(f"Voice Model: {state.recorder}", expanded=state.recorder is None):
             with st.form("realtime-voice"):
                 state = render_rvc_options_form(state)
                 if st.form_submit_button("Start",use_container_width=True,type="primary"):
-                    if state.recorder is None: state.recorder = RecorderPlayback()
-                    state.recorder.start(state.voice_model,config=config,device=state.device,
-                                         input_device_index=state.input_device_index,
-                                         output_device_index=state.output_device_index,
-                                         **state.rvc_options)
+                    if state.recorder is None:
+                        state.recorder = RecorderPlayback()
+                        state.recorder.start(state.voice_model,config=config,device=state.device,
+                                            input_device_index=state.input_device_index,
+                                            output_device_index=state.output_device_index,
+                                            **state.rvc_options)
+                    elif state.voice_model==state.recorder.voice_model:
+                        state.recorder.update_options(state.rvc_options)
+                    else: state.recorder.load_rvc_model(state.voice_model, config, state.device)
                     save_voice_conversion_params("realtime-rvc",state.rvc_options)
 
         

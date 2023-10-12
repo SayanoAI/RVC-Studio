@@ -85,8 +85,8 @@ class RVC(FeatureExtractor):
         index_rate = kwargs.pop("index_rate",.5)
         protect = kwargs.pop("protect",.5)
         rms_mix_rate = kwargs.pop("rms_mix_rate",1.)
-
-        feats = torch.from_numpy(x)
+    
+        feats = torch.from_numpy(x.copy())
         feats = feats.view(1, -1)
         if config.is_half:
             feats = feats.half()
@@ -95,9 +95,7 @@ class RVC(FeatureExtractor):
         feats = feats.to(self.device)
 
         with torch.no_grad():
-            
             padding_mask = torch.BoolTensor(feats.shape).to(self.device).fill_(False)
-            print(f"audio={x.shape} feats={feats.shape} padding_mask={padding_mask.shape}")
             inputs = {
                 "source": feats,
                 "padding_mask": padding_mask,
@@ -142,7 +140,6 @@ class RVC(FeatureExtractor):
                 pitchff[pitchf > 0] = 1
                 pitchff[pitchf < 1] = protect
                 pitchff = pitchff.unsqueeze(-1)
-                print(feats.shape,pitchff.shape,feats0.shape,p_len)
                 feats = feats * pitchff + feats0 * (1 - pitchff)
                 del pitchff
         else:
@@ -156,11 +153,9 @@ class RVC(FeatureExtractor):
             if self.if_f0 == 1:
                 # print("process_output",feats,p_len,pitch,pitchf)
                 # print(12222222222,feats.dtype,pitch.dtype,pitchf.dtype,sid.dtype,self.is_half)
-                print("before vc",feats.shape,pitch.shape,pitchf.shape)
                 infered_audio = (
                     self.net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0].data
                 )
-                print("after vc",infered_audio.shape)
             else:
                 infered_audio = (
                     self.net_g.infer(feats, p_len, sid)[0][0, 0].data
