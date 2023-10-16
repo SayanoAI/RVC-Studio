@@ -121,13 +121,12 @@ def download_song(output_audio,output_audio_name,ext="mp3"):
     
 def render_vocal_separation_form(state):
     with st.form("inference.split_vocals.expander"):
-        uvr5_params = vocal_separation_form(state.uvr5_params)
+        state.uvr5_params = vocal_separation_form(state.uvr5_params)
         
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
-            state.uvr5_params = ObjectNamespace(**vars(uvr5_params))
-            save_vocal_separation_params("inference",vars(uvr5_params))
+            save_vocal_separation_params("inference",state.uvr5_params)
             st.experimental_rerun()
-        elif uvr5_params.model_paths is None: st.write(i18n("inference.model_paths"))
+        elif state.uvr5_params.model_paths is None: st.write(i18n("inference.model_paths"))
     return state
 
 def render_voice_conversion_form(state):

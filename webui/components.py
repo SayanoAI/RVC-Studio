@@ -47,15 +47,7 @@ def active_subprocess_list():
                 print(e)
 
 def initial_vocal_separation_params(folder=None):
-    if folder:
-        config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
-        os.makedirs(os.path.dirname(config_file),exist_ok=True)
-        if os.path.isfile(config_file):
-            with open(config_file,"r") as f:
-                data = json.load(f)
-                return ObjectNamespace(**data)
-
-    return ObjectNamespace(
+    params = ObjectNamespace(
         preprocess_models=[],
         postprocess_models=[],
         agg=10,
@@ -63,6 +55,19 @@ def initial_vocal_separation_params(folder=None):
         model_paths=[],
         use_cache=True,
     )
+
+    if folder:
+        try:
+            config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
+            os.makedirs(os.path.dirname(config_file),exist_ok=True)
+            if os.path.isfile(config_file):
+                with open(config_file,"r") as f:
+                    data = json.load(f)
+                    params.update(data)
+        except Exception as e:
+            print(e)
+    return params
+
 def save_vocal_separation_params(folder,data):
     config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
@@ -99,15 +104,7 @@ def vocal_separation_form(state):
     return state
 
 def initial_voice_conversion_params(folder=None):
-    if folder:
-        config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
-        os.makedirs(os.path.dirname(config_file),exist_ok=True)
-        if os.path.isfile(config_file):
-            with open(config_file,"r") as f:
-                data = json.load(f)
-                return ObjectNamespace(**data)
-            
-    return ObjectNamespace(
+    params = ObjectNamespace(
         f0_up_key=0,
         f0_method=["rmvpe"],
         f0_autotune=False,
@@ -118,6 +115,18 @@ def initial_voice_conversion_params(folder=None):
         rms_mix_rate=.2,
         protect=0.2,
         )
+    if folder:
+        try:
+            config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
+            os.makedirs(os.path.dirname(config_file),exist_ok=True)
+            if os.path.isfile(config_file):
+                with open(config_file,"r") as f:
+                    data = json.load(f)
+                    params.update(data)
+        except Exception as e:
+            print(e)
+    return params
+
 def save_voice_conversion_params(folder,data):
     config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
