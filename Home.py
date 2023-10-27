@@ -18,7 +18,7 @@ from tts_cli import STT_MODELS_DIR, stt_checkpoint, load_stt_models
 from webui.components import file_downloader, file_uploader_form
 
 
-from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, save_file
+from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, LLM_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, save_file, slugify_filepath
 
 CWD = get_cwd()
 
@@ -28,7 +28,7 @@ def download_audio_to_buffer(url):
     buffer = BytesIO()
     youtube_video = YouTube(url)
     audio = youtube_video.streams.get_audio_only()
-    default_filename = audio.default_filename
+    default_filename = slugify_filepath(audio.default_filename)
     audio.stream_to_buffer(buffer)
     return default_filename, buffer
 
@@ -151,6 +151,5 @@ if __name__=="__main__":
             
             if st.button("Download Song"):
                 data.seek(0)
-                params = (english_cleaners(os.path.join(SONG_DIR,fname)).replace(" ","_"),data.read())
-                # input_audio = bytes_to_audio(data)
+                params = (os.path.join(SONG_DIR,fname),data.read())
                 st.toast(save_file(params))

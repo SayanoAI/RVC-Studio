@@ -96,14 +96,17 @@ def one_click_convert(state):
         **state.uvr5_params,
         )
     
+    params = dict(state.convert_params)
+    params.update(resample_sr=state.input_instrumental[1])
     changed_vocals = convert_vocals(
         state,
         state.input_vocals,
-        **(state.convert_params))
+        **(params)
+    )
     
     if changed_vocals:
         state.output_vocals = changed_vocals
-        mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_audio[1])
+        mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_instrumental[1])
         state.output_audio_name = get_filename(
             state.input_audio_name,state.model_name)
         state.output_audio = mixed_audio
@@ -237,10 +240,13 @@ if __name__=="__main__":
 
         if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
             with st.spinner(i18n("inference.convert_vocals")):
+                params = dict(state.convert_params)
+                params.update(resample_sr=state.input_instrumental[1])
+
                 output_vocals = convert_vocals(
                     state,
                     state.input_vocals,
-                    **(state.convert_params)
+                    **params
                     )
                         
                 if output_vocals is not None:
@@ -249,7 +255,7 @@ if __name__=="__main__":
                         mixed_audio = merge_audio(
                             output_vocals,
                             state.input_instrumental,
-                            sr=state.input_audio[1]
+                            sr=state.input_instrumental[1]
                         )
                     else: mixed_audio = output_vocals
                     state.output_audio = mixed_audio

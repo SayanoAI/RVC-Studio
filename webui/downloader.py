@@ -1,4 +1,6 @@
+import re
 from typing import IO, List, Tuple
+import unicodedata
 import requests
 import os
 import zipfile
@@ -99,3 +101,17 @@ def save_zipped_files(params: Tuple[str, any]):
         return f"Successfully saved files to: {data_path}"
     except Exception as e:
         return f"Failed to save files: {e}"
+    
+def slugify_filepath(filepath):
+    # Split the path into directory and filename
+    directory, filename = os.path.split(filepath)
+    # Normalize the filename
+    filename = unicodedata.normalize('NFKD', filename)
+    # Encode the filename as ASCII and ignore errors
+    filename = filename.encode('ascii', 'ignore').decode()
+    # Convert the filename to lowercase
+    filename = filename.lower()
+    # Replace spaces and other unwanted characters with dashes
+    filename = re.sub(r'[^a-z0-9.-]+', '-', filename)
+    # Join the directory and the slugified filename
+    return os.path.join(directory, filename)
