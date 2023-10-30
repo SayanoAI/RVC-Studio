@@ -138,13 +138,13 @@ if __name__=="__main__":
 
         if state.downloaded_audio:
             title, data = state.downloaded_audio
-            st.subheader("Title")
-            st.write(title)
+            st.subheader(title)
             state.format = st.radio(
                 i18n("inference.format"),
                 options=SUPPORTED_AUDIO,horizontal=True,
                 index=get_index(SUPPORTED_AUDIO,state.format))
             fname = Path(title).with_suffix(f".{state.format}").name
+            fname = st.text_input("Save Filename",fname)
             st.subheader("Listen to Audio")
             st.audio(data, format='audio/mpeg')
             st.subheader("Download Audio File")
