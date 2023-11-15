@@ -268,7 +268,7 @@ def init_training_state():
         pretrained_D=None,
         gpus=[],
         if_cache_gpu=False,
-        if_save_every_weights=False,
+        if_save_every_weights=True,
         version="v2",
         pids=[],
         device="cuda")

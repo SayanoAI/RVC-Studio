@@ -75,7 +75,7 @@ def save_vocal_separation_params(folder,data):
         return f.write(json.dumps(data,indent=2))
         
 def vocal_separation_form(state):
-    uvr5_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
+    uvr5_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["voc","inst"])
     uvr5_denoise_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise"])
     
     state.preprocess_models = st.multiselect(
