@@ -60,7 +60,7 @@ def st_tensorboard(url="http://localhost:6006", width=None, height=800, scrollin
     
 def start_tensorboard(logdir, host="localhost"):
     cmd = f"tensorboard --logdir={logdir} --host={host}"
-    p = subprocess.Popen(cmd, shell=True, cwd=CWD)
+    p = subprocess.Popen(cmd, cwd=CWD)
     return p
 
 if __name__=="__main__":

@@ -15,7 +15,7 @@ from webui import config
 import torch
 
 class Preprocess:
-    def __init__(self, sr, exp_dir, noparallel=True):
+    def __init__(self, sr, exp_dir, noparallel=True, period=3.0, overlap=.3, max_volume=.95):
         self.slicer = Slicer(
             sr=sr,
             threshold=-42,
@@ -26,10 +26,10 @@ class Preprocess:
         )
         self.sr = sr
         self.bh, self.ah = signal.butter(N=5, Wn=48, btype="high", fs=self.sr)
-        self.per = 3.0
-        self.overlap = 0.3
+        self.per = period
+        self.overlap = overlap
         self.tail = self.per + self.overlap
-        self.max = 0.9
+        self.max = max_volume
         self.alpha = 0.75
         self.exp_dir = exp_dir
         self.gt_wavs_dir = "%s/0_gt_wavs" % exp_dir
@@ -217,9 +217,9 @@ class FeatureInput(FeatureExtractor):
                 except:
                     self.printt("f0fail-%s-%s-%s" % (idx, inp_path, traceback.format_exc()))
 
-def preprocess_trainset(inp_root, sr, n_p, exp_dir):
+def preprocess_trainset(inp_root, sr, n_p, exp_dir, period=3.0, overlap=.3):
     try:
-        pp = Preprocess(sr, exp_dir)
+        pp = Preprocess(sr, exp_dir, period=period, overlap=overlap)
         pp.println("start preprocess")
         pp.println(sys.argv)
         pp.pipeline_mp_inp_dir(inp_root, n_p)

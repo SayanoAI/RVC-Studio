@@ -76,7 +76,7 @@ def save_vocal_separation_params(folder,data):
         
 def vocal_separation_form(state):
     uvr5_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["voc","inst"])
-    uvr5_denoise_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise"])
+    uvr5_denoise_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise","kara"])
     
     state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),

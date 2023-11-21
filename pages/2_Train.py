@@ -29,10 +29,10 @@ CWD = os.getcwd()
 if CWD not in sys.path:
     sys.path.append(CWD)
 
-def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version):
+def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version, period=3., overlap=.3):
     model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
-    return preprocess_trainset(trainset_dir,SR_MAP[sr],n_threads,model_log_dir)
+    return preprocess_trainset(trainset_dir,SR_MAP[sr],n_threads,model_log_dir,period,overlap)
 
 def extract_features(exp_dir, n_threads, version, if_f0, f0method,device, sr):
     model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
@@ -123,7 +123,7 @@ def create_filelist(exp_dir,if_f0,spk_id,version,sr):
         print("write filelist done")
         return True
     else:
-        raise Exception(f"missing ground truth data: {missing_data}")
+        raise Exception(f"missing ground truth data: {len(opt)=}, {len(os.listdir(gt_wavs_dir))=}")
 
 def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
     try:
@@ -271,6 +271,7 @@ def init_training_state():
         if_save_every_weights=True,
         version="v2",
         pids=[],
+        period=3.0, overlap=.3,
         device="cuda")
 
 if __name__=="__main__":
@@ -298,9 +299,11 @@ if __name__=="__main__":
             file_uploader_form(DATASETS_DIR,"Upload a zipped folder of your dataset (make sure the files are in a folder)",types="zip")
             state.trainset_dir=st.text_input(i18n("training.preprocess_data.trainset_dir"),placeholder="./datasets/name_of_zipped_folder")
 
+            state.period=st.slider("Length of sample (seconds)",min_value=3.,max_value=15.,step=1.,value=state.period)
+            state.overlap=st.slider("Length of sample overlap (seconds)",min_value=.3,max_value=3.,step=.1,value=state.overlap)
             disabled = not (state.trainset_dir and state.exp_dir and os.path.exists(state.trainset_dir))
             if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
-                st.toast(preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version))
+                st.toast(preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version, state.period, state.overlap))
 
         PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
         PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
