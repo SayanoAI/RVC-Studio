@@ -16,17 +16,19 @@ CWD = get_cwd()
 
 class ObjectNamespace(dict):
     def __init__(self,**kwargs): super().__init__(kwargs)
-    def __missing__(self, name: str): return None
-    def get(self, name: str, default_value=None): return self.__getitem__(name) if name in self.keys() else default_value
-    def __getattr__(self, name: str): return self.__getitem__(name) if name in self.keys() else None
+    def __missing__(self, name: str): return ObjectNamespace()
+    def get(self, name: str, default_value=None): return self.__getitem__(name) if name in self else default_value
+    def __getattr__(self, name: str): return self.__getitem__(name) if name in self else ObjectNamespace()
     def __getitem__(self, name: str):
         value = super().__getitem__(name) # get the value from the parent class
         if isinstance(value, weakref.ref): # check if the value is a weak reference
             value = value() # call the weak reference object to get the referent
         return value # return the referent or the original value
-    def __setattr__(self, name: str, value): return self.__setitem__(name, value)
-    def __delattr__(self, name: str): return self.__delitem__(name) if name in self.keys() else None
-    def __delitem__(self, name: str): return super().__delitem__(name) if name in self.keys() else None
+    def __setattr__(self, name: str, value): self.__setitem__(name, value)
+    def __delattr__(self, name: str):
+        if name in self.keys(): self.__delitem__(name)
+    def __delitem__(self, name: str):
+        if name in self.keys(): super().__delitem__(name)
 
 def get_subprocesses(pid = os.getpid()):
     # Get a list of all subprocesses started by the current process

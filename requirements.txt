@@ -49,6 +49,7 @@ Cython
 pytube
 lightning==2.0.8
 samplerate
+fastapi[all]>=0.103.1
 
 #tts
 transformers==4.32.1

@@ -23,9 +23,6 @@ from webui.utils import gc_collect, get_filenames
 
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
-
-
-
 class VC(FeatureExtractor):
 
     def vc(
