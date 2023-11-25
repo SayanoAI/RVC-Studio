@@ -1,8 +1,10 @@
 import os
 import sys
+import requests
 import streamlit as st
+from server.utils import audio2bytes, bytes2audio
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, config, get_cwd, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, SERVERS, config, get_cwd, i18n
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
@@ -11,18 +13,29 @@ from webui.downloader import OUTPUT_DIR, SONG_DIR
 from webui.utils import ObjectNamespace
 from vc_infer_pipeline import get_vc, vc_single
 from webui.contexts import SessionStateContext
-from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
+from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, load_input_audio, merge_audio, remix_audio, save_input_audio
 
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 from uvr5_cli import split_audio
 
 CWD = get_cwd()
+INFERENCE_URL = SERVERS['RVC']['url']
 
-def split_vocals(model_paths,**args):
+def split_vocals(audio_path,**args):
     with st.status("splitting vocals... ") as status:
         try:
-            vocals,instrumental,input_audio=split_audio(model_paths,**args)
-            return vocals, instrumental, input_audio
+            input_audio = load_input_audio(audio_path)
+            audio_data = audio2bytes(*input_audio)
+            body = dict(audio_data=audio_data,**args)
+            with requests.post(f"{INFERENCE_URL}/uvr",json=body) as req:
+                if req.status_code==200:
+                    data = req.json()
+                    vocals = data.get("vocals")
+                    if vocals: vocals = bytes2audio(vocals)
+                    instrumentals = data.get("instrumentals")
+                    if instrumentals: instrumentals = bytes2audio(instrumentals)
+            # vocals,instrumental,input_audio=split_audio(model_paths,**args)
+                    return vocals, instrumentals, input_audio
         except Exception as e:
             status.error(e)
             status.update(state="error")
@@ -38,23 +51,35 @@ def load_model(_state):
 def convert_vocals(_state,input_audio,**kwargs):
     with st.status(f"converting vocals... {_state.model_name} - {kwargs}") as status:
         try:
-            models=load_model(_state)
-            _state.convert_params = ObjectNamespace(**kwargs)
-            return vc_single(input_audio=input_audio,**models,**kwargs)
+            # models=load_model(_state)
+            # _state.convert_params = ObjectNamespace(**kwargs)
+            # return vc_single(input_audio=input_audio,**models,**kwargs)
+            audio_data = audio2bytes(*input_audio)
+            body = dict(name=_state.model_name,audio_data=audio_data,**kwargs)
+            
+            with requests.post(f"{INFERENCE_URL}/rvc",json=body) as req:
+                if req.status_code==200:
+                    audio = bytes2audio(req.content)
+                    return audio
         except Exception as e:
+            print(e)
             status.error(e)
             status.update(state="error")
             return None
 
 def get_rvc_models():
-    fnames = get_filenames(root=os.path.join(CWD,"models"),folder="RVC",exts=["pth","pt"])
+    fnames = []
+    with requests.get(f"{INFERENCE_URL}/rvc") as req:
+        if req.status_code==200:
+            fnames = req.json()
+            
     return fnames
 
 def init_inference_state():
     return ObjectNamespace(
         rvc_models=None,
         device=get_optimal_torch_device(),
-        format="mp3",
+        format="flac",
         models=get_rvc_models(),
         model_name=None,
         
@@ -97,7 +122,7 @@ def one_click_convert(state):
         )
     
     params = dict(state.convert_params)
-    params.update(resample_sr=state.input_instrumental[1])
+    params.update(resample_sr=int(state.input_instrumental[1]))
     changed_vocals = convert_vocals(
         state,
         state.input_vocals,
@@ -241,7 +266,7 @@ if __name__=="__main__":
         if st.button(i18n("inference.convert_vocals"),disabled=not (state.input_vocals and state.model_name)):
             with st.spinner(i18n("inference.convert_vocals")):
                 params = dict(state.convert_params)
-                params.update(resample_sr=state.input_instrumental[1])
+                params.update(resample_sr=int(state.input_instrumental[1]))
 
                 output_vocals = convert_vocals(
                     state,

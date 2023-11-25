@@ -13,6 +13,7 @@ class RVCInferenceParams(BaseModel):
     resample_sr: int=0
     rms_mix_rate: float=.25
     protect: float=0.25
+    filter_radius: int=3
 
 class UVRInferenceParams(BaseModel):
     uvr_models: List[str]

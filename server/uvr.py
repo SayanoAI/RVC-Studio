@@ -27,7 +27,7 @@ def split_vocals(uvr_models: List[str], preprocess_models: List[str], postproces
         input_audio = bytes2audio(audio_data)
         if input_audio:
             tempfile = os.path.join(CACHE_DIR,f"{hashlib.md5(audio_data.encode('utf-8')).hexdigest()}.wav")
-            save_input_audio(tempfile,input_audio,to_int16=True)
+            if not os.path.isfile(tempfile): save_input_audio(tempfile,input_audio,to_int16=True)
             vocals,instrumental,_ = split_audio(
                 model_paths=add_basepath(uvr_models),
                 preprocess_models=add_basepath(preprocess_models),

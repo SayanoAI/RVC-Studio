@@ -26,8 +26,8 @@ def init_inference_state():
         models=get_rvc_models(),
         model_name=None,
         
-        split_vocal_config=initial_vocal_separation_params(),
-        vocal_change_config=initial_voice_conversion_params(),
+        split_vocal_config=initial_vocal_separation_params("playlist"),
+        vocal_change_config=initial_voice_conversion_params("playlist"),
         shuffle=False,
         loop=False,
         volume=1.0,
@@ -35,8 +35,6 @@ def init_inference_state():
     )
 
 def refresh_data(state):
-    # state.split_vocal_config.uvr5_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["vocal","instrument"])
-    # state.split_vocal_config.uvr5_preprocess_models = get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise"])
     state.models = get_rvc_models()
     state.playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
     gc_collect()

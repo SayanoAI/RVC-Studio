@@ -1,8 +1,11 @@
+import html
 import json
 import os
 from pathlib import Path
+import random
 
 import urllib.request
+from server.uvr import list_uvr_denoise_models, list_uvr_models
 from webui.utils import ObjectNamespace
 from typing import Tuple
 import streamlit as st
@@ -52,7 +55,7 @@ def initial_vocal_separation_params(folder=None):
         postprocess_models=[],
         agg=10,
         merge_type="median",
-        model_paths=[],
+        uvr_models=[],
         use_cache=True,
     )
 
@@ -75,19 +78,19 @@ def save_vocal_separation_params(folder,data):
         return f.write(json.dumps(data,indent=2))
         
 def vocal_separation_form(state):
-    uvr5_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["voc","inst"])
-    uvr5_denoise_models=get_filenames(root=os.path.join(CWD,"models"),name_filters=["echo","reverb","noise","kara"])
+    uvr5_models=list_uvr_models()
+    uvr5_denoise_models=list_uvr_denoise_models()
     
     state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),
             options=uvr5_denoise_models,
             format_func=lambda item: os.path.basename(item),
             default=[name for name in state.preprocess_models if name in uvr5_denoise_models])
-    state.model_paths = st.multiselect(
+    state.uvr_models = st.multiselect(
         i18n("inference.model_paths"),
         options=uvr5_models,
         format_func=lambda item: os.path.basename(item),
-        default=[name for name in state.model_paths if name in uvr5_models])
+        default=[name for name in state.uvr_models if name in uvr5_models])
     state.postprocess_models = st.multiselect(
             i18n("inference.postprocess_model"),
             options=uvr5_denoise_models,
@@ -110,7 +113,7 @@ def initial_voice_conversion_params(folder=None):
         f0_autotune=False,
         merge_type="median",
         index_rate=.75,
-        filter_radius=3,
+        # filter_radius=3,
         resample_sr=0,
         rms_mix_rate=.2,
         protect=0.2,
@@ -151,7 +154,7 @@ def voice_conversion_form(state, use_hybrid=True):
                                         options=[0,16000,24000,22050,40000,44100,48000],
                                         value=state.resample_sr)
     state.index_rate=st.slider(i18n("inference.index_rate"),min_value=0.,max_value=1.,step=.05,value=state.index_rate)
-    state.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.filter_radius)
+    # state.filter_radius=st.slider(i18n("inference.filter_radius"),min_value=0,max_value=7,step=1,value=state.filter_radius)
     state.rms_mix_rate=st.slider(i18n("inference.rms_mix_rate"),min_value=0.,max_value=1.,step=.05,value=state.rms_mix_rate)
     state.protect=st.slider(i18n("inference.protect"),min_value=0.,max_value=.5,step=.01,value=state.protect)
     return state
@@ -202,3 +205,48 @@ def file_downloader(params: Tuple[str, str], expected_size=None):
             weights_warning.empty()
         if progress_bar is not None:
             progress_bar.empty()
+
+## Ported from streamlit_tensorboard with modifications
+def st_iframe(url: str, width=None, height=None, scrolling=False):
+    """Embed iframe within a Streamlit app
+    Parameters
+    ----------
+    url: string
+        URL of the server. Defaults to `http://localhost:8188`
+    width: int
+        The width of the frame in CSS pixels. Defaults to container width.
+    height: int
+        The height of the frame in CSS pixels. Defaults to container height.
+    scrolling: bool
+        If True, show a scrollbar when the content is larger than the iframe.
+        Otherwise, do not show a scrollbar. Defaults to False.
+
+    Example
+    -------
+    >>> st_iframe(url="http://localhost:8888", width=1080)
+    """
+
+    frame_id = "swagger-frame-{:08x}".format(random.getrandbits(64))
+    shell = """
+        <iframe id="%HTML_ID%" width="%WIDTH%" height="%HEIGHT%" frameborder="0">
+        </iframe>
+        <script>
+        (function() {
+            const frame = document.getElementById(%JSON_ID%);
+            frame.src = new URL(%URL%, window.location);
+        })();
+        </script>
+    """
+
+    replacements = [
+        ("%HTML_ID%", html.escape(frame_id, quote=True)),
+        ("%JSON_ID%", json.dumps(frame_id)),
+        ("%HEIGHT%", str(height) if height else "100%"),
+        ("%WIDTH%", str(width) if width else "100%"),
+        ("%URL%", json.dumps(url)),
+    ]
+
+    for (k, v) in replacements:
+        shell = shell.replace(k, v)
+
+    return st.components.v1.html(shell, width=width, height=height, scrolling=scrolling)
