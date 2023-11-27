@@ -112,21 +112,6 @@ if __name__=="__main__":
             with ProgressBarContext(to_download,file_downloader,"Downloading models") as pb:
                 st.button("Download All",key="download-all-vits-models",disabled=len(to_download)==0,on_click=pb.run)
 
-        with st.expander("Chat Models"):
-            col1, col2 = st.columns(2)
-            stt_path = os.path.join(STT_MODELS_DIR,stt_checkpoint)
-            is_downloaded = os.path.exists(stt_path)
-            col1.checkbox(os.path.basename(stt_path),value=is_downloaded,disabled=True)
-            if col2.button("Download",disabled=is_downloaded,key=stt_path):
-                with st.spinner(f"Downloading {stt_checkpoint} to {stt_path}"):
-                    models = load_stt_models("speecht5") #hacks the from_pretrained downloader
-                    del models
-                    st.experimental_rerun()
-            generator = [(os.path.join(BASE_MODELS_DIR,"LLM",os.path.basename(link)),link) for link in LLM_MODELS]
-            to_download = render_model_checkboxes(generator)
-            with ProgressBarContext(to_download,file_downloader,"Downloading models") as pb:
-                st.button("Download All",key="download-all-chat-models",disabled=len(to_download)==0,on_click=pb.run)
-
     with audio_tab, SessionStateContext("youtube_downloader") as state:
         
         st.title("Download Audio from Youtube")
