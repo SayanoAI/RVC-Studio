@@ -1,5 +1,5 @@
 from typing import List, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 
 
 class RVCInferenceParams(BaseModel):
@@ -24,3 +24,8 @@ class UVRInferenceParams(BaseModel):
     merge_type: Literal["median","mean"]="median"
     use_cache: bool=True
     format: Literal["mp3","flac","wav"]="flac"
+
+class UVRRVCInferenceParams(BaseModel):
+    uvr_params: UVRInferenceParams
+    rvc_params: RVCInferenceParams
+    audio_data: str

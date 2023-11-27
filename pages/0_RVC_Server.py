@@ -3,7 +3,6 @@ import subprocess
 from time import sleep
 import psutil
 
-import requests
 from webui import MENU_ITEMS, SERVERS, ObjectNamespace, get_cwd
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
@@ -15,18 +14,20 @@ from webui.contexts import ProgressBarContext, SessionStateContext
 
 CWD = get_cwd()
 
-st.write(SERVERS["RVC"])
-st.write(pid_is_active(SERVERS["RVC"]["pid"]))
+def stop_server(pid):
+    if pid_is_active(pid):
+        process = psutil.Process(pid)
+        if process.is_running(): process.kill()
 
 def start_server(host,port):
-    if pid_is_active(None if SERVERS["RVC"] is None else SERVERS["RVC"].get("pid")):
-        pid = SERVERS["RVC"].get("pid")
+    pid = SERVERS["RVC"].get("pid")
+    if pid_is_active(pid):
         process = psutil.Process(pid)
         if process.is_running(): return SERVERS["RVC"]["url"]
     
     base_url = f"http://{host}:{port}"
     cmd = f"python api.py --port={port} --host={host}"
-    p = subprocess.Popen(cmd, cwd=CWD, shell=True)
+    p = subprocess.Popen(cmd, cwd=CWD)
 
     if poll_url(base_url):
         SERVERS["RVC"] = {
@@ -61,7 +62,8 @@ def get_params(model):
 
 if __name__=="__main__":
     with SessionStateContext("rvc-api",initial_state()) as state:
-        is_active = pid_is_active(None if SERVERS["RVC"] is None else SERVERS["RVC"].get("pid"))
+        pid = SERVERS["RVC"].get("pid")
+        is_active = pid_is_active(pid)
 
         with st.form("rvc-api-form"):
             state.remote_bind = st.checkbox("Bind to 0.0.0.0 (Required for docker or remote connections)", value=state.remote_bind)
@@ -77,4 +79,9 @@ if __name__=="__main__":
                 
         active_subprocess_list()
         
-        if is_active: st_iframe(url=f'{SERVERS["RVC"]["url"]}/docs',height=800)
+        if is_active:
+            if st.button("Stop Server",type="primary"):
+                stop_server(pid)
+                st.experimental_rerun()
+
+            st_iframe(url=f'{SERVERS["RVC"]["url"]}/docs',height=800)

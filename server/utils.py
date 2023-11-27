@@ -1,7 +1,9 @@
+import gc
 from io import BytesIO
 import base64
 
 import numpy as np
+import torch
 
 def to_response(item: dict, filter: str=""):
     response = {}
@@ -32,3 +34,9 @@ def audio2bytes(audio: np.array, sr: int):
     except Exception as e:
         print(e)
     return ""
+
+def gc_collect():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    gc.set_threshold(100,10,1)
+    gc.collect()

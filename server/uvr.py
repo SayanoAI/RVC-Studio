@@ -1,6 +1,6 @@
 import hashlib
 import os
-from typing import List
+from typing import Any, List, Union
 from server.utils import bytes2audio
 from uvr5_cli import split_audio
 from webui.audio import save_input_audio
@@ -22,9 +22,9 @@ def list_uvr_denoise_models():
     fnames = get_filenames(root=BASE_MODELS_DIR,name_filters=["echo","reverb","noise","kara"])
     return [os.path.relpath(name,BASE_MODELS_DIR) for name in fnames]
 
-def split_vocals(uvr_models: List[str], preprocess_models: List[str], postprocess_models: List[str], audio_data: str, **kwargs):
+def split_vocals(uvr_models: List[str], preprocess_models: List[str], postprocess_models: List[str], audio_data: Union[str,Any], **kwargs):
     try:
-        input_audio = bytes2audio(audio_data)
+        input_audio = bytes2audio(audio_data) if type(audio_data)==str else audio_data
         if input_audio:
             tempfile = os.path.join(CACHE_DIR,f"{hashlib.md5(audio_data.encode('utf-8')).hexdigest()}.wav")
             if not os.path.isfile(tempfile): save_input_audio(tempfile,input_audio,to_int16=True)

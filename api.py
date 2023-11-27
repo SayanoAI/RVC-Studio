@@ -3,7 +3,7 @@ import subprocess
 from fastapi import FastAPI
 from server.rvc import STATUS, convert_vocals, list_rvc_models
 from server.types import RVCInferenceParams, UVRInferenceParams
-from server.utils import audio2bytes, to_response
+from server.utils import audio2bytes, gc_collect, to_response
 from server.uvr import list_uvr_denoise_models, list_uvr_models, split_vocals
 from webui.utils import get_optimal_threads
 
@@ -19,9 +19,23 @@ async def get_rvc():
 
 @server.post("/rvc")
 async def rvc_infer(body: RVCInferenceParams):
-    output_audio = convert_vocals(**body.__dict__)
+    gc_collect()
+    output_audio = convert_vocals(**vars(body))
     if output_audio: return audio2bytes(*output_audio)
     return ""
+
+# @server.post("/uvr/rvc")
+# async def uvr_rvc_infer(body: UVRRVCInferenceParams):
+#     gc_collect()
+#     response = {}
+#     result = split_vocals(audio_data=body.audio_data,**body.uvr_params.__dict__)
+#     if result:
+#         vocals, instrumentals = result
+#         output_audio = convert_vocals(audio_data=audio2bytes(*vocals),**body.rvc_params.__dict__)
+#         if output_audio:
+#             response["vocals"] = audio2bytes(*output_audio)
+#             response["instrumentals"] = audio2bytes(*instrumentals)
+#     return response
 
 @server.get("/uvr")
 async def get_uvr():
@@ -37,8 +51,9 @@ async def get_uvr_postprocess():
 
 @server.post("/uvr")
 async def uvr_infer(body: UVRInferenceParams):
+    gc_collect()
     response = {}
-    result = split_vocals(**body.__dict__)
+    result = split_vocals(**vars(body))
     if result:
         vocals, instrumentals = result
         response["vocals"] = audio2bytes(*vocals)
@@ -54,7 +69,7 @@ def main():
     args = parser.parse_args()
 
     cmd=f"python -m uvicorn api:server {'--reload' if args.reload else ''} --workers={args.workers} --port={args.port} --host={args.host}"
-    subprocess.Popen(cmd,shell=False)
+    subprocess.call(cmd)
 
 if __name__ == "__main__":
     main()
