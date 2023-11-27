@@ -1,9 +1,8 @@
 import hashlib
 import os
 from typing import Any, List, Union
-from server.utils import bytes2audio
 from uvr5_cli import split_audio
-from webui.audio import save_input_audio
+from lib.audio import save_input_audio, bytes2audio
 from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR
 from webui import config
 from webui.utils import get_filenames

@@ -39,19 +39,26 @@ class ObjectNamespace(dict):
 
 class PersistedDict:
     def __init__(self,fname,**kwargs):
-        self.fname = fname
-        with shelve.open(fname) as shelf:
-            for k in kwargs:
-                shelf[k] = kwargs[k]
-            print(f"{shelf=}")
+        self.__fname__ = fname
+        if len(kwargs):
+            with shelve.open(fname) as shelf:
+                for k in kwargs:
+                    shelf[k] = kwargs[k]
+
+    def __missing__(self, name: str): return print(f"Attribute {name} is missing")
 
     def __getitem__(self, name: str):
-        with shelve.open(self.fname) as shelf:
+        if name.startswith("__") and name.endswith("__"): return super().__getattribute__(name)
+        with shelve.open(self.__fname__) as shelf:
             return shelf.get(name,None)
         
     def __setitem__(self, name: str, value):
-        with shelve.open(self.fname) as shelf:
+        with shelve.open(self.__fname__) as shelf:
             shelf[name] = value
+
+    def get(self, name: str, value): return self.__getitem__(name) or value
+
+    def set(self, name: str, value): return self.__setitem__(name, value)
     
 @lru_cache
 def load_config():
@@ -64,10 +71,12 @@ def get_cwd():
         sys.path.append(CWD)
     return CWD
 
-@lru_cache(maxsize=None)
+@lru_cache
 def get_servers():
     servers = PersistedDict(os.path.join(get_cwd(),".cache","servers.shelve"))
     return servers
 
 config, i18n = load_config()
 SERVERS = get_servers()
+RVC_INFERENCE_URL = f"{SERVERS['RVC']['url']}/rvc"
+UVR_INFERENCE_URL = f"{SERVERS['RVC']['url']}/uvr"

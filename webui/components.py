@@ -5,15 +5,14 @@ from pathlib import Path
 import random
 
 import urllib.request
-from server.uvr import list_uvr_denoise_models, list_uvr_models
-from webui.utils import ObjectNamespace
+from webui.api import get_uvr_models, get_uvr_postprocess_models, get_uvr_preprocess_models
 from typing import Tuple
 import streamlit as st
 
-from webui import PITCH_EXTRACTION_OPTIONS, get_cwd, i18n
+from webui import PITCH_EXTRACTION_OPTIONS, get_cwd, i18n, ObjectNamespace
 from webui.contexts import ProgressBarContext
 from webui.downloader import save_file, save_file_generator
-from webui.utils import gc_collect, get_filenames, get_index, get_subprocesses
+from webui.utils import gc_collect, get_index, get_subprocesses
 
 CWD = get_cwd()
     
@@ -78,14 +77,15 @@ def save_vocal_separation_params(folder,data):
         return f.write(json.dumps(data,indent=2))
         
 def vocal_separation_form(state):
-    uvr5_models=list_uvr_models()
-    uvr5_denoise_models=list_uvr_denoise_models()
+    uvr5_models=get_uvr_models()
+    uvr5_preprocess_models=get_uvr_preprocess_models()
+    uvr5_postprocess_models=get_uvr_postprocess_models()
     
     state.preprocess_models = st.multiselect(
             i18n("inference.preprocess_model"),
-            options=uvr5_denoise_models,
+            options=uvr5_preprocess_models,
             format_func=lambda item: os.path.basename(item),
-            default=[name for name in state.preprocess_models if name in uvr5_denoise_models])
+            default=[name for name in state.preprocess_models if name in uvr5_preprocess_models])
     state.uvr_models = st.multiselect(
         i18n("inference.model_paths"),
         options=uvr5_models,
@@ -93,9 +93,9 @@ def vocal_separation_form(state):
         default=[name for name in state.uvr_models if name in uvr5_models])
     state.postprocess_models = st.multiselect(
             i18n("inference.postprocess_model"),
-            options=uvr5_denoise_models,
+            options=uvr5_postprocess_models,
             format_func=lambda item: os.path.basename(item),
-            default=[name for name in state.postprocess_models if name in uvr5_denoise_models])
+            default=[name for name in state.postprocess_models if name in uvr5_postprocess_models])
     col1, col2, col3 = st.columns(3)
     
     state.merge_type = col2.radio(
@@ -135,6 +135,7 @@ def save_voice_conversion_params(folder,data):
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
     with open(config_file,"w") as f:
         return f.write(json.dumps(data,indent=2))
+    
 def voice_conversion_form(state, use_hybrid=True):
     state.f0_up_key = st.slider(i18n("inference.f0_up_key"),min_value=-12,max_value=12,value=state.f0_up_key,step=1)
     if use_hybrid:

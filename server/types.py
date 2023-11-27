@@ -1,5 +1,5 @@
 from typing import List, Literal
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 
 
 class RVCInferenceParams(BaseModel):

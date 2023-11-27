@@ -1,67 +1,40 @@
 import os
-import requests
 import streamlit as st
-from server.utils import audio2bytes, bytes2audio
 
 from webui import DEVICE_OPTIONS, MENU_ITEMS, SERVERS, config, get_cwd, i18n
+from webui.api import convert_vocals, get_rvc_models, split_vocals
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
 from webui.downloader import OUTPUT_DIR, SONG_DIR
 
 from webui.utils import ObjectNamespace
-from vc_infer_pipeline import get_vc
 from webui.contexts import SessionStateContext
-from webui.audio import SUPPORTED_AUDIO, bytes_to_audio, load_input_audio, merge_audio, remix_audio, save_input_audio
+from lib.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
 
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 CWD = get_cwd()
 INFERENCE_URL = SERVERS['RVC']['url']
 
-def split_vocals(audio_path,**args):
-    with st.status("splitting vocals... ") as status:
+def call_uvr(audio_path,**kwargs):
+    with st.status(f"splitting vocals... {kwargs}") as status:
         try:
-            input_audio = load_input_audio(audio_path)
-            audio_data = audio2bytes(*input_audio)
-            body = dict(audio_data=audio_data,**args)
-            with requests.post(f"{INFERENCE_URL}/uvr",json=body) as req:
-                if req.status_code==200:
-                    data = req.json()
-                    vocals = data.get("vocals")
-                    if vocals: vocals = bytes2audio(vocals)
-                    instrumentals = data.get("instrumentals")
-                    if instrumentals: instrumentals = bytes2audio(instrumentals)
-            # vocals,instrumental,input_audio=split_audio(model_paths,**args)
-                    return vocals, instrumentals, input_audio
+            return split_vocals(audio_path,**kwargs)
         except Exception as e:
             status.error(e)
             status.update(state="error")
             return None, None, None
 
-def convert_vocals(_state,input_audio,**kwargs):
-    with st.status(f"converting vocals... {_state.model_name} - {kwargs}") as status:
+def call_rvc(model_name,input_audio,**kwargs):
+    with st.status(f"converting vocals... {model_name} - {kwargs}") as status:
         try:
-            audio_data = audio2bytes(*input_audio)
-            body = dict(name=_state.model_name,audio_data=audio_data,**kwargs)
-            
-            with requests.post(f"{INFERENCE_URL}/rvc",json=body) as req:
-                if req.status_code==200:
-                    audio = bytes2audio(req.content)
-                    return audio
+            return convert_vocals(model_name,input_audio,**kwargs)
         except Exception as e:
             print(e)
             status.error(e)
             status.update(state="error")
             return None
-
-def get_rvc_models():
-    fnames = []
-    with requests.get(f"{INFERENCE_URL}/rvc") as req:
-        if req.status_code==200:
-            fnames = req.json()
-            
-    return fnames
 
 def init_inference_state():
     return ObjectNamespace(
@@ -102,7 +75,7 @@ def get_filename(audio_name,model_name):
     return f"{singer}.{song}"
 
 def one_click_convert(state):
-    state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
+    state.input_vocals, state.input_instrumental, state.input_audio = call_uvr(
         audio_path=state.input_audio_name,
         # device=state.device,
         format=state.format,
@@ -111,8 +84,8 @@ def one_click_convert(state):
     
     params = dict(state.convert_params)
     params.update(resample_sr=int(state.input_instrumental[1]))
-    changed_vocals = convert_vocals(
-        state,
+    changed_vocals = call_rvc(
+        state.model_name,
         state.input_vocals,
         **(params)
     )
@@ -209,7 +182,7 @@ if __name__=="__main__":
             state = render_vocal_separation_form(state)
 
         if st.button(i18n("inference.split_vocals"),disabled=not (state.input_audio_name and len(state.uvr5_params.model_paths))):
-            state.input_vocals, state.input_instrumental, state.input_audio = split_vocals(
+            state.input_vocals, state.input_instrumental, state.input_audio = call_uvr(
                 audio_path=state.input_audio_name,
                 device=state.device,
                 format=state.format,
@@ -256,8 +229,8 @@ if __name__=="__main__":
                 params = dict(state.convert_params)
                 params.update(resample_sr=int(state.input_instrumental[1]))
 
-                output_vocals = convert_vocals(
-                    state,
+                output_vocals = call_rvc(
+                    state.model_name,
                     state.input_vocals,
                     **params
                     )

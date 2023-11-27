@@ -1,9 +1,9 @@
 import argparse
-import os, sys, torch, warnings
+import os, torch, warnings
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
 from webui import get_cwd
-from webui.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
+from lib.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
 from webui.downloader import BASE_CACHE_DIR
 from webui.utils import gc_collect, get_optimal_threads
 

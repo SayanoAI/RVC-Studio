@@ -11,7 +11,7 @@ from lib.uvr5_pack.constants import MDX_NET_FREQ_CUT
 from lib.uvr5_pack.vr_network.model_param_init import ModelParameters
 from lib.uvr5_pack.vr_network.nets_new import CascadedNet
 from lib.uvr5_pack.vr_network.nets import CascadedASPPNet
-from webui.audio import remix_audio
+from lib.audio import remix_audio
 import librosa
 from lib.uvr5_pack import spec_utils
 class UVR5Base:

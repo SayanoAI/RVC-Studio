@@ -1,4 +1,3 @@
-import os
 import subprocess
 from time import sleep
 import psutil
@@ -6,9 +5,8 @@ import psutil
 from webui import MENU_ITEMS, SERVERS, ObjectNamespace, get_cwd
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
-from webui.chat import load_model_data
 
-from webui.utils import get_filenames, pid_is_active, poll_url
+from webui.utils import pid_is_active, poll_url
 from webui.components import active_subprocess_list, st_iframe
 from webui.contexts import ProgressBarContext, SessionStateContext
 
@@ -37,28 +35,12 @@ def start_server(host,port):
     
     return base_url
 
-def get_model_list():
-    models_list =  [os.path.relpath(path,CWD) for path in get_filenames(root=os.path.join(CWD,"models"),folder="LLM",exts=["bin","gguf"])]
-    return models_list
-
-def render_model_params_form(state):
-    CONTEXTSIZE_OPTIONS = [256,512,1024,2048,3072,4096,6144,8192,12288,16384,24576,32768,65536]
-    state.n_ctx = st.select_slider("Max Context Length", options=CONTEXTSIZE_OPTIONS, value=state.n_ctx)
-    state.n_gpu_layers = st.slider("GPU Layers", min_value=0, max_value=64, step=4, value=state.n_gpu_layers)
-    
-    return state
-
 def initial_state():
     return ObjectNamespace(
         remote_bind=False,
         host="localhost",
         port=5555
     )
-
-@st.cache_data
-def get_params(model):
-    data = load_model_data(model)
-    return data["params"]
 
 if __name__=="__main__":
     with SessionStateContext("rvc-api",initial_state()) as state:

@@ -10,7 +10,7 @@ from lib.model_utils import load_hubert, change_rms
 
 from pitch_extraction import FeatureExtractor
 
-from webui.audio import load_input_audio, remix_audio
+from lib.audio import load_input_audio, remix_audio
 from webui import config, get_cwd
 
 CWD = get_cwd()

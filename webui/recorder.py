@@ -5,7 +5,7 @@ import threading
 import torch
 import webrtcvad
 from rvc_for_realtime import RVC
-from webui.audio import remix_audio
+from lib.audio import remix_audio
 
 from webui.utils import ObjectNamespace, gc_collect
 

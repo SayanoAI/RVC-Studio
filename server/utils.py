@@ -1,8 +1,5 @@
 import gc
-from io import BytesIO
-import base64
 
-import numpy as np
 import torch
 
 def to_response(item: dict, filter: str=""):
@@ -16,24 +13,6 @@ def to_response(item: dict, filter: str=""):
             if len(sv)<32: response[k]=v
             else: response[k]=sv[:32]
     return response
-
-def bytes2audio(data: str):
-    try:
-        iofile = BytesIO(base64.b64decode(data))
-        decoded = np.load(iofile)
-        return decoded["audio"], decoded["sr"]+0
-    except Exception as e:
-        print(e)
-    return None
-
-def audio2bytes(audio: np.array, sr: int):
-    try:
-        iofile = BytesIO()
-        np.savez_compressed(iofile,audio=audio,sr=sr)
-        return base64.b64encode(iofile.getvalue()).decode("utf-8")
-    except Exception as e:
-        print(e)
-    return ""
 
 def gc_collect():
     if torch.cuda.is_available():

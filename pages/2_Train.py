@@ -12,9 +12,7 @@ from webui.components import active_subprocess_list, file_uploader_form
 from webui.downloader import BASE_MODELS_DIR, DATASETS_DIR
 from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
 
-from webui.audio import load_input_audio, save_input_audio
-
-
+from lib.audio import load_input_audio, save_input_audio
 
 from webui.utils import ObjectNamespace
 import subprocess

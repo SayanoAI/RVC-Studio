@@ -5,10 +5,9 @@ import threading
 from typing import Iterable
 
 import numpy as np
-from uvr5_cli import split_audio
 import asyncio
-from vc_infer_pipeline import get_vc, vc_single
-from webui.audio import load_input_audio, save_input_audio, merge_audio
+from lib.audio import load_input_audio, save_input_audio, merge_audio
+from webui.api import convert_vocals, split_vocals
 from webui.downloader import BASE_CACHE_DIR
 import pyaudio
 
@@ -16,7 +15,7 @@ from webui.utils import gc_collect
 
 def convert_song(
     audio_path, # song name
-    rvc_models, # RVC model
+    model_name, # RVC model
     # uvr5_name=[], # UVR5 models
     # preprocess_model=None, # reverb removal model
     # device="cuda",
@@ -38,21 +37,21 @@ def convert_song(
 
     **kwargs
 ):
-    cache_dir = os.path.join(BASE_CACHE_DIR,"playlist",rvc_models["model_name"])
+    cache_dir = os.path.join(BASE_CACHE_DIR,"playlist",model_name)
     os.makedirs(cache_dir,exist_ok=True)
     song_path = os.path.join(cache_dir,os.path.basename(audio_path).split(".")[0]+".mp3")
     if os.path.isfile(song_path):
         return load_input_audio(song_path)
     
     print(f"unused args: {kwargs}")
-    input_vocals, input_instrumental, input_audio = split_audio(
+    input_vocals, input_instrumental, input_audio = split_vocals(
         audio_path=audio_path,
         **split_audio_params
         )
-    changed_vocals = vc_single(
+    changed_vocals = convert_vocals(
+        model_name=model_name,
         input_audio=input_vocals,
         **vc_single_params,
-        **rvc_models
     )
 
     mixed_audio = merge_audio(changed_vocals,input_instrumental,sr=input_audio[1])
@@ -116,11 +115,6 @@ class PlaylistPlayer:
         # update arguments
         self.args.update(args)
 
-    def load_model(self):
-        if self.rvc_model is None:
-            self.rvc_model = get_vc(self.model_name,config=self.config,device=self.args["device"])
-        return self.rvc_model
-
     async def play_song(self):
         # initialize portaudio
         p = pyaudio.PyAudio()
@@ -166,7 +160,6 @@ class PlaylistPlayer:
         # convert the songs in the playlist and put them in the queue
         while not self.stopped and self.index < len(self.playlist):
             with self.lock:
-                rvc_models = self.load_model()
 
                 if not self.queue.full():
                     # get the next song filename from the playlist
@@ -174,7 +167,7 @@ class PlaylistPlayer:
 
                     try:
                         # call the convert_song function on it (replace with your own function)
-                        input_audio = convert_song(song,rvc_models,use_cache=self.use_cache,**self.args)
+                        input_audio = convert_song(song,self.model_name,use_cache=self.use_cache,**self.args)
                         # put the song data and sample rate in the queue
                         self.queue.put((song, input_audio))
                     except Exception as e:

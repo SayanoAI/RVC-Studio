@@ -1,11 +1,9 @@
-from functools import lru_cache
 import hashlib
 import json
 import os
 from typing import Any, Union
-from server.utils import bytes2audio
 from vc_infer_pipeline import get_vc, vc_single
-from webui.audio import load_input_audio, save_input_audio
+from lib.audio import load_input_audio, save_input_audio, bytes2audio
 from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR
 from webui import config
 from server import STATUS

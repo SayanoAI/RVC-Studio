@@ -1,9 +1,10 @@
 import argparse
 import subprocess
 from fastapi import FastAPI
+from lib.audio import audio2bytes
 from server.rvc import STATUS, convert_vocals, list_rvc_models
 from server.types import RVCInferenceParams, UVRInferenceParams
-from server.utils import audio2bytes, gc_collect, to_response
+from server.utils import gc_collect, to_response
 from server.uvr import list_uvr_denoise_models, list_uvr_models, split_vocals
 from webui.utils import get_optimal_threads
 

@@ -1,21 +1,21 @@
 import os
-import sys
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from webui import DEVICE_OPTIONS, MENU_ITEMS, get_cwd, i18n, config
+from webui.api import get_rvc_models
 from webui.downloader import SONG_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
-from webui.components import active_subprocess_list, file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, vocal_separation_form, voice_conversion_form
-from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device, get_rvc_models
+from webui.components import active_subprocess_list, file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
+from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 
 from webui.player import PlaylistPlayer
-from webui.utils import ObjectNamespace
+from webui import ObjectNamespace
 from webui.contexts import SessionStateContext
-from webui.audio import SUPPORTED_AUDIO
+from lib.audio import SUPPORTED_AUDIO
 
 CWD = get_cwd()
 
@@ -47,6 +47,7 @@ def render_vocal_separation_form(state):
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.split_vocal_config = split_vocal_config
             update_player_args(split_audio_params=(state.split_vocal_config))
+            save_vocal_separation_params("playlist",state.split_vocal_config)
     return state
 
 def render_vocal_conversion_form(state):
@@ -56,6 +57,7 @@ def render_vocal_conversion_form(state):
         if st.form_submit_button(i18n("inference.save.button"),type="primary"):
             state.vocal_change_config = vocal_change_config
             update_player_args(vc_single_params=(state.vocal_change_config))
+            save_voice_conversion_params("playlist",state.vocal_change_config)
     return state
 
 def set_volume(state):
@@ -113,7 +115,7 @@ if __name__=="__main__":
             st.experimental_rerun()
 
         if col2.button("Play" if state.player is None else ("Resume" if state.player.paused else "Pause"), type="primary",use_container_width=True,
-                    disabled=not (state.split_vocal_config.model_paths and state.model_name)):
+                    disabled=not (state.split_vocal_config.uvr_models and state.model_name)):
             if state.player is None:
                 state.player = PlaylistPlayer(state.playlist,
                                               shuffle=state.shuffle,
@@ -141,7 +143,7 @@ if __name__=="__main__":
             gc_collect()
             st.experimental_rerun()
             
-        with st.expander("Settings", expanded=not (state.player and len(state.split_vocal_config.model_paths))):
+        with st.expander("Settings", expanded=not (state.player and len(state.split_vocal_config.uvr_models))):
             vs_tab, vc_tab = st.tabs(["Split Vocal", "Vocal Change"])
 
             with vs_tab:

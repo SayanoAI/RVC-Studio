@@ -7,7 +7,7 @@ from lib.infer_pack.text.cleaners import english_cleaners
 from lib.slicer2 import Slicer
 from webui import get_cwd
 
-from webui.audio import MAX_INT16, load_input_audio, remix_audio
+from lib.audio import MAX_INT16, load_input_audio, remix_audio
 from webui.downloader import BASE_CACHE_DIR, download_file
 
 CWD = get_cwd()

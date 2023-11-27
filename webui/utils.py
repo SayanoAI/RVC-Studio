@@ -39,10 +39,6 @@ def get_filenames(root=CWD,folder="**",exts=["*"],name_filters=[""]):
         fnames.extend(glob.glob(f"{root}/{folder}/*.{ext}",recursive=True))
     return sorted([ele for ele in fnames if any([nf.lower() in ele.lower() for nf in name_filters])])
 
-def get_rvc_models():
-    fnames = get_filenames(root=os.path.join(CWD,"models"),folder="RVC",exts=["pth","pt"])
-    return fnames
-
 def get_index(arr,value):
     if arr is not None:
         if value in arr: return arr.index(value)

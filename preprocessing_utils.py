@@ -1,4 +1,3 @@
-from multiprocessing.pool import ThreadPool
 import sys, os, multiprocessing
 from threading import Thread
 from scipy import signal
@@ -9,7 +8,7 @@ import librosa, traceback
 from scipy.io import wavfile
 from lib.audio import load_audio
 from pitch_extraction import FeatureExtractor
-from webui.audio import load_input_audio
+from lib.audio import load_input_audio
 from webui.utils import gc_collect
 from webui import config
 import torch
