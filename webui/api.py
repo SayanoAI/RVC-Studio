@@ -5,30 +5,42 @@ from webui import RVC_INFERENCE_URL, UVR_INFERENCE_URL
 
 def get_rvc_models():
     fnames = []
-    with requests.get(RVC_INFERENCE_URL) as req:
-        if req.status_code==200:
-            fnames = req.json()
+    try:
+        with requests.get(RVC_INFERENCE_URL) as req:
+            if req.status_code==200:
+                fnames = req.json()
+    except Exception as e:
+        print(e)
     return fnames
 
 def get_uvr_models():
     fnames = []
-    with requests.get(UVR_INFERENCE_URL) as req:
-        if req.status_code==200:
-            fnames = req.json()
+    try:
+        with requests.get(UVR_INFERENCE_URL) as req:
+            if req.status_code==200:
+                fnames = req.json()
+    except Exception as e:
+        print(e)
     return fnames
 
 def get_uvr_preprocess_models():
     fnames = []
-    with requests.get(f"{UVR_INFERENCE_URL}/preprocess") as req:
-        if req.status_code==200:
-            fnames = req.json()
+    try:
+        with requests.get(f"{UVR_INFERENCE_URL}/preprocess") as req:
+            if req.status_code==200:
+                fnames = req.json()
+    except Exception as e:
+        print(e)
     return fnames
 
 def get_uvr_postprocess_models():
     fnames = []
-    with requests.get(f"{UVR_INFERENCE_URL}/postprocess") as req:
-        if req.status_code==200:
-            fnames = req.json()
+    try:
+        with requests.get(f"{UVR_INFERENCE_URL}/postprocess") as req:
+            if req.status_code==200:
+                fnames = req.json()
+    except Exception as e:
+        print(e)
     return fnames
 
 def split_vocals(audio_path,**args):
