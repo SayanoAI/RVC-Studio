@@ -40,7 +40,7 @@ def init_inference_state():
         models=get_rvc_models(),
         model_name=None,
         
-        audio_files=get_filenames(exts=SUPPORTED_AUDIO,folder="songs"),
+        audio_files=get_filenames(exts=SUPPORTED_AUDIO,root=SONG_DIR),
         input_audio_name=None,
         input_audio=None,
         input_vocals=None,
@@ -55,7 +55,7 @@ def init_inference_state():
 
 def refresh_data(state):
     state.models = get_rvc_models()
-    state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
+    state.audio_files = get_filenames(exts=SUPPORTED_AUDIO,root=SONG_DIR)
     gc_collect()
     return state
     

@@ -2,6 +2,7 @@ import base64
 import io
 import os
 from typing import Union
+import zlib
 import numpy as np
 import librosa
 import soundfile as sf
@@ -64,7 +65,7 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
 
 def load_input_audio(fname,sr=None,**kwargs):
     sound = librosa.load(fname,sr=sr,**kwargs)
-    print(f"loading sound {fname} {sound[0].shape} {sound[1]}")
+    print(f"loading sound {fname} {sound[0].shape} {sound[1]} {sound[0].dtype}")
     return sound
    
 def save_input_audio(fname,input_audio,sr=None,to_int16=False):
@@ -98,20 +99,65 @@ def bytes_to_audio(data: Union[io.BytesIO,bytes],**kwargs):
             audio = audio.T # transpose to channels-first
     return audio, sr
 
+# def bytes2audio(data: str):
+#     try:
+#         iofile = io.BytesIO(base64.b64decode(data))
+#         decoded = np.load(iofile)
+#         return decoded["audio"], decoded["sr"]+0
+#     except Exception as e:
+#         print(e)
+#     return None
+
+# def audio2bytes(audio: np.array, sr: int):
+#     try:
+#         iofile = io.BytesIO()
+#         np.savez_compressed(iofile,audio=audio,sr=sr)
+#         return base64.b64encode(iofile.getvalue()).decode("utf-8")
+#     except Exception as e:
+#         print(e)
+#     return ""
+
 def bytes2audio(data: str):
     try:
-        iofile = io.BytesIO(base64.b64decode(data))
-        decoded = np.load(iofile)
-        return decoded["audio"], decoded["sr"]+0
+        # Split the suffixed data by the colon
+        dtype,data,shape,sr = data.split(":")
+
+        # Get the data, the dtype, and the shape from the split data
+        shape = tuple(map(int, shape.split(",")))
+        sr=int(sr)
+
+        # Decode the data using base64
+        decoded_data = base64.b64decode(data)
+
+        # Decompress the decoded data using zlib
+        decompressed_data = zlib.decompress(decoded_data)
+
+        # Convert the decompressed data to a numpy array with the given dtype
+        arr = np.frombuffer(decompressed_data, dtype=dtype)
+
+        # Reshape the array to the original shape
+        arr = arr.reshape(shape)
+        return arr, sr
     except Exception as e:
         print(e)
     return None
 
 def audio2bytes(audio: np.array, sr: int):
     try:
-        iofile = io.BytesIO()
-        np.savez_compressed(iofile,audio=audio,sr=sr)
-        return base64.b64encode(iofile.getvalue()).decode("utf-8")
+        # Get the dtype, the shape, and the data of the array
+        dtype = audio.dtype.name
+        shape = audio.shape
+        data = audio.tobytes()
+
+        # Compress the data using zlib
+        compressed_data = zlib.compress(data)
+
+        # Encode the compressed data using base64
+        encoded_data = base64.b64encode(compressed_data)
+
+        # Add a suffix with the dtype and the shape to the encoded data
+        suffixed_data = ":".join([dtype,encoded_data.decode(),",".join(map(str, shape)),str(sr)])
+        return suffixed_data
     except Exception as e:
         print(e)
     return ""

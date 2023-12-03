@@ -19,7 +19,7 @@ from lib.audio import SUPPORTED_AUDIO
 def init_inference_state():
     return ObjectNamespace(
         player=None,
-        playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs"),
+        playlist = get_filenames(exts=SUPPORTED_AUDIO,root=SONG_DIR),
         models=get_rvc_models(),
         model_name=None,
         
@@ -33,7 +33,7 @@ def init_inference_state():
 
 def refresh_data(state):
     state.models = get_rvc_models()
-    state.playlist = get_filenames(exts=SUPPORTED_AUDIO,name_filters=[""],folder="songs")
+    state.playlist = get_filenames(exts=SUPPORTED_AUDIO,root=SONG_DIR)
     gc_collect()
     return state
     

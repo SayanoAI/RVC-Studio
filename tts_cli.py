@@ -128,14 +128,14 @@ def __silero__(text, speaker="lj_16khz"):
                         device="cpu")
     return audio[0].cpu().numpy(), 16000
     
-def __vits__(text,speaker=os.path.join(CWD,"models","VITS","pretrained_ljs.pth")):
+def __vits__(text,speaker=os.path.join(BASE_MODELS_DIR,"VITS","pretrained_ljs.pth")):
     from lib.infer_pack.models import SynthesizerTrn
     from lib.infer_pack.text.symbols import symbols
     from lib.infer_pack.text import text_to_sequence
     from lib.infer_pack.commons import intersperse
     from lib import utils
 
-    hps = utils.get_hparams_from_file(os.path.join(CWD,"models","VITS","configs","ljs_base.json"))
+    hps = utils.get_hparams_from_file(os.path.join(BASE_MODELS_DIR,"VITS","configs","ljs_base.json"))
     def get_text(text, hps):
         text_norm = text_to_sequence(text, hps.data.text_cleaners)
         if hps.data.add_blank:

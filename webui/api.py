@@ -66,5 +66,6 @@ def convert_vocals(model_name,input_audio,**kwargs):
     
     with requests.post(RVC_INFERENCE_URL,json=body) as req:
         if req.status_code==200:
-            audio = bytes2audio(req.content)
+            response = req.json()
+            audio = bytes2audio(response["data"])
             return audio

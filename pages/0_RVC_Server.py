@@ -57,7 +57,7 @@ if __name__=="__main__":
             state.url = st.text_input("Server URL", value = f"http://{state.host}:{state.port}")
 
             if st.form_submit_button("Start Server",disabled=is_active):
-                with ProgressBarContext([1]*5,sleep,"Waiting for rvc api to load") as pb:
+                with ProgressBarContext([1],sleep,"Waiting for rvc api to load") as pb:
                     start_server(host=state.host,port=state.port)
                     pb.run()
                     st.experimental_rerun()

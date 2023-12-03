@@ -9,9 +9,9 @@
 
     "inference.split_vocals": "Extract Vocals",
     "inference.split_vocals.expander": "Extract Vocals Options",
-    "inference.preprocess_model": "Choose a preprocessing model (sequential)",
-    "inference.uvr_models": "Choose a vocal extraction model (parallel)",
-    "inference.postprocess_model": "Chose a postprocessing model (sequential)",
+    "inference.preprocess_model": "Choose one or more preprocessing models to run in sequence (optional)",
+    "inference.uvr_models": "Choose one or more vocal extraction models to run in parallel (required)",
+    "inference.postprocess_model": "Choose one or more postprocessing model to run in sequence (optional)",
     "inference.device": "Device",
     "inference.format": "Audio Format",
     "inference.merge_type": "Merge Type",
