@@ -10,7 +10,7 @@ import numpy as np
 import psutil
 import requests
 import torch
-from webui import ObjectNamespace, get_cwd
+from lib import ObjectNamespace, get_cwd
 
 torch.manual_seed(1337)
 CWD = get_cwd()

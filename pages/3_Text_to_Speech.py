@@ -2,21 +2,17 @@ import hashlib
 import os
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, TTS_MODELS, config, get_cwd, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, TTS_MODELS
+from lib import config, ObjectNamespace, i18n, OUTPUT_DIR
 from webui.api import convert_vocals, get_rvc_models
-from webui.downloader import OUTPUT_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import initial_voice_conversion_params, save_voice_conversion_params, voice_conversion_form
-
-from webui import ObjectNamespace
 from tts_cli import generate_speech
 from webui.contexts import SessionStateContext
 from lib.audio import save_input_audio
 
-from webui.utils import gc_collect, get_index, get_optimal_torch_device
-
-CWD = get_cwd()
+from lib.utils import gc_collect, get_index, get_optimal_torch_device
 
 def init_inference_state():
     return ObjectNamespace(

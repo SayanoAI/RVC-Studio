@@ -5,35 +5,31 @@ from time import sleep
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 import streamlit as st
-from webui import MENU_ITEMS, N_THREADS_OPTIONS, PITCH_EXTRACTION_OPTIONS, SR_MAP, config, i18n
+from webui import MENU_ITEMS, N_THREADS_OPTIONS, PITCH_EXTRACTION_OPTIONS, SR_MAP
+from lib import BASE_DIR, config, i18n, BASE_MODELS_DIR, DATASETS_DIR, LOG_DIR
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
 from webui.components import active_subprocess_list, file_uploader_form
-from webui.downloader import BASE_MODELS_DIR, DATASETS_DIR
 from tts_cli import EMBEDDING_CHECKPOINT, TTS_MODELS_DIR
 
 from lib.audio import load_input_audio, save_input_audio
 
-from webui.utils import ObjectNamespace
+from lib.utils import ObjectNamespace
 import subprocess
 import faiss
 import torch
 from preprocessing_utils import extract_features_trainset, preprocess_trainset
 from webui.contexts import ProgressBarContext, SessionStateContext
 
-from webui.utils import get_filenames, get_index
-
-CWD = os.getcwd()
-if CWD not in sys.path:
-    sys.path.append(CWD)
+from lib.utils import get_filenames, get_index
 
 def preprocess_data(exp_dir, sr, trainset_dir, n_threads, version, period=3., overlap=.3):
-    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
+    model_log_dir = os.path.join(LOG_DIR,f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
     return preprocess_trainset(trainset_dir,SR_MAP[sr],n_threads,model_log_dir,period,overlap)
 
 def extract_features(exp_dir, n_threads, version, if_f0, f0method,device, sr):
-    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
+    model_log_dir = os.path.join(LOG_DIR,f"{exp_dir}_{version}_{sr}")
     os.makedirs(model_log_dir, exist_ok=True)
     
     # if if_f0: #pitch extraction
@@ -48,7 +44,7 @@ def extract_features(exp_dir, n_threads, version, if_f0, f0method,device, sr):
     return extract_features_trainset(model_log_dir,n_p=n_p,f0method=f0method,device=device,if_f0=if_f0,version=version)
 
 def create_filelist(exp_dir,if_f0,spk_id,version,sr):
-    model_log_dir = os.path.join(CWD,"logs",f"{exp_dir}_{version}_{sr}")
+    model_log_dir = os.path.join(LOG_DIR,f"{exp_dir}_{version}_{sr}")
 
     print(i18n("training.create_filelist"))
     gt_wavs_dir = os.sep.join([model_log_dir,"0_gt_wavs"])
@@ -100,16 +96,16 @@ def create_filelist(exp_dir,if_f0,spk_id,version,sr):
     fea_dim = 256 if version == "v1" else 768
     if if_f0:
         data = "|".join([
-            os.path.join(CWD,"logs","mute","0_gt_wavs",f"mute{sr}.wav"),
-            os.path.join(CWD,"logs","mute",f"3_feature{fea_dim}","mute.npy"),
-            os.path.join(CWD,"logs","mute","2a_f0","mute.wav.npy"),
-            os.path.join(CWD,"logs","mute","2b-f0nsf","mute.wav.npy"),
+            os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
+            os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
+            os.path.join(LOG_DIR,"mute","2a_f0","mute.wav.npy"),
+            os.path.join(LOG_DIR,"mute","2b-f0nsf","mute.wav.npy"),
             str(spk_id)
         ])
     else:
         data = "|".join([
-            os.path.join(CWD,"logs","mute","0_gt_wavs",f"mute{sr}.wav"),
-            os.path.join(CWD,"logs","mute",f"3_feature{fea_dim}","mute.npy"),
+            os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
+            os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
             str(spk_id)
         ])
     opt.append(data)
@@ -146,7 +142,7 @@ def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save
             "-v", version
         ])
         
-        subprocess.Popen(cmd, shell=True, cwd=CWD, stderr=subprocess.PIPE)
+        subprocess.Popen(cmd, shell=True, cwd=BASE_DIR, stderr=subprocess.PIPE)
 
         return f"Successfully started training with {cmd}. View your process under Active Processes."
     except Exception as e:
@@ -154,7 +150,7 @@ def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save
 
 def train_index(exp_dir,version,sr):
     try:
-        model_log_dir = f"{CWD}/logs/{exp_dir}_{version}_{sr}"
+        model_log_dir = os.path.join(LOG_DIR,f"{exp_dir}_{version}_{sr}")
         feature_dir = os.sep.join([model_log_dir,"3_feature256" if version == "v1" else "3_feature768"])
         os.makedirs(feature_dir, exist_ok=True)
 
@@ -226,10 +222,10 @@ def one_click_train(): #TODO not implemented yet
 def train_speaker_embedding(exp_dir: str, model_log_dir: str):
     try:
         # get dataset
-        training_file = os.path.join(CWD,"logs",model_log_dir,"embedding.wav")
+        training_file = os.path.join(LOG_DIR,model_log_dir,"embedding.wav")
         if os.path.isfile(training_file): audio = load_input_audio(training_file,sr=16000,mono=True)[0]
         else:
-            dataset_dir = os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")
+            dataset_dir = os.path.join(LOG_DIR,model_log_dir,"1_16k_wavs")
             audio = np.concatenate([
                 load_input_audio(os.path.join(dataset_dir,fname),sr=16000,mono=True)[0]
                 for fname in os.listdir(dataset_dir)],axis=None)
@@ -313,7 +309,7 @@ if __name__=="__main__":
             col1,col2 = st.columns(2)
             state.if_f0=col1.checkbox(i18n("training.if_f0"),value=state.if_f0)
             state.f0method=col2.multiselect(i18n("training.f0method"),options=PITCH_EXTRACTION_OPTIONS,default=state.f0method)
-            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"1_16k_wavs")))
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(LOG_DIR,model_log_dir,"1_16k_wavs")))
             if st.form_submit_button(i18n("training.extract_features.submit"),disabled=disabled):
                 st.toast(extract_features(state.exp_dir, state.n_threads, state.version, state.if_f0, state.f0method, state.device,state.sr))
             
@@ -331,7 +327,7 @@ if __name__=="__main__":
             state.if_cache_gpu=st.checkbox(i18n("training.if_cache_gpu"),value=state.if_cache_gpu)
             state.if_save_every_weights=st.checkbox(i18n("training.if_save_every_weights"),value=state.if_save_every_weights)
             
-            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature768")))
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(LOG_DIR,model_log_dir,"3_feature768")))
             if st.form_submit_button(i18n("training.train_model.submit"),disabled=disabled):
                 if not (state.pretrained_D and state.pretrained_G): st.toast("Please download the pretrained models!")
                 else: 
@@ -343,12 +339,12 @@ if __name__=="__main__":
                         pb.run()
                         st.experimental_rerun()
 
-        disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
+        disabled = not (state.exp_dir and os.path.exists(os.path.join(LOG_DIR,model_log_dir,"3_feature256" if state.version == "v1" else "3_feature768")))
         if state.exp_dir and state.version and st.button(i18n("training.train_index.submit"),disabled=disabled):
             st.toast(train_index(state.exp_dir,state.version,state.sr))
 
         if state.exp_dir:
-            disabled = not (state.exp_dir and os.path.exists(os.path.join(CWD,"logs",model_log_dir)))
+            disabled = not (state.exp_dir and os.path.exists(os.path.join(LOG_DIR,model_log_dir)))
             if st.button(i18n("training.train_speaker.submit"),disabled=disabled):
                 st.toast(train_speaker_embedding(state.exp_dir,model_log_dir))
             else: st.markdown(f"*Only required for speecht5 TTS*")

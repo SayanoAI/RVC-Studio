@@ -2,12 +2,10 @@ import argparse
 import os, torch, warnings
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
-from webui import get_cwd
+from lib import BASE_CACHE_DIR
 from lib.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
-from webui.downloader import BASE_CACHE_DIR
-from webui.utils import gc_collect, get_optimal_threads
+from lib.utils import gc_collect, get_optimal_threads
 
-CWD = get_cwd()
 CACHED_SONGS_DIR = os.path.join(BASE_CACHE_DIR,"songs")
 
 warnings.filterwarnings("ignore")
@@ -86,7 +84,7 @@ def __run_inference_worker(arg):
 
     return vocals, instrumental, input_audio
     
-def split_audio(model_paths,audio_path,preprocess_models=[],postprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean",format="mp3",**kwargs):
+def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[],device="cuda",agg=10,use_cache=False,merge_type="mean",format="mp3",**kwargs):
     print(f"unused kwargs={kwargs}")
     merge_func = np.nanmedian if merge_type=="median" else np.nanmean
     num_threads = max(get_optimal_threads(-1),1)
@@ -124,7 +122,7 @@ def split_audio(model_paths,audio_path,preprocess_models=[],postprocess_models=[
     wav_instrument = []
     wav_vocals = []
 
-    for model_path in model_paths:
+    for model_path in uvr_models:
         args = (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads,format)
         vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])
@@ -134,7 +132,7 @@ def split_audio(model_paths,audio_path,preprocess_models=[],postprocess_models=[
 
     # postprocess vocals to reduce reverb
     if len(postprocess_models):
-        vocals_name = get_filename("vocals",*[os.path.basename(name).split(".")[0] for name in model_paths],agg=agg) + f".{format}"
+        vocals_name = get_filename("vocals",*[os.path.basename(name).split(".")[0] for name in uvr_models],agg=agg) + f".{format}"
         vocals_file = os.path.join(cache_dir,"postprocessing",vocals_name)
         if not os.path.isfile(vocals_file): save_input_audio(vocals_file,(wav_vocals,vocals[-1]),to_int16=True)
         print("postprocessing...")        

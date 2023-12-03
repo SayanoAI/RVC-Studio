@@ -2,12 +2,11 @@ import hashlib
 import json
 import os
 from typing import Any, Union
+from lib.utils import get_filenames
 from vc_infer_pipeline import get_vc, vc_single
 from lib.audio import load_input_audio, save_input_audio, bytes2audio
-from webui.downloader import BASE_CACHE_DIR, BASE_MODELS_DIR
-from webui import config
 from server import STATUS
-from webui.utils import get_filenames
+from lib import BASE_CACHE_DIR, BASE_MODELS_DIR, config
 
 CACHE_DIR = os.path.join(BASE_CACHE_DIR,"temp","rvc")
 os.makedirs(CACHE_DIR,exist_ok=True)

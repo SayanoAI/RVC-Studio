@@ -6,14 +6,14 @@ import streamlit as st
 
 from vc_infer_pipeline import get_vc
 
-from webui import DEVICE_OPTIONS, get_cwd, i18n, config
+from webui import DEVICE_OPTIONS
+from lib import i18n, config
+from webui.api import get_rvc_models
 from webui.components import initial_voice_conversion_params, save_voice_conversion_params, voice_conversion_form
 from webui.contexts import SessionStateContext
 from webui.recorder import RecorderPlayback
-from webui.utils import ObjectNamespace, gc_collect, get_filenames, get_index, get_optimal_torch_device
+from lib.utils import ObjectNamespace, gc_collect, get_index, get_optimal_torch_device
 from pyaudio import PyAudio
-
-CWD = get_cwd()
 
 def render_rvc_options_form(state):
     state.voice_model = st.selectbox(
@@ -45,11 +45,6 @@ def render_recorder_settings(state):
             min_value=0.,max_value=0.5, step=0.01,
             value=state.recorder.silence_threshold
         )
-        
-
-def get_voice_list():
-    models_list = [os.path.relpath(path,CWD) for path in get_filenames(root=os.path.join(CWD,"models"),folder="RVC",exts=["pth"])]
-    return models_list
 
 @st.cache_data
 def get_sound_devices(device_type: str):
@@ -65,7 +60,7 @@ def init_state():
     return ObjectNamespace(
         rvc_options = initial_voice_conversion_params("realtime-rvc"),
         voice_model = "",
-        voice_model_list = get_voice_list(),
+        voice_model_list = get_rvc_models(),
         device=get_optimal_torch_device(),
         sample_rate=16000,
         input_device_index=None,

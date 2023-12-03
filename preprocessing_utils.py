@@ -9,8 +9,8 @@ from scipy.io import wavfile
 from lib.audio import load_audio
 from pitch_extraction import FeatureExtractor
 from lib.audio import load_input_audio
-from webui.utils import gc_collect
-from webui import config
+from lib.utils import gc_collect
+from lib import config
 import torch
 
 class Preprocess:

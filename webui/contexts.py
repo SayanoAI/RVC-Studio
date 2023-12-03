@@ -3,7 +3,7 @@ from multiprocessing.pool import ThreadPool
 from types import FunctionType
 from typing import List
 import streamlit as st
-from webui.utils import ObjectNamespace, gc_collect
+from lib.utils import ObjectNamespace, gc_collect
 
 class SessionStateContext:
     def __init__(self, name: str, initial_state={}):

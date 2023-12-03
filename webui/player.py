@@ -8,10 +8,10 @@ import numpy as np
 import asyncio
 from lib.audio import load_input_audio, save_input_audio, merge_audio
 from webui.api import convert_vocals, split_vocals
-from webui.downloader import BASE_CACHE_DIR
+from lib import BASE_CACHE_DIR
 import pyaudio
 
-from webui.utils import gc_collect
+from lib.utils import gc_collect
 
 def convert_song(
     audio_path, # song name

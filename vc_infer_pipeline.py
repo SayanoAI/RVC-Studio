@@ -11,11 +11,9 @@ from lib.model_utils import load_hubert, change_rms
 from pitch_extraction import FeatureExtractor
 
 from lib.audio import load_input_audio, remix_audio
-from webui import config, get_cwd
+from lib import config, BASE_MODELS_DIR
 
-CWD = get_cwd()
-
-from webui.utils import gc_collect, get_filenames
+from lib.utils import gc_collect, get_filenames
 
 # torchcrepe = lazyload("torchcrepe")  # Fork Feature. Crepe algo for training and preprocess
 # torch = lazyload("torch")
@@ -239,7 +237,7 @@ def get_vc(model_path,config,device=None):
     vc = VC(tgt_sr, config)
     hubert_model = load_hubert(config)
     model_name = os.path.basename(model_path).split(".")[0]
-    index_files = get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".index",exts=["index"],name_filters=[model_name])
+    index_files = get_filenames(root=os.path.join(BASE_MODELS_DIR,"RVC"),folder=".index",exts=["index"],name_filters=[model_name])
 
     try: #preload file_index
         if len(index_files)==0:

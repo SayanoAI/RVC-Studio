@@ -1,7 +1,3 @@
-import gc
-
-import torch
-
 def to_response(item: dict, filter: str=""):
     response = {}
     for (k,v) in item.items():
@@ -13,9 +9,3 @@ def to_response(item: dict, filter: str=""):
             if len(sv)<32: response[k]=v
             else: response[k]=sv[:32]
     return response
-
-def gc_collect():
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    gc.set_threshold(100,10,1)
-    gc.collect()

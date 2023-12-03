@@ -2,9 +2,7 @@ from collections import OrderedDict
 import os
 import traceback
 
-from webui import get_cwd
-
-CWD = get_cwd()
+from lib import BASE_MODELS_DIR
 
 from lib.train import utils
 import datetime
@@ -53,7 +51,7 @@ from lib.train.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 global_step = 0
 least_loss = 40
 
-def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path=os.path.join(CWD,"models","RVC")):
+def save_checkpoint(ckpt, sr, if_f0, name, epoch, version, hps, model_path=os.path.join(BASE_MODELS_DIR,"RVC")):
     try:
         opt = OrderedDict()
         opt["weight"] = {}

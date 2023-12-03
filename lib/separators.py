@@ -2,7 +2,7 @@ import hashlib
 import json
 from multiprocessing.pool import ThreadPool
 import os
-from webui.utils import ObjectNamespace
+from lib.utils import ObjectNamespace
 import numpy as np
 import torch
 from tqdm import tqdm

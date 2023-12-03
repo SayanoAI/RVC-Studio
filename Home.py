@@ -5,19 +5,18 @@ from pathlib import Path
 import platform
 from pytube import YouTube
 import streamlit as st
-from webui import MENU_ITEMS, get_cwd, i18n
+from webui import MENU_ITEMS
+from lib import i18n
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from lib.audio import SUPPORTED_AUDIO
-from webui.utils import get_index
+from lib.utils import get_index
 
 
 from webui.components import file_downloader, file_uploader_form
 
 
 from webui.downloader import BASE_MODELS, BASE_MODELS_DIR, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, SONG_DIR, VITS_MODELS, VR_MODELS, download_link_generator, save_file, slugify_filepath
-
-CWD = get_cwd()
 
 from webui.contexts import ProgressBarContext, SessionStateContext
 

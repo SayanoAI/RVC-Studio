@@ -1,10 +1,10 @@
 import os
 import logging
+from lib import BASE_MODELS_DIR, config
 from lib.model_utils import change_rms, load_hubert
 
 from pitch_extraction import FeatureExtractor
-from webui import get_cwd, config
-from webui.utils import gc_collect, get_filenames
+from lib.utils import gc_collect, get_filenames
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +12,6 @@ import fairseq
 import numpy as np
 import torch
 import torch.nn.functional as F
-
-CWD = get_cwd()
 
 if config.dml == True:
 
@@ -61,7 +59,7 @@ class RVC(FeatureExtractor):
             net_g = net_g.float()
         hubert_model = load_hubert(config)
         model_name = os.path.basename(model_path).split(".")[0]
-        index_files = get_filenames(root=os.path.join(CWD,"models","RVC"),folder=".index",exts=["index"],name_filters=[model_name])
+        index_files = get_filenames(root=os.path.join(BASE_MODELS_DIR,"RVC"),folder=".index",exts=["index"],name_filters=[model_name])
         file_index = index_files.pop() if len(index_files) else ""
 
         self.cpt = cpt

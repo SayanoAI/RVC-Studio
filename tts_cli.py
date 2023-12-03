@@ -5,12 +5,10 @@ import torch
 import os
 from lib.infer_pack.text.cleaners import english_cleaners
 from lib.slicer2 import Slicer
-from webui import get_cwd
 
 from lib.audio import MAX_INT16, load_input_audio, remix_audio
+from lib import BASE_MODELS_DIR
 from webui.downloader import BASE_CACHE_DIR, download_file
-
-CWD = get_cwd()
     
 speecht5_checkpoint = "microsoft/speecht5_tts"
 speecht5_vocoder_checkpoint = "microsoft/speecht5_hifigan"
@@ -20,9 +18,9 @@ bark_voice_presets="v2/en_speaker_0"
 tacotron2_checkpoint = "speechbrain/tts-tacotron2-ljspeech"
 hifigan_checkpoint = "speechbrain/tts-hifigan-ljspeech"
 EMBEDDING_CHECKPOINT = "speechbrain/spkrec-xvect-voxceleb"
-os.makedirs(os.path.join(CWD,"models","TTS","embeddings"),exist_ok=True)
-TTS_MODELS_DIR = os.path.join(CWD,"models","TTS")
-STT_MODELS_DIR = os.path.join(CWD,"models","STT")
+os.makedirs(os.path.join(BASE_MODELS_DIR,"TTS","embeddings"),exist_ok=True)
+TTS_MODELS_DIR = os.path.join(BASE_MODELS_DIR,"TTS")
+STT_MODELS_DIR = os.path.join(BASE_MODELS_DIR,"STT")
 DEFAULT_SPEAKER = os.path.join(TTS_MODELS_DIR,"embeddings","Sayano.npy")
 
 def __speecht5__(text, speaker_embedding=None, device="cpu"):

@@ -9,12 +9,11 @@ from webui.api import get_uvr_models, get_uvr_postprocess_models, get_uvr_prepro
 from typing import Tuple
 import streamlit as st
 
-from webui import PITCH_EXTRACTION_OPTIONS, get_cwd, i18n, ObjectNamespace
+from webui import PITCH_EXTRACTION_OPTIONS
 from webui.contexts import ProgressBarContext
 from webui.downloader import save_file, save_file_generator
-from webui.utils import gc_collect, get_index, get_subprocesses
-
-CWD = get_cwd()
+from lib.utils import gc_collect, get_index, get_subprocesses
+from lib import BASE_DIR, i18n, ObjectNamespace
     
 def __default_mapper(x: Tuple[str,any]):
      return x
@@ -60,7 +59,7 @@ def initial_vocal_separation_params(folder=None):
 
     if folder:
         try:
-            config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
+            config_file = os.path.join(BASE_DIR,"configs",folder,"vocal_separation_params.json")
             os.makedirs(os.path.dirname(config_file),exist_ok=True)
             if os.path.isfile(config_file):
                 with open(config_file,"r") as f:
@@ -71,7 +70,7 @@ def initial_vocal_separation_params(folder=None):
     return params
 
 def save_vocal_separation_params(folder,data):
-    config_file = os.path.join(os.getcwd(),"configs",folder,"vocal_separation_params.json")
+    config_file = os.path.join(BASE_DIR,"configs",folder,"vocal_separation_params.json")
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
     with open(config_file,"w") as f:
         return f.write(json.dumps(data,indent=2))
@@ -87,7 +86,7 @@ def vocal_separation_form(state):
             format_func=lambda item: os.path.basename(item),
             default=[name for name in state.preprocess_models if name in uvr5_preprocess_models])
     state.uvr_models = st.multiselect(
-        i18n("inference.model_paths"),
+        i18n("inference.uvr_models"),
         options=uvr5_models,
         format_func=lambda item: os.path.basename(item),
         default=[name for name in state.uvr_models if name in uvr5_models])
@@ -120,7 +119,7 @@ def initial_voice_conversion_params(folder=None):
         )
     if folder:
         try:
-            config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
+            config_file = os.path.join(BASE_DIR,"configs",folder,"voice_conversion_params.json")
             os.makedirs(os.path.dirname(config_file),exist_ok=True)
             if os.path.isfile(config_file):
                 with open(config_file,"r") as f:
@@ -131,7 +130,7 @@ def initial_voice_conversion_params(folder=None):
     return params
 
 def save_voice_conversion_params(folder,data):
-    config_file = os.path.join(os.getcwd(),"configs",folder,"voice_conversion_params.json")
+    config_file = os.path.join(BASE_DIR,"configs",folder,"voice_conversion_params.json")
     os.makedirs(os.path.dirname(config_file),exist_ok=True)
     with open(config_file,"w") as f:
         return f.write(json.dumps(data,indent=2))

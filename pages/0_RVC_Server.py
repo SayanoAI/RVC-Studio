@@ -2,15 +2,14 @@ import subprocess
 from time import sleep
 import psutil
 
-from webui import MENU_ITEMS, SERVERS, ObjectNamespace, get_cwd
+from webui import MENU_ITEMS, SERVERS
+from lib import ObjectNamespace, BASE_DIR
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-from webui.utils import pid_is_active, poll_url
+from lib.utils import pid_is_active, poll_url
 from webui.components import active_subprocess_list, st_iframe
 from webui.contexts import ProgressBarContext, SessionStateContext
-
-CWD = get_cwd()
 
 def stop_server(pid):
     if pid_is_active(pid):
@@ -25,7 +24,7 @@ def start_server(host,port):
     
     base_url = f"http://{host}:{port}"
     cmd = f"python api.py --port={port} --host={host}"
-    p = subprocess.Popen(cmd, cwd=CWD)
+    p = subprocess.Popen(cmd, cwd=BASE_DIR)
 
     if poll_url(base_url):
         SERVERS.RVC_INFERENCE_URL = f"{base_url}/rvc"

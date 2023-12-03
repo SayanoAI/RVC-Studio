@@ -2,7 +2,7 @@ import requests
 
 from lib.audio import audio2bytes, bytes2audio, load_input_audio
 from webui import RVC_INFERENCE_URL, UVR_INFERENCE_URL
-from webui.utils import gc_collect
+from lib.utils import gc_collect
 
 def get_rvc_models():
     fnames = []

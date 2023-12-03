@@ -5,16 +5,9 @@ import requests
 import os
 import zipfile
 
+from lib import BASE_CACHE_DIR, BASE_MODELS_DIR
+
 RVC_DOWNLOAD_LINK = 'https://huggingface.co/datasets/SayanoAI/RVC-Studio/resolve/main/'
-
-BASE_DIR = os.getcwd()
-BASE_MODELS_DIR = os.path.join(BASE_DIR,"models")
-SONG_DIR = os.path.join(BASE_DIR,"songs")
-BASE_CACHE_DIR = os.path.join(BASE_DIR,".cache")
-DATASETS_DIR = os.path.join(BASE_DIR,"datasets")
-LOG_DIR = os.path.join(BASE_DIR,"logs")
-OUTPUT_DIR = os.path.join(BASE_DIR,"output")
-
 MDX_MODELS = ["MDXNET/Kim_Vocal_2.onnx","MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
 VR_MODELS = ["UVR/UVR-DeEcho-DeReverb.pth","UVR/HP5-vocals+instrumentals.pth"]
 RVC_MODELS = [
