@@ -18,20 +18,24 @@ def stop_server(pid):
         if process.is_running(): process.kill()
 
 def start_server(host,port):
-    pid = SERVERS["RVC"].get("pid")
+    pid = SERVERS.INFERENCE_PID
     if pid_is_active(pid):
         process = psutil.Process(pid)
-        if process.is_running(): return SERVERS["RVC"]["url"]
+        if process.is_running(): return SERVERS.url
     
     base_url = f"http://{host}:{port}"
     cmd = f"python api.py --port={port} --host={host}"
     p = subprocess.Popen(cmd, cwd=CWD)
 
     if poll_url(base_url):
-        SERVERS["RVC"] = {
-            "url": base_url,
-            "pid": p.pid
-        }
+        SERVERS.RVC_INFERENCE_URL = f"{base_url}/rvc"
+        print(SERVERS)
+        SERVERS.UVR_INFERENCE_URL = f"{base_url}/uvr"
+        print(SERVERS)
+        SERVERS.DOCS_URL = f"{base_url}/docs"
+        print(SERVERS)
+        SERVERS.INFERENCE_PID = p.pid
+        print(SERVERS)
     
     return base_url
 
@@ -44,7 +48,7 @@ def initial_state():
 
 if __name__=="__main__":
     with SessionStateContext("rvc-api",initial_state()) as state:
-        pid = SERVERS["RVC"].get("pid")
+        pid = SERVERS.INFERENCE_PID
         is_active = pid_is_active(pid)
 
         with st.form("rvc-api-form"):
@@ -66,4 +70,4 @@ if __name__=="__main__":
                 stop_server(pid)
                 st.experimental_rerun()
 
-            st_iframe(url=f'{SERVERS["RVC"]["url"]}/docs',height=800)
+            st_iframe(url=SERVERS.DOCS_URL,height=800)

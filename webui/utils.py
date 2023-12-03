@@ -74,7 +74,7 @@ def pid_is_active(pid: int):
             return psutil.pid_exists(pid)
         elif platform.system() == "Linux":
             os.kill(pid, 0)
-    except OSError as e:
+    except Exception as e:
         print(e)
         return False
     else:

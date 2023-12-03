@@ -2,6 +2,7 @@ import requests
 
 from lib.audio import audio2bytes, bytes2audio, load_input_audio
 from webui import RVC_INFERENCE_URL, UVR_INFERENCE_URL
+from webui.utils import gc_collect
 
 def get_rvc_models():
     fnames = []
@@ -59,6 +60,7 @@ def split_vocals(audio_path,**args):
     return None, None, None
 
 def convert_vocals(model_name,input_audio,**kwargs):
+    gc_collect()
     audio_data = audio2bytes(*input_audio)
     body = dict(name=model_name,audio_data=audio_data,**kwargs)
     

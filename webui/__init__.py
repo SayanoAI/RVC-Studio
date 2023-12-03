@@ -1,10 +1,22 @@
-from functools import lru_cache
+from functools import lru_cache, total_ordering
 import os
 import shelve
+from contextlib import contextmanager
 import sys
 import weakref
 from config import Config
 from i18n import I18nAuto
+
+@lru_cache
+def load_config():
+    return Config(), I18nAuto()
+
+@lru_cache
+def get_cwd():
+    CWD = os.getcwd()
+    if CWD not in sys.path:
+        sys.path.append(CWD)
+    return CWD
 
 MENU_ITEMS = {
     "Get help": "https://github.com/SayanoAI/RVC-Studio/discussions",
@@ -19,6 +31,14 @@ PITCH_EXTRACTION_OPTIONS = ["crepe","rmvpe","mangio-crepe","rmvpe+"]
 TTS_MODELS = ["edge","speecht5"]
 N_THREADS_OPTIONS=[1,2,4,8,12,16]
 SR_MAP = {"32k": 32000,"40k": 40000, "48k": 48000}
+
+BASE_DIR = get_cwd()
+BASE_MODELS_DIR = os.path.join(BASE_DIR,"models")
+SONG_DIR = os.path.join(BASE_DIR,"songs")
+BASE_CACHE_DIR = os.path.join(BASE_DIR,".cache")
+DATASETS_DIR = os.path.join(BASE_DIR,"datasets")
+LOG_DIR = os.path.join(BASE_DIR,"logs")
+OUTPUT_DIR = os.path.join(BASE_DIR,"output")
 
 class ObjectNamespace(dict):
     def __init__(self,**kwargs): super().__init__(kwargs)
@@ -38,45 +58,91 @@ class ObjectNamespace(dict):
     def __getstate__(self): return dict(**self)
 
 class PersistedDict:
-    def __init__(self,fname,**kwargs):
-        self.__fname__ = fname
-        if len(kwargs):
-            with shelve.open(fname) as shelf:
-                for k in kwargs:
-                    shelf[k] = kwargs[k]
 
-    def __missing__(self, name: str): return print(f"Attribute {name} is missing")
+    # initialize the class with an optional filename and dict arguments
+    def __init__(self, filename=None, **data):
+        # store the filename as an attribute
+        self.filename = filename
 
-    def __getitem__(self, name: str):
-        if name.startswith("__") and name.endswith("__"): return super().__getattribute__(name)
-        with shelve.open(self.__fname__) as shelf:
-            return shelf.get(name,None)
+        for key, value in data.items():
+            # recursively convert the values to NestedDict
+            self.__setattr__(key, value)
+
+    # define a context manager to open and close the shelve file
+    @contextmanager
+    def open_shelf(self):
+        # if filename is given, open the shelve file
+        shelf = shelve.open(self.filename) if self.filename else {}
+
+        # yield the shelf as the resource
+        yield shelf
+        if hasattr(shelf,"close"):
+            # close the shelf when exiting the context
+            shelf.close()
+
+    # define a method to get the attribute value given a key
+    def __getattr__(self, key: str):
+        is_private = key.startswith("_") and key.endswith("_")
         
-    def __setitem__(self, name: str, value):
-        with shelve.open(self.__fname__) as shelf:
-            shelf[name] = value
+        # if the key is filename, set it as an attribute
+        if key == "filename" or is_private:
+            if key in self.__dict__: return self.__dict__[key]
+            else: return None
 
-    def get(self, name: str, value): return self.__getitem__(name) or value
+        # use the context manager to open the shelve file
+        with self.open_shelf() as shelf:
+            # if the key exists in the shelve file, return the value
+            # return getattr(shelf, key, None)
+            if key in shelf:
+                return shelf[key]
+            # else, return None
+            else:
+                return None
 
-    def set(self, name: str, value): return self.__setitem__(name, value)
+    # define a method to set the attribute value given a key
+    def __setattr__(self, key, value):
+        # if the key is filename, set it as an attribute
+        if key == "filename":
+            self.__dict__[key] = value
+        # else, use the context manager to open the shelve file
+        else:
+            with self.open_shelf() as shelf:
+                # store the value in the shelve file
+                print(f"{key}={value}")
+                shelf[key] = value
+
+    # define a method to represent the class as a dict
+    def __repr__(self):
+        # initialize an empty dict
+        result = {}
+        # use the context manager to open the shelve file
+        with self.open_shelf() as shelf:
+            # loop through the keys in the shelve file
+            for key in shelf.keys():
+                # add the key and value to the result
+                result[key] = shelf[key]
+        # return the result
+        return str(result)
     
-@lru_cache
-def load_config():
-    return Config(), I18nAuto()
+    def __setitem__(self, key, value): self.__setattr__(key, value)
+    def __getitem__(self, key): self.__getattr__(key)
+    def __lt__(self,_): return False
+    def __eq__(self,other):
+        if hasattr(other,"filename"): return self.filename==other.filename
+        else: return False
+    def __call__(self,*args,**kwargs):
+        print(f"{args=}, {kwargs=}")
+        return str(self)
 
-@lru_cache
-def get_cwd():
-    CWD = os.getcwd()
-    if CWD not in sys.path:
-        sys.path.append(CWD)
-    return CWD
 
 @lru_cache
 def get_servers():
-    servers = PersistedDict(os.path.join(get_cwd(),".cache","servers.shelve"))
+    os.makedirs(BASE_CACHE_DIR,exist_ok=True)
+    fname = os.path.join(BASE_CACHE_DIR,"servers.shelve")
+    servers = PersistedDict(fname)
     return servers
 
 config, i18n = load_config()
 SERVERS = get_servers()
-RVC_INFERENCE_URL = f"{SERVERS['RVC']['url']}/rvc"
-UVR_INFERENCE_URL = f"{SERVERS['RVC']['url']}/uvr"
+RVC_INFERENCE_URL = SERVERS.RVC_INFERENCE_URL
+UVR_INFERENCE_URL = SERVERS.UVR_INFERENCE_URL

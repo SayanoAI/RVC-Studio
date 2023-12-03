@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 
-from webui import DEVICE_OPTIONS, MENU_ITEMS, SERVERS, config, get_cwd, i18n
+from webui import DEVICE_OPTIONS, MENU_ITEMS, config, get_cwd, i18n
 from webui.api import convert_vocals, get_rvc_models, split_vocals
 st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 
@@ -15,7 +15,6 @@ from lib.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio,
 from webui.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
 CWD = get_cwd()
-INFERENCE_URL = SERVERS['RVC']['url']
 
 def call_uvr(audio_path,**kwargs):
     with st.status(f"splitting vocals... {kwargs}") as status:

@@ -105,7 +105,7 @@ class Config:
                 / 1024
                 / 1024
                 / 1024
-                + 0.4
+                # + 0.4
             )
         elif self.has_mps():
             print("No supported Nvidia GPU found")
@@ -126,7 +126,7 @@ class Config:
             x_pad = 3
             x_query = 10
             x_center = 60
-            x_max = 65
+            x_max = 64
         else:
             # 5G显存配置
             x_pad = 1

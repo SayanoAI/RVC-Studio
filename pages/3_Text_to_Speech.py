@@ -51,7 +51,7 @@ def get_filename(audio_name,model_name):
     
 def one_click_speech(state):
     state.tts_audio = generate_speech(state.tts_text,speaker=os.path.basename(state.model_name).split(".")[0],method=state.tts_method, device=state.device)
-    state.converted_voice = call_rvc(state,state.tts_audio,**(state.tts_options))
+    state.converted_voice = call_rvc(state.model_name,state.tts_audio,**(state.tts_options))
 
 if __name__=="__main__":
     with SessionStateContext("tts",initial_state=init_inference_state()) as state:
@@ -86,10 +86,10 @@ if __name__=="__main__":
                     options=DEVICE_OPTIONS,horizontal=True,
                     index=get_index(DEVICE_OPTIONS,state.device))
                 
-                tts_options = voice_conversion_form(state.tts_options)
+                state.tts_options = voice_conversion_form(state.tts_options)
 
                 if st.form_submit_button(i18n("inference.save.button")):
-                    state.tts_options = tts_options
+                    
                     state.device = device
                     save_voice_conversion_params("tts",state.tts_options)
 
@@ -107,7 +107,7 @@ if __name__=="__main__":
                 col1.audio(state.tts_audio[0],sample_rate=state.tts_audio[1])
 
                 if col2.button("Convert Speech"):
-                    state.converted_voice = convert_vocals(state,state.tts_audio,**(state.tts_options))
+                    state.converted_voice = convert_vocals(state.model_name,state.tts_audio,**(state.tts_options))
 
                 if state.converted_voice:
                     col2.audio(state.converted_voice[0],sample_rate=state.converted_voice[1])
