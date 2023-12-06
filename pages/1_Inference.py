@@ -79,19 +79,20 @@ def one_click_convert(state):
         )
     
     params = dict(state.convert_params)
-    params.update(resample_sr=int(state.input_instrumental[1]))
-    changed_vocals = call_rvc(
-        state.model_name,
-        state.input_vocals,
-        **(params)
-    )
-    
-    if changed_vocals:
-        state.output_vocals = changed_vocals
-        mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_instrumental[1])
-        state.output_audio_name = get_filename(
-            state.input_audio_name,state.model_name)
-        state.output_audio = mixed_audio
+    if state.input_vocals is not None and state.input_instrumental is not None:
+        params.update(resample_sr=int(state.input_instrumental[1]))
+        changed_vocals = call_rvc(
+            state.model_name,
+            state.input_vocals,
+            **(params)
+        )
+        
+        if changed_vocals:
+            state.output_vocals = changed_vocals
+            mixed_audio = merge_audio(changed_vocals,state.input_instrumental,sr=state.input_instrumental[1])
+            state.output_audio_name = get_filename(
+                state.input_audio_name,state.model_name)
+            state.output_audio = mixed_audio
     return state
 
 def download_song(output_audio,output_audio_name,ext="mp3"):

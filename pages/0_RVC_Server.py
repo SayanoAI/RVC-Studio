@@ -7,14 +7,17 @@ from lib import ObjectNamespace, BASE_DIR, config
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
-from lib.utils import pid_is_active, poll_url
+from lib.utils import get_subprocesses, pid_is_active, poll_url
 from webui.components import active_subprocess_list, st_iframe
 from webui.contexts import ProgressBarContext, SessionStateContext
 
 def stop_server(pid):
     if pid_is_active(pid):
         process = psutil.Process(pid)
-        if process.is_running(): process.kill()
+        if process.is_running():
+            for sub in get_subprocesses(pid):
+                sub.kill()
+            process.kill()
 
 def start_server(host,port):
     pid = SERVERS.INFERENCE_PID
@@ -65,8 +68,9 @@ if __name__=="__main__":
         active_subprocess_list()
         
         if is_active:
-            if st.button("Stop Server",type="primary"):
+            if st.button(f"Restart Server [{pid}]",type="primary"):
                 stop_server(pid)
+                start_server(host=state.host,port=state.port)
                 st.experimental_rerun()
 
             st_iframe(url=SERVERS.DOCS_URL,height=800)

@@ -51,6 +51,9 @@ def get_index(arr,value):
 def gc_collect():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+    elif torch.backends.mps.is_available():
+        torch.mps.empty_cache()
     gc.set_threshold(100,10,1)
     gc.collect()
     
@@ -80,7 +83,7 @@ def pid_is_active(pid: int):
     else:
         return True
     
-def poll_url(url,timeout=60):
+def poll_url(url,timeout=10):
     for i in range(timeout): # wait for server to start up
         try:
             with requests.get(url) as req:
