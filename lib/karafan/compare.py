@@ -46,6 +46,7 @@ def SDR(song_output_path, output_format, Gdrive, elapsed_time):
 
 	if output_format=='PCM_16':	ext = 'wav'
 	elif output_format=='FLOAT': ext = 'wav'
+	elif output_format == 'WAV': ext = 'wav'
 	elif output_format== "FLAC": ext = 'flac'
 	elif output_format== 'MP3':	ext = 'mp3'
 

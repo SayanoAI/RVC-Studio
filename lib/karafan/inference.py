@@ -118,11 +118,11 @@ def demix_base(mix, device, model, infer_session):
 
 class MusicSeparationModel:
 
-	def __init__(self, config, cache_dir=None, use_cache=True):
+	def __init__(self, config, cache_dir=None, use_cache=True, format: str=None):
 
 		self.Gdrive		= BASE_DIR
 
-		self.output_format		= config['AUDIO']['output_format']
+		self.output_format		= config['AUDIO']['output_format'] if format is None else format.upper()
 		# Integers
 		self.normalize			= int(config['AUDIO']['normalize'])
 		self.silent				= int(config['AUDIO']['silent'])
@@ -745,6 +745,7 @@ class MusicSeparationModel:
 
 		if self.output_format == 'PCM_16':	filename += '.wav'
 		elif self.output_format == 'FLOAT':	filename += '.wav'
+		elif self.output_format == 'WAV':	filename += '.wav'
 		elif self.output_format == "FLAC":	filename += '.flac'
 		elif self.output_format == 'MP3':	filename += '.mp3'
 
@@ -870,8 +871,8 @@ def Download_Model(model, models_path):
 	return file_path  # Path to this model
 
 
-def Process(input_file, cache_dir=None, use_cache=True,config=settings.Defaults):
-	model = MusicSeparationModel(config,cache_dir=cache_dir,use_cache=use_cache)
+def Process(input_file, cache_dir=None, use_cache=True, format=None, config=settings.Defaults):
+	model = MusicSeparationModel(config,cache_dir=cache_dir,use_cache=use_cache,format=format)
 
 	output = model.SEPARATE(input_file)
 	del model

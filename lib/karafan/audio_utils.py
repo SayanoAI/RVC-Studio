@@ -47,8 +47,9 @@ def Load_Audio(file, sample_rate, ffmpeg = None, output_path = None):
 
 def Save_Audio(file_path, audio, sample_rate, output_format, cut_off, ffmpeg):
 
-	if output_format == 'PCM_16' or output_format == 'FLOAT':
-		sf.write(file_path + '.wav',  audio.T, sample_rate, format='wav', subtype = output_format)
+	# if output_format == 'PCM_16' or output_format == 'FLOAT':
+	if output_format == 'WAV':
+		sf.write(file_path + '.wav',  audio.T, sample_rate, format='wav', subtype = "PCM_16" if "int" in audio.dtype.name else "FLOAT")
 	else:
 		# Create a temporary file
 		temp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)

@@ -69,7 +69,7 @@ def get_filename(*args,**kwargs):
 def __run_inference_worker(arg):
     (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads,format) = arg
     if "karafan" in model_path:
-        vocals, instrumental, input_audio = karafan.inference.Process(audio_path,cache_dir=cache_dir,use_cache=use_cache)
+        vocals, instrumental, input_audio = karafan.inference.Process(audio_path,cache_dir=cache_dir,use_cache=use_cache,format=format)
     else:
         model = Separator(
                 agg=agg,

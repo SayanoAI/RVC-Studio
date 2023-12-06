@@ -1,3 +1,4 @@
+import os
 import subprocess
 from time import sleep
 import psutil
@@ -26,7 +27,7 @@ def start_server(host,port):
         if process.is_running(): return SERVERS.url
     
     base_url = f"http://{host}:{port}"
-    cmd = f"{config.python_cmd} ./api.py --port={port} --host={host}"
+    cmd = f"{config.python_cmd} {os.path.join(BASE_DIR,'api.py')} --port={port} --host={host}"
     p = subprocess.Popen(cmd, cwd=BASE_DIR)
 
     if poll_url(base_url):
@@ -68,7 +69,7 @@ if __name__=="__main__":
         active_subprocess_list()
         
         if is_active:
-            if st.button(f"Restart Server [{pid}]",type="primary"):
+            if st.button(f"Stop Server [{pid}]",type="primary"):
                 stop_server(pid)
                 start_server(host=state.host,port=state.port)
                 st.experimental_rerun()
