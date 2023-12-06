@@ -3,7 +3,7 @@ from time import sleep
 import psutil
 
 from webui import MENU_ITEMS, SERVERS
-from lib import ObjectNamespace, BASE_DIR
+from lib import ObjectNamespace, BASE_DIR, config
 import streamlit as st
 st.set_page_config(layout="wide",menu_items=MENU_ITEMS)
 
@@ -23,7 +23,7 @@ def start_server(host,port):
         if process.is_running(): return SERVERS.url
     
     base_url = f"http://{host}:{port}"
-    cmd = f"python api.py --port={port} --host={host}"
+    cmd = f"{config.python_cmd} ./api.py --port={port} --host={host}"
     p = subprocess.Popen(cmd, cwd=BASE_DIR)
 
     if poll_url(base_url):

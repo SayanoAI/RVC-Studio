@@ -5,9 +5,9 @@ from lib.audio import audio2bytes
 from server import STATUS
 from server.rvc import convert_vocals, list_rvc_models
 from server.types import RVCInferenceParams, UVRInferenceParams
-from server.utils import to_response
 from server.uvr import list_uvr_denoise_models, list_uvr_models, split_vocals
 from lib.utils import get_optimal_threads, gc_collect
+from lib import config
 
 server = FastAPI()
 
@@ -69,7 +69,7 @@ def main():
     parser.add_argument( "-d", "--host", type=str, default="localhost", help="Domain of server", required=False)
     args = parser.parse_args()
 
-    cmd=f"python -m uvicorn api:server {'--reload' if args.reload else ''} --workers={args.workers} --port={args.port} --host={args.host}"
+    cmd=f"{config.python_cmd} -m uvicorn api:server {'--reload' if args.reload else ''} --workers={args.workers} --port={args.port} --host={args.host}"
     subprocess.call(cmd)
 
 if __name__ == "__main__":

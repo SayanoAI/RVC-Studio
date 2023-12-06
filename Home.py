@@ -6,7 +6,7 @@ import platform
 from pytube import YouTube
 import streamlit as st
 from webui import MENU_ITEMS
-from lib import i18n, SONG_DIR, BASE_MODELS_DIR
+from lib import i18n, SONG_DIR, BASE_MODELS_DIR, get_cwd
 st.set_page_config("RVC Studio",layout="centered",menu_items=MENU_ITEMS)
 
 from lib.audio import SUPPORTED_AUDIO
@@ -60,7 +60,8 @@ def rvc_index_path_mapper(params):
     else: return (os.path.join(BASE_MODELS_DIR,"RVC",".index",os.path.basename(data_path)), data) # index file
 
 if __name__=="__main__":
-
+    CWD = get_cwd()
+    st.write(f"Current Location: {CWD}")
     model_tab, audio_tab = st.tabs(["Model Download","Audio Download"])
     with model_tab:
         st.title("Download required models")
