@@ -16,7 +16,7 @@ from lib.utils import get_index
 from webui.components import file_downloader, file_uploader_form
 
 
-from webui.downloader import BASE_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, save_file, slugify_filepath
+from webui.downloader import BASE_MODELS, KARAFAN_MODELS, MDX_MODELS, PRETRAINED_MODELS, RVC_DOWNLOAD_LINK, RVC_MODELS, VITS_MODELS, VR_MODELS, download_link_generator, save_file, slugify_filepath
 
 
 from webui.contexts import ProgressBarContext, SessionStateContext
@@ -99,7 +99,7 @@ if __name__=="__main__":
                 with ProgressBarContext(to_download,file_downloader,"Downloading models") as pb:
                     pb.run()
         with st.expander("Vocal Separation Models"):
-            generator = download_link_generator(RVC_DOWNLOAD_LINK, VR_MODELS+MDX_MODELS)
+            generator = download_link_generator(RVC_DOWNLOAD_LINK, VR_MODELS+MDX_MODELS+KARAFAN_MODELS)
             to_download = render_model_checkboxes(generator)
             if st.button("Download All",key="download-all-vr-models",disabled=len(to_download)==0):
                 with ProgressBarContext(to_download,file_downloader,"Downloading models") as pb:

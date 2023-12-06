@@ -40,11 +40,12 @@ Or run it in [Google Colab](https://colab.research.google.com/github/SayanoAI/RV
 ## Instructions for Inference page
 1. Download all the required models on the webui page or here: https://huggingface.co/datasets/SayanoAI/RVC-Studio/tree/main
 2. Put your favourite songs in the ./songs folder
-3. Press "Refresh Data" button
-4. Select a song (only wav/flac/ogg/mp3 are supported for now)
-5. Select a voice model (put your RVC v2 models in ./models/RVC/ and index file in ./models/RVC/.index/)
-6. Choose a vocal extraction model (preprocessing model is optional)
-7. Click "Save Options" and "1-Click VC" to get started
+3. Navigate to "RVC Server" page and start the server
+4. Navigate to "Inference" page and press "Refresh Data" button
+5. Select a song (only wav/flac/ogg/mp3 are supported for now)
+6. Select a voice model (put your RVC v2 models in ./models/RVC/ and index file in ./models/RVC/.index/)
+7. Choose a vocal extraction model (preprocessing model is optional)
+8. Click "Save Options" and "1-Click VC" to get started
 
 ## Instructions for Chat page
 Chat functionality has been migrated to [RVC-Chat](https://github.com/SayanoAI/RVC-Chat).
@@ -64,7 +65,7 @@ This project is for educational and research purposes only. The generated voice 
 
 ## Credits
 This project uses code and AI models from the following repositories:
-
+- [Karafan](https://github.com/Captain-FLAM/KaraFan) by Captain-FLAM.
 - [Retrieval-based Voice Conversion WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) by RVC-Project.
 - [Ultimate Vocal Remover GUI](https://github.com/Anjok07/ultimatevocalremovergui) by Anjok07.
 - [Streamlit](https://github.com/streamlit/streamlit) by streamlit.

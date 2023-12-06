@@ -8,9 +8,11 @@ import zipfile
 from lib import BASE_CACHE_DIR, BASE_MODELS_DIR
 
 RVC_DOWNLOAD_LINK = 'https://huggingface.co/datasets/SayanoAI/RVC-Studio/resolve/main/'
-MDX_MODELS = ["MDXNET/Kim_Vocal_2.onnx","MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
+MDX_MODELS = ["MDXNET/UVR-MDX-NET-vocal_FT.onnx"]
+KARAFAN_MODELS = ["karafan/MDX23C-8KFFT-InstVoc_HQ.ckpt"]
 VR_MODELS = ["UVR/UVR-DeEcho-DeReverb.pth","UVR/HP5-vocals+instrumentals.pth"]
 RVC_MODELS = [
+    # "RVC/Claire.pth","RVC/.index/Claire_v2_32k.index",
     "RVC/Sayano.pth","RVC/.index/added_IVF1063_Flat_nprobe_1_Sayano_v2.index",
     "RVC/Mae_v2.pth",
     "RVC/Fuji.pth","RVC/.index/added_IVF985_Flat_nprobe_1_Fuji_v2.index",
