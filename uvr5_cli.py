@@ -69,7 +69,7 @@ def get_filename(*args,**kwargs):
 def __run_inference_worker(arg):
     (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads,format) = arg
     if "karafan" in model_path:
-        vocals, instrumental, input_audio = karafan.inference.Process(audio_path)
+        vocals, instrumental, input_audio = karafan.inference.Process(audio_path,cache_dir=cache_dir,use_cache=use_cache)
     else:
         model = Separator(
                 agg=agg,
@@ -91,19 +91,19 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
     merge_func = np.nanmedian if merge_type=="median" else np.nanmean
     num_threads = max(get_optimal_threads(-1),1)
     song_name = os.path.basename(audio_path).split(".")[0]
-    cache_dir = CACHED_SONGS_DIR
+    cache_dir = os.path.join(CACHED_SONGS_DIR,song_name)
 
     # preprocess input song to split reverb
     if len(preprocess_models):
         output_name = get_filename(*[os.path.basename(name).split(".")[0] for name in preprocess_models],agg=agg) + f".{format}"
-        preprocessed_file = os.path.join(cache_dir,song_name,"preprocessing",output_name)
+        preprocessed_file = os.path.join(cache_dir,"preprocessing",output_name)
         
         # read from cache
         if os.path.isfile(preprocessed_file): input_audio = load_input_audio(preprocessed_file,mono=True)
         else: # preprocess audio
             for i,preprocess_model in enumerate(preprocess_models):
                 output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + f".{format}"
-                intermediary_file = os.path.join(cache_dir,song_name,"preprocessing",output_name)
+                intermediary_file = os.path.join(cache_dir,"preprocessing",output_name)
                 if os.path.isfile(intermediary_file):
                     if i==len(preprocess_model)-1: #last model
                         input_audio = load_input_audio(intermediary_file, mono=True)
@@ -115,10 +115,8 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
 
             save_input_audio(preprocessed_file,instrumental,to_int16=True)
         audio_path = preprocessed_file
-        cache_dir = os.path.join(CACHED_SONGS_DIR,song_name)
     else:
         input_audio = load_input_audio(audio_path,mono=True)
-        cache_dir = CACHED_SONGS_DIR
         
     # apply vocal separation
     wav_instrument = []

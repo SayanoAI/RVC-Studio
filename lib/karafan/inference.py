@@ -118,7 +118,7 @@ def demix_base(mix, device, model, infer_session):
 
 class MusicSeparationModel:
 
-	def __init__(self, config):
+	def __init__(self, config, cache_dir=None, use_cache=True):
 
 		self.Gdrive		= BASE_DIR
 
@@ -132,10 +132,10 @@ class MusicSeparationModel:
 		# Booleans
 		self.infra_bass			= config['AUDIO']['infra_bass']
 		self.DEBUG				= config['BONUS']['DEBUG']
-		self.GOD_MODE			= config['BONUS']['GOD_MODE']
+		self.GOD_MODE			= use_cache #config['BONUS']['GOD_MODE']
 		self.large_gpu			= config['BONUS']['large_gpu']
 
-		self.output = os.path.join(BASE_CACHE_DIR,"temp","karafan")
+		self.output = os.path.join(BASE_CACHE_DIR,"temp","karafan") if cache_dir is None else cache_dir
 		
 		self.ffmpeg = os.path.join(self.Gdrive, "ffmpeg") + (".exe" if platform.system() == 'Windows' else "")
 		
@@ -296,7 +296,7 @@ class MusicSeparationModel:
 		#*************************************************
 
 		self.BATCH_MODE = BATCH_MODE
-		self.song_output_path = os.path.join(self.output, name)
+		self.song_output_path = os.path.join(self.output, "karafan")
 		
 		
 		start_time = time.time()
@@ -870,8 +870,8 @@ def Download_Model(model, models_path):
 	return file_path  # Path to this model
 
 
-def Process(input_file, config=settings.Defaults):
-	model = MusicSeparationModel(config)
+def Process(input_file, cache_dir=None, use_cache=True,config=settings.Defaults):
+	model = MusicSeparationModel(config,cache_dir=cache_dir,use_cache=use_cache)
 
 	output = model.SEPARATE(input_file)
 	del model
