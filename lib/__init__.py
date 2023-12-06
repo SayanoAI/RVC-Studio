@@ -19,7 +19,11 @@ def get_cwd():
     return CWD
 
 class ObjectNamespace(dict):
-    def __init__(self,**kwargs): super().__init__(kwargs)
+    def __init__(self,**kwargs):
+        for k,v in kwargs.items():
+            if hasattr(v,"items"): self[k]=ObjectNamespace(**v)
+            else: self[k]=v
+
     def __missing__(self, name: str): return ObjectNamespace()
     def get(self, name: str, default_value=None): return self.__getitem__(name) if name in self.keys() else default_value
     def __getattr__(self, name: str): return self.__getitem__(name) if name in self.keys() else ObjectNamespace()

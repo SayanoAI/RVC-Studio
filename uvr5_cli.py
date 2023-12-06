@@ -2,7 +2,7 @@ import argparse
 import os, torch, warnings
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
-from lib import BASE_CACHE_DIR
+from lib import BASE_CACHE_DIR, karafan
 from lib.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
 from lib.utils import gc_collect, get_optimal_threads
 
@@ -68,19 +68,21 @@ def get_filename(*args,**kwargs):
 
 def __run_inference_worker(arg):
     (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads,format) = arg
-    
-    model = Separator(
-            agg=agg,
-            model_path=model_path,
-            device=device,
-            is_half="cuda" in str(device),
-            use_cache=use_cache,
-            cache_dir=cache_dir,
-            num_threads = num_threads
-            )
-    vocals, instrumental, input_audio = model.run_inference(audio_path,format)
-    del model
-    gc_collect()
+    if "karafan" in model_path:
+        vocals, instrumental, input_audio = karafan.inference.Process(audio_path)
+    else:
+        model = Separator(
+                agg=agg,
+                model_path=model_path,
+                device=device,
+                is_half="cuda" in str(device),
+                use_cache=use_cache,
+                cache_dir=cache_dir,
+                num_threads = num_threads
+                )
+        vocals, instrumental, input_audio = model.run_inference(audio_path,format)
+        del model
+        gc_collect()
 
     return vocals, instrumental, input_audio
     

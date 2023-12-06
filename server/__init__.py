@@ -1,5 +1,5 @@
 from functools import lru_cache
-from lib.utils import ObjectNamespace
+from lib import ObjectNamespace
 
 @lru_cache
 def get_status():
