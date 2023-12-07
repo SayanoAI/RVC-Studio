@@ -105,8 +105,8 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
                 output_name = get_filename(i,os.path.basename(preprocess_model).split(".")[0],agg=agg) + f".{format}"
                 intermediary_file = os.path.join(cache_dir,"preprocessing",output_name)
                 if os.path.isfile(intermediary_file):
-                    if i==len(preprocess_model)-1: #last model
-                        input_audio = load_input_audio(intermediary_file, mono=True)
+                    # if i==len(preprocess_model)-1: #last model
+                    instrumental = input_audio = load_input_audio(intermediary_file, mono=True)
                 else:
                     args = (preprocess_model,audio_path,agg,device,False,CACHED_SONGS_DIR if i==0 else None,num_threads,format)
                     _, instrumental, input_audio = __run_inference_worker(args)

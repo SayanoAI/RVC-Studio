@@ -296,7 +296,7 @@ class MusicSeparationModel:
 		#*************************************************
 
 		self.BATCH_MODE = BATCH_MODE
-		self.song_output_path = os.path.join(self.output, "karafan")
+		self.song_output_path = os.path.join(self.output, name)
 		
 		
 		start_time = time.time()
