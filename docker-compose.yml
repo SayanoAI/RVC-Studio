@@ -15,6 +15,7 @@ services:
     ports:
       - 8501:8501
       - 6006:6006
+      - 5555:5555
     stop_signal: SIGINT
     deploy:
       resources:

@@ -7,7 +7,7 @@ from server.rvc import convert_vocals, list_rvc_models
 from server.types import RVCInferenceParams, UVRInferenceParams
 from server.uvr import list_uvr_denoise_models, list_uvr_models, split_vocals
 from lib.utils import get_optimal_threads, gc_collect
-from lib import config
+from lib import BASE_DIR, config
 
 server = FastAPI()
 
@@ -69,8 +69,10 @@ def main():
     parser.add_argument( "-d", "--host", type=str, default="localhost", help="Domain of server", required=False)
     args = parser.parse_args()
 
-    cmd=f"{config.python_cmd} -m uvicorn api:server {'--reload' if args.reload else ''} --workers={args.workers} --port={args.port} --host={args.host}"
-    subprocess.call(cmd)
+    # cmd=f"{config.python_cmd} -m uvicorn api:server {'--reload' if args.reload else ''} --workers={args.workers} --port={args.port} --host={args.host}"
+    cmd=[config.python_cmd, "-m", "uvicorn", "api:server", f"--workers={args.workers}", f"--port={args.port}", f"--host={args.host}"]
+    if args.reload: cmd+=["--reload"]
+    subprocess.call(cmd,cwd=BASE_DIR)
 
 if __name__ == "__main__":
     main()

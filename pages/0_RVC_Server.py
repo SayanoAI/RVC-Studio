@@ -27,7 +27,7 @@ def start_server(host,port):
         if process.is_running(): return SERVERS.url
     
     base_url = f"http://{host}:{port}"
-    cmd = f"{config.python_cmd} {os.path.join(BASE_DIR,'api.py')} --port={port} --host={host}"
+    cmd = [config.python_cmd,os.path.join(BASE_DIR,'api.py'),f"--port={port}", f"--host={host}"]
     p = subprocess.Popen(cmd, cwd=BASE_DIR)
 
     if poll_url(base_url):
