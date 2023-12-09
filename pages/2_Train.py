@@ -111,13 +111,13 @@ def create_filelist(exp_dir,if_f0,spk_id,version,sr):
     opt.append(data)
 
     shuffle(opt)
-    if len(opt)>=len(os.listdir(gt_wavs_dir)): # has gt data
+    if len(missing_data)==0: # no missing gt data
         with open(os.path.join(model_log_dir, "filelist.txt"), "w") as f:
             f.write("\n".join(opt))
         print("write filelist done")
         return True
     else:
-        raise Exception(f"missing ground truth data: {len(opt)=}, {len(os.listdir(gt_wavs_dir))=}")
+        raise Exception(f"missing ground truth data: {len(opt)=}, {len(missing_data)=}")
 
 def train_model(exp_dir,if_f0,spk_id,version,sr,gpus,batch_size,total_epoch,save_epoch,pretrained_G,pretrained_D,if_save_latest,if_cache_gpu,if_save_every_weights):
     try:
