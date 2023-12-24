@@ -24,11 +24,11 @@ async def get_rvc():
     gc_collect()
     return list_rvc_models()
 
-@server.post("/rvc")
-async def rvc_infer(body: RVCInferenceParams):
+@server.post("/rvc/{name}")
+async def rvc_infer(body: RVCInferenceParams, name: str):
     response = {}
     gc_collect()
-    output_audio = convert_vocals(**vars(body))
+    output_audio = convert_vocals(name=name,**vars(body))
     if output_audio: response["data"] = audio2bytes(*output_audio)
     gc_collect()
     return response

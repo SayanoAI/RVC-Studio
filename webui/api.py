@@ -67,9 +67,9 @@ def split_vocals(audio_path,**args):
 def convert_vocals(model_name,input_audio,**kwargs):
     gc_collect()
     audio_data = audio2bytes(*input_audio)
-    body = dict(name=model_name,audio_data=audio_data,**kwargs)
+    body = dict(audio_data=audio_data,**kwargs)
     
-    with requests.post(RVC_INFERENCE_URL,json=body) as req:
+    with requests.post(f"{RVC_INFERENCE_URL}/{model_name}",json=body) as req:
         if req.status_code==200:
             response = req.json()
             audio = bytes2audio(response["data"])

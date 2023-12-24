@@ -68,7 +68,7 @@ def get_optimal_torch_device(index = 0) -> torch.device:
 
 def get_optimal_threads(offset=0):
     cores = multiprocessing.cpu_count() - offset
-    return max(np.floor(cores * (1-psutil.cpu_percent())),1)
+    return int(max(np.floor(cores * (1-psutil.cpu_percent())),1))
 
 def pid_is_active(pid: int):        
     """ Check For the existence of a unix pid. https://stackoverflow.com/a/568285"""

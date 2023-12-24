@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 
 class RVCInferenceParams(BaseModel):
-    name: str
     audio_data: str
     f0_up_key: int=0
     f0_method: List[Literal["rmvpe","rmvpe+","crepe","mangio-crepe"]]=["rmvpe"]

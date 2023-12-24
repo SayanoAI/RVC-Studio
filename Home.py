@@ -21,10 +21,11 @@ from webui.downloader import BASE_MODELS, KARAFAN_MODELS, MDX_MODELS, PRETRAINED
 
 from webui.contexts import ProgressBarContext, SessionStateContext
 
-def download_audio_to_buffer(url):
+@st.cache_data
+def download_audio_to_buffer(url,subtype="mp4"):
     buffer = BytesIO()
     youtube_video = YouTube(url)
-    audio = youtube_video.streams.get_audio_only()
+    audio = youtube_video.streams.get_audio_only(subtype=subtype)
     default_filename = slugify_filepath(audio.default_filename)
     audio.stream_to_buffer(buffer)
     return default_filename, buffer

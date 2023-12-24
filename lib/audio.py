@@ -99,24 +99,6 @@ def bytes_to_audio(data: Union[io.BytesIO,bytes],**kwargs):
             audio = audio.T # transpose to channels-first
     return audio, sr
 
-# def bytes2audio(data: str):
-#     try:
-#         iofile = io.BytesIO(base64.b64decode(data))
-#         decoded = np.load(iofile)
-#         return decoded["audio"], decoded["sr"]+0
-#     except Exception as e:
-#         print(e)
-#     return None
-
-# def audio2bytes(audio: np.array, sr: int):
-#     try:
-#         iofile = io.BytesIO()
-#         np.savez_compressed(iofile,audio=audio,sr=sr)
-#         return base64.b64encode(iofile.getvalue()).decode("utf-8")
-#     except Exception as e:
-#         print(e)
-#     return ""
-
 def bytes2audio(data: str):
     try:
         # Split the suffixed data by the colon
