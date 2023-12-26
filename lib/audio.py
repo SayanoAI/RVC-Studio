@@ -25,7 +25,7 @@ AUTOTUNE_NOTES = np.array([
     2959.96, 3135.96, 3322.44, 3520.00, 3729.31, 3951.07
 ])
 
-def load_audio(file, sr):
+def load_audio(file, sr=None):
     try:
         # https://github.com/openai/whisper/blob/main/whisper/audio.py#L26
         # This launches a subprocess to decode audio while down-mixing and resampling as necessary.
@@ -64,7 +64,10 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
     return audio, target_sr
 
 def load_input_audio(fname,sr=None,**kwargs):
-    sound = librosa.load(fname,sr=sr,**kwargs)
+    if sr is None: sr=44100
+    audio = load_audio(fname, sr)
+    # sound = librosa.load(fname,sr=sr,**kwargs)
+    sound = audio, sr
     print(f"loading sound {fname} {sound[0].shape} {sound[1]} {sound[0].dtype}")
     return sound
    

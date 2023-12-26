@@ -15,7 +15,8 @@ class Separator:
     def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=None, **kwargs):
         dereverb = "reverb" in model_path.lower()
         deecho = "echo"  in model_path.lower()
-        denoise = dereverb or deecho
+        bve = "BVE" in model_path.lower()
+        denoise = dereverb or deecho or bve
 
         if "MDX" in model_path:
             self.model = MDXNet(model_path=model_path,denoise=denoise,device=device,**kwargs)
