@@ -32,6 +32,11 @@ def load_model(_state):
         gc_collect()
     return _state.rvc_models
 
+def refresh_data(state):
+    state.voice_model_list = get_rvc_models()
+    gc_collect()
+    return state
+
 def render_recorder_settings(state):
     if state.recorder is not None and state.recorder.recording:
         if st.button("Stop",type="primary"):
@@ -68,6 +73,10 @@ def init_state():
         recorder = None,
         p = PyAudio()
     )
+
+INPUT_DEVICES = get_sound_devices("maxInputChannels")
+OUTPUT_DEVICES = get_sound_devices("maxOutputChannels")
+
 if __name__ == "__main__":
     with SessionStateContext("realtime-rvc",initial_state=init_state()) as state:
         st.header("Real Time RVC")
@@ -77,13 +86,17 @@ if __name__ == "__main__":
             disabled=not config.has_gpu,
             options=DEVICE_OPTIONS,horizontal=True,
             index=get_index(DEVICE_OPTIONS,state.device))
-        INPUT_DEVICES = get_sound_devices("maxInputChannels")
+        
+        if col1.button(i18n("inference.refresh_data.button")):
+            state = refresh_data(state)
+            st.experimental_rerun()
+        
         state.input_device_index = col2.selectbox("Input Device",
             options=INPUT_DEVICES,
             format_func=lambda i: f"{i}. "+state.p.get_device_info_by_index(i)["name"],
             index=get_index(INPUT_DEVICES,state.input_device_index)
         )
-        OUTPUT_DEVICES = get_sound_devices("maxOutputChannels")
+        
         state.output_device_index = col3.selectbox("Output Device",
             options=OUTPUT_DEVICES,
             format_func=lambda i: f"{i}. "+state.p.get_device_info_by_index(i)["name"],
