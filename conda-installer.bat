@@ -6,7 +6,8 @@ exit /B
 
 REM This script will check if conda is already installed, and if not, download and install Miniconda, a mini version of Anaconda that includes only conda and its dependencies, and add it to the user path
 REM You can change the installation directory as needed
-set INSTALL_DIR="%userprofile%\Miniconda3"
+SET INSTALL_DIR=%userprofile%\Miniconda3
+SET PATH=%INSTALL_DIR%\condabin;%PATH%
 
 REM Check if conda is already installed
 echo Checking if conda is already installed...
