@@ -5,7 +5,7 @@ from lib.audio import audio2bytes, bytes2audio, load_input_audio
 from webui import RVC_INFERENCE_URL, UVR_INFERENCE_URL
 from lib.utils import gc_collect
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def get_rvc_models():
     fnames = []
     try:
@@ -16,7 +16,7 @@ def get_rvc_models():
         print(e)
     return fnames
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def get_uvr_models():
     fnames = []
     try:
@@ -27,7 +27,7 @@ def get_uvr_models():
         print(e)
     return fnames
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def get_uvr_preprocess_models():
     fnames = []
     try:
@@ -38,7 +38,7 @@ def get_uvr_preprocess_models():
         print(e)
     return fnames
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def get_uvr_postprocess_models():
     fnames = []
     try:

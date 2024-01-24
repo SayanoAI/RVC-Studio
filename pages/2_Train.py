@@ -94,21 +94,23 @@ def create_filelist(exp_dir,if_f0,spk_id,version,sr):
 
     # add mute data 
     fea_dim = 256 if version == "v1" else 768
-    if if_f0:
-        data = "|".join([
-            os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
-            os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
-            os.path.join(LOG_DIR,"mute","2a_f0","mute.wav.npy"),
-            os.path.join(LOG_DIR,"mute","2b-f0nsf","mute.wav.npy"),
-            str(spk_id)
-        ])
-    else:
-        data = "|".join([
-            os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
-            os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
-            str(spk_id)
-        ])
-    opt.append(data)
+    num_mute = max(2,len(opt)//100) # use 1% mute file or 2 copies (like original repo)
+    for _ in range(num_mute):
+        if if_f0:
+            data = "|".join([
+                os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
+                os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
+                os.path.join(LOG_DIR,"mute","2a_f0","mute.wav.npy"),
+                os.path.join(LOG_DIR,"mute","2b-f0nsf","mute.wav.npy"),
+                str(spk_id)
+            ])
+        else:
+            data = "|".join([
+                os.path.join(LOG_DIR,"mute","0_gt_wavs",f"mute{sr}.wav"),
+                os.path.join(LOG_DIR,"mute",f"3_feature{fea_dim}","mute.npy"),
+                str(spk_id)
+            ])
+        opt.append(data)
 
     shuffle(opt)
     if len(missing_data)==0: # no missing gt data
@@ -284,7 +286,7 @@ if __name__=="__main__":
                             options=SR_OPTIONS,
                             index=get_index(SR_OPTIONS,state.sr),
                             horizontal=True)
-            state.version=col2.radio(i18n("training.version"),options=["v1","v2"],horizontal=True,index=get_index(["v1","v2"],state.version))
+            state.version=col2.radio(i18n("training.version"),options=["v2"],horizontal=True,index=get_index(["v2"],state.version))
             state.device=col3.radio(i18n("training.device"),options=["cuda","cpu"],horizontal=True)
 
             #preprocess_data(exp_dir, sr, trainset_dir, n_threads)
@@ -299,8 +301,8 @@ if __name__=="__main__":
             if st.button(i18n("training.preprocess_data.submit"),disabled=disabled):
                 st.toast(preprocess_data(state.exp_dir, state.sr, state.trainset_dir, state.n_threads, state.version, state.period, state.overlap))
 
-        PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}G{state.sr}"])
-        PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=[f"{'f0' if state.if_f0 else ''}D{state.sr}"])
+        PRETRAINED_G = get_filenames(root="models",folder="pretrained_v2",name_filters=['f0' if state.if_f0 else 'k',"G",state.sr],filter_func=all)
+        PRETRAINED_D = get_filenames(root="models",folder="pretrained_v2",name_filters=['f0' if state.if_f0 else 'k',"D",state.sr],filter_func=all)
         model_log_dir = f"{state.exp_dir}_{state.version}_{state.sr}"
 
         with st.form(i18n("training.extract_features.form")):  #extract_features(exp_dir, n_threads, version, if_f0, f0method)
