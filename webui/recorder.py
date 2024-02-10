@@ -1,9 +1,11 @@
+import os
 import time
 import numpy as np
 import pyaudio
 import threading
 import torch
 import webrtcvad
+from lib import BASE_MODELS_DIR
 from rvc_for_realtime import RVC
 from lib.audio import remix_audio
 
@@ -114,7 +116,7 @@ class RecorderPlayback:
         print(f"loading {model_name}...")
         if self.rvc_model is None or self.rvc_model.model_name!=model_name:
             if self.rvc_model: del self.rvc_model
-            self.rvc_model = RVC(model_name,config=config,device=device)
+            self.rvc_model = RVC(os.path.join(BASE_MODELS_DIR,"RVC",f"{model_name}.pth"),config=config,device=device)
             gc_collect()
         print(f"{model_name} finished loading")
         return self.rvc_model
