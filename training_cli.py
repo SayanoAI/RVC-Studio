@@ -9,6 +9,7 @@ import datetime
 
 hps = utils.get_hparams()
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.gpus.replace("-", ",")
+os.environ["NCCL_P2P_DISABLE"] = 1
 from random import shuffle, randint
 
 import torch
