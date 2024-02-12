@@ -9,7 +9,7 @@ import torch, torchcrepe, pyworld
 from lib.rmvpe import RMVPE
 from lib.audio import autotune_f0, pad_audio
 from lib import BASE_MODELS_DIR
-from lib.utils import gc_collect, get_optimal_threads, get_optimal_torch_device
+from lib.utils import gc_collect, get_merge_func, get_optimal_threads, get_optimal_torch_device
 
 class FeatureExtractor:
     def __init__(self, tgt_sr, config, onnx=False):
@@ -248,7 +248,7 @@ class FeatureExtractor:
         f0_computation_stack = pad_audio(*f0_computation_stack) # prevents uneven f0
 
         print(f"Calculating hybrid median f0 from the stack of: {methods_list} using {merge_type} merge")
-        merge_func = np.nanmedian if merge_type=="median" else np.nanmean
+        merge_func = get_merge_func(merge_type)
         f0_median_hybrid = merge_func(f0_computation_stack, axis=0)
 
         return f0_median_hybrid

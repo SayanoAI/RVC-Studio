@@ -92,3 +92,9 @@ def poll_url(url,timeout=10):
             sleep(1.)
             print(f"waited {i+1} seconds...")
     return False
+
+def get_merge_func(merge_type: str):
+    if merge_type=="min": return np.min
+    elif merge_type=="max": return np.max
+    elif merge_type=="median": return np.median
+    else: return np.mean

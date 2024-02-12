@@ -9,7 +9,7 @@ from webui.api import get_uvr_models, get_uvr_postprocess_models, get_uvr_prepro
 from typing import Tuple
 import streamlit as st
 
-from webui import PITCH_EXTRACTION_OPTIONS
+from webui import PITCH_EXTRACTION_OPTIONS, MERGE_OPTIONS
 from webui.contexts import ProgressBarContext
 from webui.downloader import save_file, save_file_generator
 from lib.utils import gc_collect, get_index, get_subprocesses
@@ -99,8 +99,8 @@ def vocal_separation_form(state):
     
     state.merge_type = col2.radio(
         i18n("inference.merge_type"),
-        options=["median","mean"],horizontal=True,
-        index=get_index(["median","mean"],state.merge_type))
+        options=MERGE_OPTIONS,horizontal=True,
+        index=get_index(MERGE_OPTIONS,state.merge_type))
     state.agg = col1.slider(i18n("inference.agg"),min_value=0,max_value=20,step=1,value=state.agg)
     state.use_cache = col3.checkbox(i18n("inference.use_cache"),value=state.use_cache)
     return state

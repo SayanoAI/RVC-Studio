@@ -7,7 +7,7 @@ class RVCInferenceParams(BaseModel):
     f0_up_key: int=0
     f0_method: List[Literal["rmvpe","rmvpe+","crepe","mangio-crepe"]]=["rmvpe"]
     f0_autotune: bool=False
-    merge_type: Literal["median","mean"]="median"
+    merge_type: Literal["median","mean","min","max"]="median"
     index_rate: float=.75
     resample_sr: int=0
     rms_mix_rate: float=.25
@@ -20,7 +20,7 @@ class UVRInferenceParams(BaseModel):
     preprocess_models: List[str]=[]
     postprocess_models: List[str]=[]
     agg: int=10
-    merge_type: Literal["median","mean"]="median"
+    merge_type: Literal["median","mean","min","max"]="median"
     use_cache: bool=True
     format: Literal["mp3","flac","wav"]="flac"
 
