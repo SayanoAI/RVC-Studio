@@ -9,7 +9,7 @@ st.set_page_config(layout="centered",menu_items=MENU_ITEMS)
 from webui.components import file_uploader_form, initial_vocal_separation_params, initial_voice_conversion_params, save_vocal_separation_params, save_voice_conversion_params, vocal_separation_form, voice_conversion_form
 from lib.utils import ObjectNamespace
 from webui.contexts import SessionStateContext
-from lib.audio import SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
+from lib.audio import OUTPUT_CHANNELS, SUPPORTED_AUDIO, bytes_to_audio, merge_audio, remix_audio, save_input_audio
 
 from lib.utils import gc_collect, get_filenames, get_index, get_optimal_torch_device
 
@@ -37,6 +37,7 @@ def init_inference_state():
         rvc_models=None,
         device=get_optimal_torch_device(),
         format="flac",
+        channels="mono",
         models=get_rvc_models(),
         model_name=None,
         
@@ -95,13 +96,13 @@ def one_click_convert(state):
             state.output_audio = mixed_audio
     return state
 
-def download_song(output_audio,output_audio_name,ext="mp3"):
+def download_song(output_audio,output_audio_name,ext="mp3",to_stereo=False):
     audio_path = output_audio_name.split(".")
     
     output_dir = os.path.join(OUTPUT_DIR,"inference",audio_path[0])
     os.makedirs(output_dir,exist_ok=True)
-    output_file = os.path.join(output_dir,f"{audio_path[1]}.{ext}")
-    if save_input_audio(output_file,output_audio,to_int16=True):
+    output_file = os.path.join(output_dir,".".join([audio_path[1],"stereo" if to_stereo else "mono",ext]))
+    if save_input_audio(output_file,output_audio,to_int16=True,to_stereo=to_stereo):
         return f"successfully saved to {output_file}"
     else: "failed to save"
     
@@ -154,25 +155,17 @@ if __name__=="__main__":
                 index=get_index(state.models,state.model_name),
                 format_func=lambda option: os.path.basename(option).split(".")[0]
                 )
-            # col1, col2 = right.columns(2)
-            # if col1.button(i18n("inference.load_model.button"),use_container_width=True, type="primary"):
-            #     del state.rvc_models
-            #     state.rvc_models = load_model(state)
-            #     gc_collect()
-            # if col2.button(i18n("inference.clear_data.button"),use_container_width=True):
-            #     state = clear_data(state)
-            #     st.experimental_rerun()
             
-        col1, col2 = st.columns(2)
-        state.device = col1.radio(
-            i18n("inference.device"),
-            disabled=not config.has_gpu,
-            options=DEVICE_OPTIONS,horizontal=True,
-            index=get_index(DEVICE_OPTIONS,state.device))
-        state.format = col2.radio(
-            i18n("inference.format"),
-            options=SUPPORTED_AUDIO,horizontal=True,
-            index=get_index(SUPPORTED_AUDIO,state.format))
+            col1, col2 = right.columns(2)
+            state.device = col1.radio(
+                i18n("inference.device"),
+                disabled=not config.has_gpu,
+                options=DEVICE_OPTIONS,horizontal=True,
+                index=get_index(DEVICE_OPTIONS,state.device))
+            state.format = col2.radio(
+                i18n("inference.format"),
+                options=SUPPORTED_AUDIO,horizontal=True,
+                index=get_index(SUPPORTED_AUDIO,state.format))
 
         st.subheader(i18n("inference.split_vocals"))
         with st.expander(i18n("inference.split_vocals.expander"),expanded=not (state.input_audio_name and len(state.uvr5_params.uvr_models))):
@@ -210,14 +203,14 @@ if __name__=="__main__":
         if uploaded_vocals is not None:
             input_audio = bytes_to_audio(
                 uploaded_vocals.getvalue())
-            state.input_vocals = remix_audio(input_audio,norm=True,to_int16=True,to_mono=True)
+            state.input_vocals = remix_audio(input_audio,norm=True,to_int16=True)
             state.input_audio_name = uploaded_vocals.name
             del uploaded_vocals
         uploaded_instrumentals = col2.file_uploader("Upload your own instrumental file (if you didn't use voice extraction)",type=SUPPORTED_AUDIO)
         if uploaded_instrumentals is not None:
             input_audio = bytes_to_audio(
                 uploaded_instrumentals.getvalue())
-            state.input_instrumental = remix_audio(input_audio,norm=True,to_int16=True,to_mono=True)
+            state.input_instrumental = remix_audio(input_audio,norm=True,to_int16=True)
             state.input_audio_name = uploaded_instrumentals.name
             del uploaded_instrumentals
 
@@ -259,5 +252,10 @@ if __name__=="__main__":
             if state.output_audio is not None:
                 col2.write("Converted Song")
                 col2.audio(state.output_audio[0],sample_rate=state.output_audio[1])
-                if col2.button(i18n("inference.download.button")):
-                    st.toast(download_song(state.output_audio,state.output_audio_name,ext="flac"))
+                c1, c2 = col2.columns(2)
+                state.channels = c1.radio(
+                    i18n("inference.channels"),
+                    options=OUTPUT_CHANNELS,horizontal=True,
+                    index=get_index(OUTPUT_CHANNELS,state.channels))
+                if c2.button(i18n("inference.download.button")):
+                    st.toast(download_song(state.output_audio,state.output_audio_name,ext=state.format,to_stereo=state.channels=="stereo"))

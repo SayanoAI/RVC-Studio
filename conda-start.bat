@@ -5,7 +5,7 @@ for /f %%i in ('cd') do set ENV_NAME=%%~nxi
 SET INSTALL_DIR=%userprofile%\Miniconda3
 SET PATH=%INSTALL_DIR%\condabin;%PATH%
 
-conda info --envs | findstr /i %ENV_NAME%
+CALL conda info --envs | findstr /i %ENV_NAME%
 if %errorlevel% == 0 (
     echo %ENV_NAME% environment is already available
 ) else (

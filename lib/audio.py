@@ -10,6 +10,7 @@ import ffmpeg
 
 MAX_INT16 = 32768
 SUPPORTED_AUDIO = ["mp3","flac","wav"] # ogg breaks soundfile
+OUTPUT_CHANNELS = ["mono", "stereo"]
 AUTOTUNE_NOTES = np.array([
     65.41, 69.30, 73.42, 77.78, 82.41, 87.31,
     92.50, 98.00, 103.83, 110.00, 116.54, 123.47,
@@ -25,7 +26,7 @@ AUTOTUNE_NOTES = np.array([
     2959.96, 3135.96, 3322.44, 3520.00, 3729.31, 3951.07
 ])
 
-def load_audio(file, sr=None):
+def load_audio(file, sr, **kwargs):
     try:
         # https://github.com/openai/whisper/blob/main/whisper/audio.py#L26
         # This launches a subprocess to decode audio while down-mixing and resampling as necessary.
@@ -41,9 +42,9 @@ def load_audio(file, sr=None):
     except Exception as e:
         raise RuntimeError(f"Failed to load audio: {e}")
 
-    return np.frombuffer(out, np.float32).flatten()
+    return np.frombuffer(out, np.float32).flatten(), sr
 
-def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,to_mono=False,axis=0,**kwargs):
+def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,axis=0,**kwargs):
     audio = np.array(input_audio[0],dtype="float32")
     if target_sr is None: target_sr=input_audio[1]
 
@@ -51,13 +52,12 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
     if resample or input_audio[1]!=target_sr:
         audio = librosa.core.resample(np.array(input_audio[0],dtype="float32"),orig_sr=input_audio[1],target_sr=target_sr,**kwargs)
     
-    if to_mono and audio.ndim>1: audio=np.nanmedian(audio,axis)
+    if audio.ndim>1: audio=np.nanmedian(audio,axis=axis)
+    if norm: audio = librosa.util.normalize(audio,axis=axis)
 
-    if norm: audio = librosa.util.normalize(audio)
-
-    audio_max = np.abs(audio).max() / 0.95
-    if audio_max > 1: audio /= audio_max
-    
+    audio_max = np.abs(audio).max()/.99
+    if audio_max > 1: audio = audio / audio_max
+        
     if to_int16: audio = np.clip(audio * MAX_INT16, a_min=-MAX_INT16+1, a_max=MAX_INT16-1).astype("int16")
     print(f"after remix: shape={audio.shape}, max={audio.max()}, min={audio.min()}, mean={audio.mean()}, sr={target_sr}")
 
@@ -65,23 +65,26 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
 
 def load_input_audio(fname,sr=None,**kwargs):
     if sr is None: sr=44100
-    audio = load_audio(fname, sr)
+    sound = load_audio(fname, sr, **kwargs)
     # sound = librosa.load(fname,sr=sr,**kwargs)
-    sound = audio, sr
     print(f"loading sound {fname} {sound[0].shape} {sound[1]} {sound[0].dtype}")
     return sound
    
-def save_input_audio(fname,input_audio,sr=None,to_int16=False):
+def save_input_audio(fname,input_audio,sr=None,to_int16=False,to_stereo=False):
     print(f"saving sound to {fname}")
     os.makedirs(os.path.dirname(fname),exist_ok=True)
-    audio=np.array(input_audio[0],dtype="int16" if np.abs(input_audio[0]).max()>100 else "float32")
+    audio=np.array(input_audio[0],dtype="float32")
+
     if to_int16:
-        max_a = np.abs(audio).max() * .99
-        if max_a<1:
-            audio=(audio*max_a*MAX_INT16)
-        audio=audio.astype("int16")
+        audio_max = np.abs(audio).max()/.99
+        if audio_max > 1: audio = audio / audio_max
+        audio = np.clip(audio * MAX_INT16, a_min=-MAX_INT16+1, a_max=MAX_INT16-1)
+
+    if to_stereo and audio.ndim<2: audio=np.stack([audio,audio],axis=-1)
+    print(f"{audio.shape=}")
+
     try:        
-        sf.write(fname, audio, sr if sr else input_audio[1])
+        sf.write(fname, audio.astype("int16" if np.abs(audio).max()>1 else "float32"), sr if sr else input_audio[1])
         return f"File saved to ${fname}"
     except Exception as e:
         return f"failed to save audio: {e}"
@@ -156,12 +159,12 @@ def pad_audio(*audios,axis=0):
 
 def merge_audio(audio1,audio2,sr=40000):
     print(f"merging audio audio1={audio1[0].shape,audio1[1]} audio2={audio2[0].shape,audio2[1]} sr={sr}")
-    m1,_=remix_audio(audio1,target_sr=sr)
-    m2,_=remix_audio(audio2,target_sr=sr)
+    m1,_=remix_audio(audio1,target_sr=sr,axis=0)
+    m2,_=remix_audio(audio2,target_sr=sr,axis=0)
     
-    mixed = pad_audio(m1,m2)
+    mixed = pad_audio(m1,m2,axis=0)
 
-    return remix_audio((mixed,sr),to_int16=True,norm=True,to_mono=True,axis=0)
+    return remix_audio((mixed,sr),to_int16=True,axis=0,norm=True)
 
 def autotune_f0(f0, threshold=0.):
     # autotuned_f0 = []

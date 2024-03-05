@@ -493,7 +493,7 @@ class MusicSeparationModel:
 
 		self.Save_Audio(6, vocal_final)
 		
-		output_vocals = remix_audio((vocal_final, self.sample_rate),norm=True,to_int16=True,to_mono=True)
+		output_vocals = remix_audio((vocal_final, self.sample_rate),to_int16=True)
 
 		print("► Save Music FINAL !")
 		
@@ -505,7 +505,7 @@ class MusicSeparationModel:
 
 		self.Save_Audio(7, music_final)
 
-		output_music = remix_audio((music_final, self.sample_rate),norm=True,to_int16=True,to_mono=True)
+		output_music = remix_audio((music_final, self.sample_rate),to_int16=True)
 
 		print('<b>--> Processing DONE !</b>')
 

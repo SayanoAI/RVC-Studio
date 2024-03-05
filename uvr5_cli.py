@@ -125,11 +125,12 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
 
     for model_path in uvr_models:
         args = (model_path,audio_path,agg,device,use_cache,cache_dir,num_threads,format)
+        print(f"processing... {args=}")
         vocals, instrumental, _ = __run_inference_worker(args)
         wav_vocals.append(vocals[0])
         wav_instrument.append(instrumental[0])
-    wav_instrument = merge_func(pad_audio(*wav_instrument),axis=0)
-    wav_vocals = merge_func(pad_audio(*wav_vocals),axis=0)
+    wav_instrument = np.nanmedian(pad_audio(*wav_instrument,axis=0),axis=0)
+    wav_vocals = merge_func(pad_audio(*wav_vocals,axis=0),axis=0)
 
     # postprocess vocals to reduce reverb
     if len(postprocess_models):
@@ -148,8 +149,8 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
                 wav_vocals, _ = processed_audio
             vocals_file = intermediary_file
 
-    instrumental = remix_audio((wav_instrument,instrumental[-1]),norm=True,to_int16=True,to_mono=True)
-    vocals = remix_audio((wav_vocals,vocals[-1]),norm=True,to_int16=True,to_mono=True)
+    instrumental = remix_audio((wav_instrument,instrumental[-1]),to_int16=True)
+    vocals = remix_audio((wav_vocals,vocals[-1]),to_int16=True)
 
     return vocals, instrumental, input_audio
 

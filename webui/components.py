@@ -147,8 +147,8 @@ def voice_conversion_form(state, use_hybrid=True):
     col1, col2 = st.columns(2)
     state.merge_type = col1.radio(
         i18n("inference.merge_type"),
-        options=["median","mean"],horizontal=True,
-        index=get_index(["median","mean"],state.merge_type))
+        options=MERGE_OPTIONS,horizontal=True,
+        index=get_index(MERGE_OPTIONS,state.merge_type))
     state.f0_autotune = col2.checkbox(i18n("inference.f0_autotune"),value=state.f0_autotune)
     state.resample_sr = st.select_slider(i18n("inference.resample_sr"),
                                         options=[0,16000,24000,22050,40000,44100,48000],

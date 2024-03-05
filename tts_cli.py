@@ -81,7 +81,7 @@ def __tacotron2__(text, device="cpu"):
     speech = (waveforms.cpu().numpy().squeeze() * MAX_INT16).astype(np.int16)
 
     # return as numpy array
-    return remix_audio((speech, 22050),target_sr=16000,to_mono=True,norm=True)
+    return remix_audio((speech, 22050),target_sr=16000)
 
 def __edge__(text, speaker="en-US-JennyNeural"):
     import edge_tts

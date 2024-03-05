@@ -10,7 +10,7 @@ from lib.model_utils import load_hubert, change_rms
 
 from pitch_extraction import FeatureExtractor
 
-from lib.audio import load_input_audio, remix_audio
+from lib.audio import MAX_INT16, load_input_audio, remix_audio
 from lib import config, BASE_MODELS_DIR
 
 from lib.utils import gc_collect, get_filenames
@@ -194,9 +194,8 @@ class VC(FeatureExtractor):
         if resample_sr >= 16000 and tgt_sr != resample_sr:
             audio_opt = librosa.resample(audio_opt, orig_sr=tgt_sr, target_sr=resample_sr)
 
-        max_int16 = 32768
-        audio_max = max(np.abs(audio_opt).max() / 0.99, 1)
-        audio_opt = (audio_opt * max_int16 / audio_max).astype(np.int16)
+        audio_max = np.abs(audio_opt).max() / 0.99
+        audio_opt = (audio_opt * MAX_INT16 / audio_max).astype(np.int16)
 
         gc_collect()
 
@@ -301,7 +300,7 @@ def vc_single(
     try:
         audio = input_audio[0] if input_audio is not None else load_input_audio(input_audio_path, 16000)
         
-        audio,_ = remix_audio((audio,input_audio[1] if input_audio is not None else 16000), target_sr=16000, norm=True,  to_mono=True)
+        audio,_ = remix_audio((audio,input_audio[1] if input_audio is not None else 16000), target_sr=16000)
 
         times = [0, 0, 0]
         if_f0 = cpt.get("f0", 1)
