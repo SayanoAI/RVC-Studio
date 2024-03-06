@@ -42,7 +42,7 @@ def load_audio(file, sr, **kwargs):
     except Exception as e:
         raise RuntimeError(f"Failed to load audio: {e}")
 
-    return np.frombuffer(out, np.float32).flatten(), sr
+    return remix_audio((np.frombuffer(out, np.float32).flatten(), sr),**kwargs)
 
 def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=False,axis=0,**kwargs):
     audio = np.array(input_audio[0],dtype="float32")
@@ -65,10 +65,10 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
 
 def load_input_audio(fname,sr=None,**kwargs):
     if sr is None: sr=44100
-    sound = load_audio(fname, sr, **kwargs)
+    audio, sr = load_audio(fname, sr, **kwargs)
     # sound = librosa.load(fname,sr=sr,**kwargs)
-    print(f"loading sound {fname} {sound[0].shape} {sound[1]} {sound[0].dtype}")
-    return sound
+    print(f"loading sound {fname=} {audio.ndim=} {audio.max()=} {audio.min()=} {audio.dtype=} {sr=}")
+    return audio, sr
    
 def save_input_audio(fname,input_audio,sr=None,to_int16=False,to_stereo=False):
     print(f"saving sound to {fname}")
