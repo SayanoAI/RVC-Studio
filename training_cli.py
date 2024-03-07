@@ -6,9 +6,12 @@ from lib import BASE_MODELS_DIR
 
 from lib.train import utils
 import datetime
-
+#  Fix for training won't start with 2 GPUs, even if only 1 enabled
 hps = utils.get_hparams()
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.gpus.replace("-", ",")
+n_gpus = len(hps.gpus.split("-"))
+from random import shuffle, randint
+import traceback, json, argparse, itertools, math, torch, pdb
 os.environ["NCCL_P2P_DISABLE"] = 1
 from random import shuffle, randint
 
