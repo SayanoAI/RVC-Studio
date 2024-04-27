@@ -31,8 +31,6 @@ uvicorn>=0.21.1
 colorama>=0.4.5
 pyworld==0.3.2
 httpx==0.23.
-onnxruntime-gpu==1.15
-onnxruntime==1.15
 ffmpy==0.3.1
 --extra-index-url https://download.pytorch.org/whl/cu118
 torch==2.0.1+cu118
@@ -51,6 +49,9 @@ lightning==2.0.8
 samplerate
 fastapi[all]>=0.103.1
 pyaudio
+
+#audio separator
+audio-separator[gpu]
 
 #tts
 transformers==4.32.1

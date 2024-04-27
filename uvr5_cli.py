@@ -1,28 +1,35 @@
 import argparse
 import os, torch, warnings
+from lib.model_utils import get_hash
 
 from lib.separators import MDXNet, UVR5Base, UVR5New
 from lib import BASE_CACHE_DIR, karafan
 from lib.audio import load_input_audio, pad_audio, remix_audio, save_input_audio
 from lib.utils import gc_collect, get_optimal_threads, get_merge_func
+from audio_separator.separator import Separator
 
 CACHED_SONGS_DIR = os.path.join(BASE_CACHE_DIR,"songs")
 
 warnings.filterwarnings("ignore")
 import numpy as np
 
-class Separator:
-    def __init__(self, model_path, use_cache=False, device="cpu", cache_dir=None, **kwargs):
-        dereverb = "reverb" in model_path.lower()
-        deecho = "echo"  in model_path.lower()
-        bve = "BVE" in model_path.lower()
-        denoise = dereverb or deecho or bve
+class Separators:
+    def __init__(self, model_path, use_cache=False, cache_dir=None, agg=5, format="mp3", **kwargs):
+        self.dereverb = "reverb" in model_path.lower()
+        self.deecho = "echo"  in model_path.lower()
+        self.bve = "BVE" in model_path.lower()
+        self.denoise = any([i in model_path.lower() for i in ["denoise","karaoke"]])
+        self.output_single_stem = "vocals" if self.dereverb or self.deecho or self.bve or self.denoise else None
+        self.agg = agg
+        self.format = format
 
-        if "MDX" in model_path:
-            self.model = MDXNet(model_path=model_path,denoise=denoise,device=device,**kwargs)
-        elif "UVR" in model_path:
-            self.model = UVR5New(model_path=model_path,device=device,dereverb=dereverb,**kwargs) if denoise else UVR5Base(model_path=model_path,device=device,**kwargs)
-            
+        if get_hash(model_path)=="0b633752cb273e9758813724ee8afa13":
+            self.model = UVR5Base(model_path=model_path,denoise=self.denoise,agg=self.agg,**kwargs)
+        # if "MDX" in model_path:
+        #     self.model = MDXNet(model_path=model_path,denoise=denoise,device=device,**kwargs)
+        # elif "UVR" in model_path:
+        #     self.model = UVR5New(model_path=model_path,device=device,dereverb=dereverb,deecho=deecho,bve=bve,denoise=denoise,**kwargs) #if denoise else UVR5Base(model_path=model_path,device=device,denoise=denoise,**kwargs)
+        
         self.use_cache = use_cache
         self.cache_dir = cache_dir
         self.model_path = model_path
@@ -32,15 +39,58 @@ class Separator:
     def __del__(self):
         gc_collect()
 
-    def run_inference(self, audio_path, format="mp3"):
-        song_name = get_filename(os.path.basename(self.model_path).split(".")[0],**self.args) + f".{format}"
+    def separate(self, audio_path, vocals_output_path, instrumentals_output_path):
+        if hasattr(self, "model"): return self.model.run_inference(audio_path)
+        else:
+            # load model
+            model_file_dir = os.path.dirname(self.model_path)
+            model_filename = os.path.basename(self.model_path)
+            os.makedirs(os.path.dirname(vocals_output_path),exist_ok=True)
+            os.makedirs(os.path.dirname(instrumentals_output_path),exist_ok=True)
+            # output_dir = self.music_dir if self.cache_dir is None else self.cache_dir
+            separator = Separator(
+                model_file_dir=model_file_dir,
+                enable_denoise=self.denoise,
+                output_format=self.format,
+                normalization_threshold=.95,
+                primary_stem_output_path=(vocals_output_path),
+                secondary_stem_output_path=(instrumentals_output_path),
+                # output_single_stem=self.output_single_stem,
+                # invert_using_spec=True,
+                vr_params={
+                    # Processing Options
+                    "enable_post_process": True,
+                    "enable_tta": False,
+                    # Constants
+                    "window_size": 512,
+                    "aggression": self.agg,
+                    "high_end_process": "mirroring",
+                    "batch_size": 2
+                },
+            )
+            separator.load_model(model_filename=model_filename)
+            # if self.output_single_stem:
+            #     vocals_file = instrumental_file = separator.separate(audio_path)
+            # else:
+            vocals_file, instrumental_file = separator.separate(audio_path)
+
+            del separator
+            print(f"{vocals_file=} {instrumental_file=}")
+            return {
+                "vocals": load_input_audio(vocals_file),
+                "instrumentals": load_input_audio(instrumental_file),
+                "input_audio": load_input_audio(audio_path)
+            }
+
+    def run_inference(self, audio_path):
+        song_name = get_filename(os.path.basename(self.model_path).split(".")[0],self.agg) + f".{self.format}"
         
         # handles loading of previous processed data
-        music_dir = os.path.join(
+        self.music_dir = os.path.join(
             os.path.dirname(audio_path) if self.cache_dir is None else self.cache_dir,
             os.path.basename(audio_path).split(".")[0])
-        vocals_path = os.path.join(music_dir,".vocals")
-        instrumental_path = os.path.join(music_dir,".instrumental")
+        vocals_path = os.path.join(self.music_dir,".vocals")
+        instrumental_path = os.path.join(self.music_dir,".instrumental")
         vocals_file = os.path.join(vocals_path,song_name)
         instrumental_file = os.path.join(instrumental_path,song_name)
 
@@ -50,7 +100,7 @@ class Separator:
             input_audio = load_input_audio(audio_path,mono=True)
             return vocals, instrumental, input_audio
         
-        return_dict = self.model.run_inference(audio_path)
+        return_dict = self.separate(audio_path,vocals_file,instrumental_file)
         instrumental = return_dict["instrumentals"]
         vocals = return_dict["vocals"]
         input_audio = return_dict["input_audio"]
@@ -60,6 +110,9 @@ class Separator:
             os.makedirs(instrumental_path,exist_ok=True)
             save_input_audio(vocals_file,vocals,to_int16=True)
             save_input_audio(instrumental_file,instrumental,to_int16=True)
+
+        if self.denoise: #denoise stem is flipped...
+            vocals, instrumental = instrumental, vocals
 
         return vocals, instrumental, input_audio
 
@@ -72,16 +125,17 @@ def __run_inference_worker(arg):
     if "karafan" in model_path:
         vocals, instrumental, input_audio = karafan.inference.Process(audio_path,cache_dir=cache_dir,use_cache=use_cache,format=format)
     else:
-        model = Separator(
+        model = Separators(
                 agg=agg,
                 model_path=model_path,
                 device=device,
                 is_half="cuda" in str(device),
                 use_cache=use_cache,
                 cache_dir=cache_dir,
-                num_threads = num_threads
+                num_threads = num_threads,
+                format=format
                 )
-        vocals, instrumental, input_audio = model.run_inference(audio_path,format)
+        vocals, instrumental, input_audio = model.run_inference(audio_path)
         del model
         gc_collect()
 
@@ -107,14 +161,14 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
                 intermediary_file = os.path.join(cache_dir,"preprocessing",output_name)
                 if os.path.isfile(intermediary_file):
                     # if i==len(preprocess_model)-1: #last model
-                    instrumental = input_audio = load_input_audio(intermediary_file, mono=True)
+                    processed_audio = input_audio = load_input_audio(intermediary_file, mono=True)
                 else:
                     args = (preprocess_model,audio_path,agg,device,False,CACHED_SONGS_DIR if i==0 else None,num_threads,format)
-                    _, instrumental, input_audio = __run_inference_worker(args)
-                    save_input_audio(intermediary_file,instrumental,to_int16=True)
+                    processed_audio, _, input_audio = __run_inference_worker(args)
+                    save_input_audio(intermediary_file,processed_audio,to_int16=True)
                 audio_path = intermediary_file
 
-            save_input_audio(preprocessed_file,instrumental,to_int16=True)
+            save_input_audio(preprocessed_file,processed_audio,to_int16=True)
         audio_path = preprocessed_file
     else:
         input_audio = load_input_audio(audio_path,mono=True)
@@ -143,7 +197,7 @@ def split_audio(uvr_models,audio_path,preprocess_models=[],postprocess_models=[]
             intermediary_file = os.path.join(cache_dir,"postprocessing",output_name)
             if not os.path.isfile(intermediary_file):
                 args = (postprocess_model,vocals_file,agg,device,False,None,num_threads,format)
-                _, processed_audio, _ = __run_inference_worker(args)
+                processed_audio, _, _ = __run_inference_worker(args)
                 output_name = get_filename(i,os.path.basename(postprocess_model).split(".")[0],agg=agg) + f".{format}"
                 save_input_audio(intermediary_file,processed_audio,to_int16=True)
                 wav_vocals, _ = processed_audio

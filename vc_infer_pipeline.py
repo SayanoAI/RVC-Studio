@@ -15,12 +15,6 @@ from lib import config, BASE_MODELS_DIR
 
 from lib.utils import gc_collect, get_filenames
 
-# torchcrepe = lazyload("torchcrepe")  # Fork Feature. Crepe algo for training and preprocess
-# torch = lazyload("torch")
-# rmvpe = lazyload("rmvpe")
-
-bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
-
 class VC(FeatureExtractor):
 
     def vc(
@@ -122,11 +116,9 @@ class VC(FeatureExtractor):
     def pipeline(self, model, net_g, sid, audio, times, f0_up_key, f0_method, merge_type,
             file_index, index_rate, if_f0, filter_radius, tgt_sr, resample_sr, rms_mix_rate,
             version, protect, crepe_hop_length, f0_autotune, rmvpe_onnx, f0_file=None, f0_min=50, f0_max=1100):
-        
-        
+                
         index, big_npy = self.load_index(file_index)
 
-        audio = signal.filtfilt(bh, ah, audio)
         audio_pad = np.pad(audio, (self.window // 2, self.window // 2), mode="reflect")
         opt_ts = []
         
@@ -299,8 +291,13 @@ def vc_single(
     f0_up_key = int(f0_up_key)
     try:
         audio = input_audio[0] if input_audio is not None else load_input_audio(input_audio_path, 16000)
-        
-        audio,_ = remix_audio((audio,input_audio[1] if input_audio is not None else 16000), target_sr=16000)
+
+        # zero phased digital filter cause pre-ringing noise...
+        sr = input_audio[1] if input_audio is not None else 16000
+        bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=sr)
+        audio = signal.filtfilt(bh, ah, audio)
+        audio = signal.lfilter(bh, ah, audio)
+        audio,_ = remix_audio((audio,sr), target_sr=16000)
 
         times = [0, 0, 0]
         if_f0 = cpt.get("f0", 1)

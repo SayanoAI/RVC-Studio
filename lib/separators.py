@@ -14,8 +14,10 @@ from lib.uvr5_pack.vr_network.nets import CascadedASPPNet
 from lib.audio import remix_audio
 import librosa
 from lib.uvr5_pack import spec_utils
-class UVR5Base:
-    
+
+SAMPLERATE = 44100
+
+class UVR5Base:    
     def __init__(self, agg, model_path, device, is_half,**kwargs):
         self.model_path = model_path
         self.device = device
@@ -274,7 +276,7 @@ class MDXNet:
     def __init__(self, model_path, chunks=15,denoise=False,num_threads=1,device="cpu",**kwargs):
 
         self.chunks = chunks
-        self.sr = 44100
+        self.sr = SAMPLERATE
         
         self.args = ObjectNamespace(**kwargs)
         self.denoise = denoise
@@ -323,10 +325,8 @@ class MDXNet:
     
 def prepare_mix(mix, chunk_set, margin_set, mdx_net_cut=False):
 
-    samplerate = 44100
-
     if not isinstance(mix, np.ndarray):
-        mix, samplerate = librosa.load(mix, mono=False, sr=44100)
+        mix, samplerate = librosa.load(mix, mono=False, sr=SAMPLERATE)
     else:
         mix = mix.T
 
@@ -338,7 +338,7 @@ def prepare_mix(mix, chunk_set, margin_set, mdx_net_cut=False):
         
         samples = mix.shape[-1]
         margin = margin_set
-        chunk_size = chunk_set*44100
+        chunk_size = chunk_set*SAMPLERATE
         assert not margin == 0, 'margin cannot be zero!'
         
         if margin > chunk_size:

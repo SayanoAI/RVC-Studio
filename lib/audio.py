@@ -65,9 +65,10 @@ def remix_audio(input_audio,target_sr=None,norm=False,to_int16=False,resample=Fa
 
 def load_input_audio(fname,sr=None,**kwargs):
     if sr is None: sr=44100
+    print(f"loading sound {fname=}")
     audio, sr = load_audio(fname, sr, **kwargs)
     # sound = librosa.load(fname,sr=sr,**kwargs)
-    print(f"loading sound {fname=} {audio.ndim=} {audio.max()=} {audio.min()=} {audio.dtype=} {sr=}")
+    print(f"loaded: {audio.ndim=} {audio.max()=} {audio.min()=} {audio.dtype=} {sr=}")
     return audio, sr
    
 def save_input_audio(fname,input_audio,sr=None,to_int16=False,to_stereo=False):

@@ -17,7 +17,7 @@ def list_uvr_models():
     return [os.path.relpath(name,BASE_MODELS_DIR) for name in fnames]
 
 def list_uvr_denoise_models():
-    fnames = get_filenames(root=BASE_MODELS_DIR,name_filters=["echo","reverb","noise","kara"])
+    fnames = get_filenames(root=BASE_MODELS_DIR,name_filters=["echo","reverb","noise","kara","bve"])
     return [os.path.relpath(name,BASE_MODELS_DIR) for name in fnames]
 
 def split_vocals(uvr_models: List[str], preprocess_models: List[str], postprocess_models: List[str], audio_data: Union[str,Any], **kwargs):
